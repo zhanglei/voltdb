@@ -218,7 +218,7 @@ public class LoadMultipartitionTable extends VoltSystemProcedure
 
             // make sure at the start of the table
             table.resetRowPosition();
-            for (int i = 0; table.advanceRow(); ++i) {
+            for (int i = 1; table.advanceRow(); ++i) {
                 Object[] params = new Object[columnCount];
 
                 // get the parameters from the volt table
@@ -233,12 +233,12 @@ public class LoadMultipartitionTable extends VoltSystemProcedure
                 // every 100 statements, exec the batch
                 // 100 is an arbitrary number
                 if ((i % 100) == 0) {
-                    executed += executeSQL();
+                    executed += executeSQL(false);
                 }
             }
             // execute any leftover batched statements
             if (queued > executed) {
-                executed += executeSQL();
+                executed += executeSQL(true);
             }
 
             return executed;
@@ -256,9 +256,9 @@ public class LoadMultipartitionTable extends VoltSystemProcedure
      * @return Count of rows inserted.
      * @throws VoltAbortException if any failure at all.
      */
-    long executeSQL() throws VoltAbortException {
+    long executeSQL(boolean isFinal) throws VoltAbortException {
         long count = 0;
-        VoltTable[] results = voltExecuteSQL();
+        VoltTable[] results = voltExecuteSQL(isFinal);
         for (VoltTable result : results) {
             long dmlUpdated = result.asScalarLong();
             if (dmlUpdated == 0) {
