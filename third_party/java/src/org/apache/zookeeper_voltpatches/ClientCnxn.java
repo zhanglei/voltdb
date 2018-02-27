@@ -837,9 +837,14 @@ public class ClientCnxn {
                     packet.replyHeader
                             .setErr(KeeperException.Code.CONNECTIONLOSS
                                     .intValue());
-                    throw new IOException("Xid out of order. Got "
-                            + replyHdr.getXid() + " expected "
-                            + packet.header.getXid());
+                    throw new IOException("Xid out of order. Got Xid "
+                            + replyHdr.getXid() + " with err " +
+                            + replyHdr.getErr() +
+                            " expected Xid "
+                            + packet.header.getXid()
+                            + " for a packet with details: " + packet
+                            + ", server state:" + zooKeeper
+                            + ", client details:" + zooKeeper.cnxn);
                 }
 
                 packet.replyHeader.setXid(replyHdr.getXid());
@@ -1113,18 +1118,18 @@ public class ClientCnxn {
 //                                + " for sessionid 0x"
 //                                + Long.toHexString(sessionId));
 //                    }
-//                    if (zooKeeper.state == States.CONNECTED) {
-//                        int timeToNextPing = readTimeout/2 - idleSend;
-//                        if (timeToNextPing <= 0) {
-//                            sendPing();
-//                            lastSend = now;
-//                            enableWrite();
-//                        } else {
-//                            if (timeToNextPing < to) {
-//                                to = timeToNextPing;
-//                            }
-//                        }
-//                    }
+                    if (zooKeeper.state == States.CONNECTED) {
+                        int timeToNextPing = readTimeout/2 - idleSend;
+                        if (timeToNextPing <= 0) {
+                            sendPing();
+                            lastSend = now;
+                            enableWrite();
+                        } else {
+                            if (timeToNextPing < to) {
+                                to = timeToNextPing;
+                            }
+                        }
+                    }
 
 //                    selector.select(to);
                     selector.select(20);
