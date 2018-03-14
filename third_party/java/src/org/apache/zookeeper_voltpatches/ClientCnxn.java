@@ -25,6 +25,7 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -1205,6 +1206,7 @@ public class ClientCnxn {
                             // It's only really a problem if it persists
                         }
                         else {
+                            e.printStackTrace();
                             LOG.warn(
                                     "Session 0x"
                                             + Long.toHexString(getSessionId())
@@ -1255,6 +1257,7 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during shutdown input", e);
                     }
+                    LOG.info("exception during shutdown input", e);
                 }
                 try {
                     sock.socket().shutdownOutput();
@@ -1263,6 +1266,7 @@ public class ClientCnxn {
                         LOG.debug("Ignoring exception during shutdown output",
                                 e);
                     }
+                    LOG.info("exception during shutdown output", e);
                 }
                 try {
                     sock.socket().close();
@@ -1270,6 +1274,7 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during socket close", e);
                     }
+                    LOG.info("exception during socket close", e);
                 }
                 try {
                     sock.close();
@@ -1277,6 +1282,7 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during channel close", e);
                     }
+                    LOG.debug("exception during channel close", e);
                 }
             }
             try {
