@@ -169,32 +169,9 @@ public class LoadMultipartitionTable extends VoltSystemProcedure
 
         boolean isUpsert = (upsertMode != 0);
 
-        // TODO verify table has right schema as catTable
-
         // use loadTable path for bulk insert
         if (!isUpsert && table.getRowCount() > 1) {
-            SynthesizedPlanFragment pfs[] = new SynthesizedPlanFragment[2];
-            // create a work unit to invoke super.loadTable() on each site.
-            pfs[0] = new SynthesizedPlanFragment();
-            pfs[0].fragmentId = SysProcFragmentId.PF_distribute;
-            pfs[0].outputDepId = DEP_distribute;
-            pfs[0].inputDepIds = new int[] {};
-            pfs[0].multipartition = true;
-            pfs[0].parameters = ParameterSet.fromArrayNoCopy(tableName, table);
-
-            // create a work unit to aggregate the results.
-            // MULTIPARTION_DEPENDENCY bit set, requiring result from each site
-            pfs[1] = new SynthesizedPlanFragment();
-            pfs[1].fragmentId = SysProcFragmentId.PF_aggregate;
-            pfs[1].outputDepId = DEP_aggregate;
-            pfs[1].inputDepIds = new int[] { DEP_distribute };
-            pfs[1].multipartition = false;
-            pfs[1].parameters = ParameterSet.emptyParameterSet();
-
-            // distribute and execute the fragments providing pfs and id
-            // of the aggregator's output dependency table.
-            VoltTable[] results = executeSysProcPlanFragments(pfs, DEP_aggregate);
-            return results[0].asScalarLong();
+            return voltLoadTable(tableName, table);
         }
 
         if (isUpsert) {
@@ -274,6 +251,37 @@ public class LoadMultipartitionTable extends VoltSystemProcedure
         }
 
         return executed;
+    }
+
+    /**
+     * execute voltLoadTable for loading whole table to EE
+     *
+     * @return Count of rows inserted
+     * @throws VoltAbortException if any failure at all.
+     */
+    private long voltLoadTable(String tableName, VoltTable table) {
+        SynthesizedPlanFragment pfs[] = new SynthesizedPlanFragment[2];
+        // create a work unit to invoke super.loadTable() on each site.
+        pfs[0] = new SynthesizedPlanFragment();
+        pfs[0].fragmentId = SysProcFragmentId.PF_distribute;
+        pfs[0].outputDepId = DEP_distribute;
+        pfs[0].inputDepIds = new int[]{};
+        pfs[0].multipartition = true;
+        pfs[0].parameters = ParameterSet.fromArrayNoCopy(tableName, table);
+
+        // create a work unit to aggregate the results.
+        // MULTIPARTION_DEPENDENCY bit set, requiring result from each site
+        pfs[1] = new SynthesizedPlanFragment();
+        pfs[1].fragmentId = SysProcFragmentId.PF_aggregate;
+        pfs[1].outputDepId = DEP_aggregate;
+        pfs[1].inputDepIds = new int[]{DEP_distribute};
+        pfs[1].multipartition = false;
+        pfs[1].parameters = ParameterSet.emptyParameterSet();
+
+        // distribute and execute the fragments providing pfs and id
+        // of the aggregator's output dependency table.
+        VoltTable[] results = executeSysProcPlanFragments(pfs, DEP_aggregate);
+        return results[0].asScalarLong();
     }
 
     /**
