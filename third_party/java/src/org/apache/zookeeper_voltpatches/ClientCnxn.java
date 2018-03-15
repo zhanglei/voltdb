@@ -194,8 +194,8 @@ public class ClientCnxn {
                 .append(remote).append(" lastZxid:").append(lastZxid)
                 .append(" xid:").append(xid).append(" sent:")
                 .append(sendThread.sentCount).append(" recv:")
-                .append(sendThread.recvCount).append(" queuedpkts:")
-                .append(outgoingQueue.size()).append(" pendingresp:")
+                .append(sendThread.recvCount).append(" queuedpkts:").append(outgoingQueue)
+                .append(outgoingQueue.size()).append(" pendingresp:").append(pendingQueue)
                 .append(pendingQueue.size()).append(" queuedevents:")
                 .append(eventThread.waitingEvents.size());
 
@@ -845,7 +845,7 @@ public class ClientCnxn {
                             + packet.header.getXid()
                             + " for a packet with details: " + packet
                             + ", server state:" + zooKeeper
-                            + ", client details:" + zooKeeper.cnxn);
+                            + ", client details:" + zooKeeper.cnxn + ",current xid:" + xid);
                 }
 
                 packet.replyHeader.setXid(replyHdr.getXid());
@@ -1024,6 +1024,9 @@ public class ClientCnxn {
                         + ((SocketChannel) sockKey.channel()).socket()
                                 .getRemoteSocketAddress());
             }
+            LOG.info("Session establishment request sent on "
+                    + ((SocketChannel) sockKey.channel()).socket()
+                            .getRemoteSocketAddress());
         }
 
         private void sendPing() {
@@ -1119,6 +1122,13 @@ public class ClientCnxn {
 //                                + " for sessionid 0x"
 //                                + Long.toHexString(sessionId));
 //                    }
+                    if ( to <=0) {
+                        String msg = "Client session timed out, have not heard from server in "
+                                + idleRecv + "ms"
+                                + " for sessionid 0x"
+                                + Long.toHexString(sessionId);
+                        LOG.warn(msg);
+                  }
                     if (zooKeeper.state == States.CONNECTED) {
                         int timeToNextPing = readTimeout/2 - idleSend;
                         if (timeToNextPing <= 0) {

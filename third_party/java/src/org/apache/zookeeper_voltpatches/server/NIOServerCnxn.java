@@ -489,7 +489,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                 throw new EndOfStreamException(
                         "Unable to read additional data from client sessionid 0x"
                         + Long.toHexString(sessionId)
-                        + ", likely client has closed socket");
+                        + ", likely client has closed socket: connections:" + factory.ipMap);
             }
         }
 
@@ -520,7 +520,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                     throw new EndOfStreamException(
                             "Unable to read additional data from client sessionid 0x"
                             + Long.toHexString(sessionId)
-                            + ", likely client has closed socket");
+                            + ", likely client has closed socket.connections:" + factory.ipMap);
                 }
                 if (incomingBuffer.remaining() == 0) {
                     boolean isPayload;

@@ -745,10 +745,10 @@ public class AuthSystem {
             fromAddress = "NULL";
         }
         String authenticationLogMessage = String.format(
-                "Authenticated user %s from %s. This message is rate limited to once every 60 seconds.",
+                "Authenticated user %s from %s. This message is rate limited to once every 3600 seconds.",
                 user, fromAddress);
 
-        RateLimitedLogger.tryLogForMessage(System.currentTimeMillis(), 60, TimeUnit.SECONDS,
+        RateLimitedLogger.tryLogForMessage(System.currentTimeMillis(), 3600, TimeUnit.SECONDS,
             authLogger, Level.INFO, authenticationLogMessage);
     }
 
