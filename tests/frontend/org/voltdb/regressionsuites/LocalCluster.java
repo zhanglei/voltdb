@@ -513,6 +513,9 @@ public class LocalCluster extends VoltServerConfig {
     public void overrideStartCommandVerb(String verb) {
         if (verb == null || verb.trim().isEmpty()) return;
         this.templateCmdLine.startCommand(verb);
+        if (!verb.equalsIgnoreCase("CREATE")) {
+            setForceVoltdbCreate(false);
+        }
     }
 
     public void setCustomCmdLn(String customCmdLn) {
