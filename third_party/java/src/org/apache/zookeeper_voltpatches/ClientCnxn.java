@@ -192,7 +192,8 @@ public class ClientCnxn {
         sb.append("sessionid:0x").append(Long.toHexString(getSessionId()))
                 .append(" local:").append(local).append(" remoteserver:")
                 .append(remote).append(" lastZxid:").append(lastZxid)
-                .append(" xid:").append(xid).append(" sent:")
+                .append(" xid:").append(xid).append(" longXID:")
+                .append(longXid).append(" sent:")
                 .append(sendThread.sentCount).append(" recv:")
                 .append(sendThread.recvCount).append(" queuedpkts:").append(outgoingQueue)
                 .append(outgoingQueue.size()).append(" pendingresp:").append(pendingQueue)
@@ -719,7 +720,6 @@ public class ClientCnxn {
 
         long sentCount = 0;
         long recvCount = 0;
-
         void readLength() throws IOException {
             int len = incomingBuffer.getInt();
             if (len < 0 || len >= packetLen) {
@@ -845,7 +845,7 @@ public class ClientCnxn {
                             + packet.header.getXid()
                             + " for a packet with details: " + packet
                             + ", server state:" + zooKeeper
-                            + ", client details:" + zooKeeper.cnxn + ",current xid:" + xid);
+                            + ", client details:" + zooKeeper.cnxn + ",current XID:" + xid + "long XID:" + longXid + " reply header:" + replyHdr);
                 }
 
                 packet.replyHeader.setXid(replyHdr.getXid());
@@ -926,6 +926,9 @@ public class ClientCnxn {
                                 synchronized (pendingQueue) {
                                     pendingQueue.add(p);
                                 }
+                            }
+                            if (p.header != null && (p.header.getXid() == -3 || p.header.getXid() == -4)) {
+                                LOG.info("DEBUG:packet sent xid=" + p.header.getXid() + " packet:" + p + " current xid:" + xid);
                             }
                         }
                     }
@@ -1366,8 +1369,9 @@ public class ClientCnxn {
     }
 
     private int xid = 1;
-
+    private long longXid = 1;
     synchronized private int getXid() {
+        longXid++;
         return xid++;
     }
 

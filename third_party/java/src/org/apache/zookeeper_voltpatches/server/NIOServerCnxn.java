@@ -644,6 +644,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
             close();
         } catch (CloseRequestException e) {
             // expecting close to log session closure
+            LOG.warn(e);
             close();
         } catch (EndOfStreamException e) {
             LOG.warn(e); // tell user why
@@ -707,6 +708,9 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
             Request si = new Request(this, sessionId, h.getXid(), h.getType(), incomingBuffer, authInfo);
             si.setOwner(ServerCnxn.me);
             zk.submitRequest(si);
+            if (h.getXid() == -3 || h.getXid() == -4) {
+                LOG.info("DEBUG:packet received with xid=" + h.getXid() + " request:" + si);
+            }
         }
         if (h.getXid() >= 0) {
             synchronized (this) {
@@ -718,6 +722,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Throttling recv " + zk.getInProcess());
                     }
+                    LOG.info("Throttling recv " + zk.getInProcess() + " limit:" + factory.outstandingLimit);
                     disableRecv();
                     // following lines should not be needed since we are
                     // already reading
@@ -1531,6 +1536,9 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                         enableRecv();
                     }
                 }
+            }
+            if (h.getXid() == -3 || h.getXid() == -4) {
+                LOG.info("sending response xid:" + h.getXid() + " ReplyHeader:" + h);
             }
          } catch(Exception e) {
             LOG.warn("Unexpected exception. Destruction averted.", e);
