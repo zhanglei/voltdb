@@ -35,8 +35,6 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.jute_voltpatches.BinaryInputArchive;
 import org.apache.jute_voltpatches.BinaryOutputArchive;
 import org.apache.jute_voltpatches.Record;
@@ -71,10 +69,8 @@ import org.apache.zookeeper_voltpatches.proto.SetWatches;
 import org.apache.zookeeper_voltpatches.proto.WatcherEvent;
 import org.apache.zookeeper_voltpatches.server.ByteBufferInputStream;
 import org.apache.zookeeper_voltpatches.server.ZooTrace;
-import org.voltcore.logging.Level;
 import org.voltcore.logging.VoltLogger;
 import org.voltcore.network.ReverseDNSCache;
-import org.voltcore.utils.RateLimitedLogger;
 
 /**
  * This class manages the socket i/o for the client. ClientCnxn maintains a list
