@@ -814,7 +814,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider,
                 txnHeader.setType(OpCode.error);
                 txn = new ErrorTxn(e.code().intValue());
             }
-            LOG.info("Got user-level KeeperException when processing "
+            LOG.debug("Got user-level KeeperException when processing "
                     + request.toString() + " Error Path:" + e.getPath()
                     + " Error:" + e.getMessage());
             request.setException(e);

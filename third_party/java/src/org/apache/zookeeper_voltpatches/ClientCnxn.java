@@ -25,7 +25,6 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -36,6 +35,7 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.jute_voltpatches.BinaryInputArchive;
 import org.apache.jute_voltpatches.BinaryOutputArchive;
@@ -71,8 +71,10 @@ import org.apache.zookeeper_voltpatches.proto.SetWatches;
 import org.apache.zookeeper_voltpatches.proto.WatcherEvent;
 import org.apache.zookeeper_voltpatches.server.ByteBufferInputStream;
 import org.apache.zookeeper_voltpatches.server.ZooTrace;
+import org.voltcore.logging.Level;
 import org.voltcore.logging.VoltLogger;
 import org.voltcore.network.ReverseDNSCache;
+import org.voltcore.utils.RateLimitedLogger;
 
 /**
  * This class manages the socket i/o for the client. ClientCnxn maintains a list
@@ -192,11 +194,10 @@ public class ClientCnxn {
         sb.append("sessionid:0x").append(Long.toHexString(getSessionId()))
                 .append(" local:").append(local).append(" remoteserver:")
                 .append(remote).append(" lastZxid:").append(lastZxid)
-                .append(" xid:").append(xid).append(" longXID:")
-                .append(longXid).append(" sent:")
+                .append(" xid:").append(xid).append(" sent:")
                 .append(sendThread.sentCount).append(" recv:")
-                .append(sendThread.recvCount).append(" queuedpkts:").append(outgoingQueue)
-                .append(outgoingQueue.size()).append(" pendingresp:").append(pendingQueue)
+                .append(sendThread.recvCount).append(" queuedpkts:")
+                .append(outgoingQueue.size()).append(" pendingresp:")
                 .append(pendingQueue.size()).append(" queuedevents:")
                 .append(eventThread.waitingEvents.size());
 
@@ -720,6 +721,7 @@ public class ClientCnxn {
 
         long sentCount = 0;
         long recvCount = 0;
+
         void readLength() throws IOException {
             int len = incomingBuffer.getInt();
             if (len < 0 || len >= packetLen) {
@@ -838,14 +840,9 @@ public class ClientCnxn {
                     packet.replyHeader
                             .setErr(KeeperException.Code.CONNECTIONLOSS
                                     .intValue());
-                    throw new IOException("Xid out of order. Got Xid "
-                            + replyHdr.getXid() + " with err " +
-                            + replyHdr.getErr() +
-                            " expected Xid "
-                            + packet.header.getXid()
-                            + " for a packet with details: " + packet
-                            + ", server state:" + zooKeeper
-                            + ", client details:" + zooKeeper.cnxn + ",current XID:" + xid + "long XID:" + longXid + " reply header:" + replyHdr);
+                    throw new IOException("Xid out of order. Got "
+                            + replyHdr.getXid() + " expected "
+                            + packet.header.getXid());
                 }
 
                 packet.replyHeader.setXid(replyHdr.getXid());
@@ -926,9 +923,6 @@ public class ClientCnxn {
                                 synchronized (pendingQueue) {
                                     pendingQueue.add(p);
                                 }
-                            }
-                            if (p.header != null && (p.header.getXid() == -3 || p.header.getXid() == -4)) {
-                                LOG.info("DEBUG:packet sent xid=" + p.header.getXid() + " packet:" + p + " current xid:" + xid);
                             }
                         }
                     }
@@ -1027,9 +1021,6 @@ public class ClientCnxn {
                         + ((SocketChannel) sockKey.channel()).socket()
                                 .getRemoteSocketAddress());
             }
-            LOG.info("Session establishment request sent on "
-                    + ((SocketChannel) sockKey.channel()).socket()
-                            .getRemoteSocketAddress());
         }
 
         private void sendPing() {
@@ -1125,25 +1116,18 @@ public class ClientCnxn {
 //                                + " for sessionid 0x"
 //                                + Long.toHexString(sessionId));
 //                    }
-                    if ( to <=0) {
-                        String msg = "Client session timed out, have not heard from server in "
-                                + idleRecv + "ms"
-                                + " for sessionid 0x"
-                                + Long.toHexString(sessionId);
-                        LOG.warn(msg);
-                  }
-                    if (zooKeeper.state == States.CONNECTED) {
-                        int timeToNextPing = readTimeout/2 - idleSend;
-                        if (timeToNextPing <= 0) {
-                            sendPing();
-                            lastSend = now;
-                            enableWrite();
-                        } else {
-                            if (timeToNextPing < to) {
-                                to = timeToNextPing;
-                            }
-                        }
-                    }
+//                    if (zooKeeper.state == States.CONNECTED) {
+//                        int timeToNextPing = readTimeout/2 - idleSend;
+//                        if (timeToNextPing <= 0) {
+//                            sendPing();
+//                            lastSend = now;
+//                            enableWrite();
+//                        } else {
+//                            if (timeToNextPing < to) {
+//                                to = timeToNextPing;
+//                            }
+//                        }
+//                    }
 
 //                    selector.select(to);
                     selector.select(20);
@@ -1219,7 +1203,6 @@ public class ClientCnxn {
                             // It's only really a problem if it persists
                         }
                         else {
-                            e.printStackTrace();
                             LOG.warn(
                                     "Session 0x"
                                             + Long.toHexString(getSessionId())
@@ -1270,7 +1253,6 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during shutdown input", e);
                     }
-                    LOG.info("exception during shutdown input", e);
                 }
                 try {
                     sock.socket().shutdownOutput();
@@ -1279,7 +1261,6 @@ public class ClientCnxn {
                         LOG.debug("Ignoring exception during shutdown output",
                                 e);
                     }
-                    LOG.info("exception during shutdown output", e);
                 }
                 try {
                     sock.socket().close();
@@ -1287,7 +1268,6 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during socket close", e);
                     }
-                    LOG.info("exception during socket close", e);
                 }
                 try {
                     sock.close();
@@ -1295,7 +1275,6 @@ public class ClientCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Ignoring exception during channel close", e);
                     }
-                    LOG.debug("exception during channel close", e);
                 }
             }
             try {
@@ -1369,10 +1348,22 @@ public class ClientCnxn {
     }
 
     private int xid = 1;
-    private long longXid = 1;
+
     synchronized private int getXid() {
-        longXid++;
-        return xid++;
+        int currentXid = xid;
+        xid++;
+
+        //xids are assumed to be non-negative, except as special xids, -2 for ping, and -4 for auth.
+        //If the xid overflows, the system could hang when a non-auth packet uses -4 for xid.
+        //xids are only used to match requests and responses. So resetting it to 1 as it overflows
+        //should be safe. The odds of an existing in-flight operation that happened 2147483647 operations ago still
+        //lingering around or causing any confusion seem beyond unlikely.
+        if (xid < 0) {
+            xid = 1;
+            LOG.info("ZK client has reset xid to 1.");
+        }
+
+        return currentXid;
     }
 
     public ReplyHeader submitRequest(RequestHeader h, Record request,
@@ -1413,11 +1404,19 @@ public class ClientCnxn {
                 }
                 outgoingQueue.add(packet);
             }
+            log(packet);
         }
         synchronized (sendThread) {
             selector.wakeup();
         }
         return packet;
+    }
+
+    private void log( Packet packet) {
+        if (packet.header.getXid() % 1000 == 0) {
+            String zkMessage = String.format("ZK debug message %s.", packet);
+            LOG.info(zkMessage);
+        }
     }
 
     public void addAuthInfo(String scheme, byte auth[]) {

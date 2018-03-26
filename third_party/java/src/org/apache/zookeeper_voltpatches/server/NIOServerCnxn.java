@@ -455,7 +455,6 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
             }
 
         } catch(Exception e) {
-            e.printStackTrace();
             LOG.error("NIOServerCnxn Unexpected Exception: " + e.getMessage());
         }
     }
@@ -489,7 +488,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                 throw new EndOfStreamException(
                         "Unable to read additional data from client sessionid 0x"
                         + Long.toHexString(sessionId)
-                        + ", likely client has closed socket: connections:" + factory.ipMap);
+                        + ", likely client has closed socket");
             }
         }
 
@@ -520,7 +519,7 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                     throw new EndOfStreamException(
                             "Unable to read additional data from client sessionid 0x"
                             + Long.toHexString(sessionId)
-                            + ", likely client has closed socket.connections:" + factory.ipMap);
+                            + ", likely client has closed socket");
                 }
                 if (incomingBuffer.remaining() == 0) {
                     boolean isPayload;
@@ -644,7 +643,6 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
             close();
         } catch (CloseRequestException e) {
             // expecting close to log session closure
-            LOG.warn(e);
             close();
         } catch (EndOfStreamException e) {
             LOG.warn(e); // tell user why
@@ -708,9 +706,6 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
             Request si = new Request(this, sessionId, h.getXid(), h.getType(), incomingBuffer, authInfo);
             si.setOwner(ServerCnxn.me);
             zk.submitRequest(si);
-            if (h.getXid() == -3 || h.getXid() == -4) {
-                LOG.info("DEBUG:packet received with xid=" + h.getXid() + " request:" + si);
-            }
         }
         if (h.getXid() >= 0) {
             synchronized (this) {
@@ -722,7 +717,6 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Throttling recv " + zk.getInProcess());
                     }
-                    LOG.info("Throttling recv " + zk.getInProcess() + " limit:" + factory.outstandingLimit);
                     disableRecv();
                     // following lines should not be needed since we are
                     // already reading
@@ -1536,9 +1530,6 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                         enableRecv();
                     }
                 }
-            }
-            if (h.getXid() == -3 || h.getXid() == -4) {
-                LOG.info("sending response xid:" + h.getXid() + " ReplyHeader:" + h);
             }
          } catch(Exception e) {
             LOG.warn("Unexpected exception. Destruction averted.", e);
