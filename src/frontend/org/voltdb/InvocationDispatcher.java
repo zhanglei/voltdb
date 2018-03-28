@@ -116,7 +116,7 @@ public final class InvocationDispatcher {
     private final AtomicBoolean m_isInitialRestore = new AtomicBoolean(true);
 
     private final NTProcedureService m_NTProcedureService;
-
+    private long topoCallCount = 0;
     public final static class Builder {
 
         ClientInterface m_clientInterface;
@@ -275,7 +275,6 @@ public final class InvocationDispatcher {
         final CatalogContext catalogContext = m_catalogContext.get();
 
         String clientInfo = ccxn.getHostnameAndIPAndPort();  // Storing the client's ip information
-
         final String procName = task.getProcName();
         final String threadName = Thread.currentThread().getName(); // Thread name has to be materialized here
         final StoredProcedureInvocation finalTask = task;
@@ -374,6 +373,21 @@ public final class InvocationDispatcher {
                 return dispatchSubscribe( handler, task);
             }
             else if ("@Statistics".equals(procName)) {
+
+                Object first = task.getParams().getParam(0);
+                String subselector = (String)first;
+                try {
+                    StatsSelector s = StatsSelector.valueOf(subselector.toUpperCase());
+                    subselector = s.name();
+                }
+                catch (Exception e) {
+                }
+
+                if ("TOPO".equalsIgnoreCase(subselector) && topoCallCount % 1000 == 0) {
+                    topoCallCount++;
+                    log.info("dispatching topo stats #" + topoCallCount);
+                }
+
                 return dispatchStatistics(OpsSelector.STATISTICS, task, ccxn);
             }
             else if ("@SystemCatalog".equals(procName)) {

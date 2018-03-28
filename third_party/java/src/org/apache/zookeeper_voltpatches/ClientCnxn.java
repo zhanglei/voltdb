@@ -1409,8 +1409,8 @@ public class ClientCnxn {
     }
 
     private void log( Packet packet) {
-        if (packet.header.getXid() % 1000 == 0) {
-            String zkMessage = String.format("ZK debug message %s.", packet);
+        if (packet.header.getXid() % 100000 == 0) {
+            String zkMessage = String.format("ZK message %s.", packet);
             LOG.info(zkMessage);
         }
     }

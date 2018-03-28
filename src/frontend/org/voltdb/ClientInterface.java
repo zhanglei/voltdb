@@ -247,6 +247,8 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
     final long m_siteId;
     final Mailbox m_mailbox;
 
+    private static volatile long topoCallCount = 0L;
+
     // MAX_CONNECTIONS is updated to be (FD LIMIT - 300) after startup
     private final AtomicInteger MAX_CONNECTIONS = new AtomicInteger(800);
     private ScheduledFuture<?> m_maxConnectionUpdater;
@@ -1585,6 +1587,12 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
      * to propagate the update to clients.
      */
     private void checkForTopologyChanges() {
+
+        topoCallCount++;
+        if (topoCallCount % 1000 == 0) {
+            log.info("pulling topo statistics #" + topoCallCount);
+        }
+
         StoredProcedureInvocation spi = new StoredProcedureInvocation();
         spi.setProcName("@Statistics");
         spi.setParams("TOPO", 0);
