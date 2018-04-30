@@ -63,7 +63,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
 
     static final int VARCHAR_VARBINARY_THRESHOLD = 100;
 
-    public void testSmallFixedTests() throws IOException, ProcCallException
+    public void notestSmallFixedTests() throws IOException, ProcCallException
     {
         subTestInsertNullPartitionString();
         subTestAndExpressionComparingSameTableColumns();
@@ -859,7 +859,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
         truncateTables(client, tables);
     }
 
-    public void testFixedTickets() throws Exception
+    public void notestFixedTickets() throws Exception
     {
         subTestTicketEng2250_IsNull();
         subTestTicketEng1850_WhereOrderBy();
@@ -1832,7 +1832,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
         truncateTable(client, "P3");
     }
 
-    public void testVarchar() throws IOException, ProcCallException {
+    public void notestVarchar() throws IOException, ProcCallException {
         subTestVarcharByBytes();
         subTestVarcharByCharacter();
         subTestInlineVarcharAggregation();
@@ -2340,7 +2340,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
         }
     }
 
-    public void testInWithString() throws IOException, ProcCallException, InterruptedException {
+    public void notestInWithString() throws IOException, ProcCallException, InterruptedException {
         subTestInWithIntParams();
         subTestInWithStringParams();
         subTestInWithStringParamsAdHoc();
@@ -3004,7 +3004,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
         truncateTables(client, new String[]{"P1", "R1"});
     }
 
-    public void testExistsBugEng12204() throws Exception {
+    public void notestExistsBugEng12204() throws Exception {
         Client client = getClient();
 
         client.callProcedure("@AdHoc", "insert into p1 values (0, 'foo', 0, 0.1);");
@@ -3063,7 +3063,7 @@ public class TestFixedSQLSuite extends RegressionSuite {
         assertContentOfTable(new Object[][] {}, vt);
     }
 
-    public void testSwapTablesTruncateReplicated() throws Exception {
+    public void notestSwapTablesTruncateReplicated() throws Exception {
         if (isHSQL()) {
             return;
         }
@@ -3088,6 +3088,37 @@ public class TestFixedSQLSuite extends RegressionSuite {
                                        ");");
     }
 
+    public void testEng13852() throws Exception {
+        Client client = getClient();
+
+//        assertSuccessfulDML(client,
+//                "insert into ENG_13852_P5 values ( \n" +
+//                "        0, \n" +
+//                "        1, 10, 100, 1000,\n" +
+//                "        1.0, 2.0,\n" +
+//                "        'foo', 'bar', 'baz', 'boo', 'bugs',\n" +
+//                "        now,\n" +
+//                "        x'ab',\n" +
+//                "        pointfromtext('point(0 0)'), -- point\n" +
+//                "        null, -- polygon\n" +
+//                "        null, null, null, x'ab')");
+//        assertSuccessfulDML(client, "insert into ENG_13852_R11 values (\n" +
+//                "        0,\n" +
+//                "        1, 10, 100, 1000,\n" +
+//                "        1.0, 2.0,\n" +
+//                "        'foo', 'bar', 'baz', 'boo', 'bugs',\n" +
+//                "        now,\n" +
+//                "        x'ab',\n" +
+//                "        null, -- point\n" +
+//                "        null, -- polygon\n" +
+//                "        null, null, null, x'ab')");
+        VoltTable vt = client.callProcedure("@Explain",
+                "SELECT ALL R11.POINT AS CA2\n" +
+                "FROM (SELECT DISTINCT * FROM ENG_13852_R11 LIMIT 12) AS R11,\n" +
+                "     ENG_13852_VP5 AS TA1;").getResults()[0];
+        System.out.println(vt);
+    }
+
     //
     // JUnit / RegressionSuite boilerplate
     //
@@ -3104,25 +3135,25 @@ public class TestFixedSQLSuite extends RegressionSuite {
 
         VoltProjectBuilder project = new VoltProjectBuilder();
         project.addSchema(Insert.class.getResource("fixed-sql-ddl.sql"));
-        project.addMultiPartitionProcedures(MP_PROCEDURES);
-
-        project.addStmtProcedure("Eng397Limit1", "Select P1.NUM from P1 order by P1.NUM limit ?;");
-        project.addStmtProcedure("InsertNullString", "Insert into STRINGPART values (?, ?, ?);",
-                                 new ProcedurePartitionData("STRINGPART", "NAME", "0"));
-        project.addStmtProcedure("Eng993Insert", "insert into P1 (ID,DESC,NUM,RATIO) VALUES(1+?,'NULL',NULL,1+?);");
-        project.addStmtProcedure("Eng5926Insert", "insert into PWEE (ID,WEE,NUM,RATIO) VALUES(1+?,?||'WEE',NULL,1+?);");
-
-        project.addStmtProcedure("Eng1316Insert_R", "insert into R1 values (?, ?, ?, ?);");
-        project.addStmtProcedure("Eng1316Update_R", "update R1 set num = num + 1 where id < 104");
-        project.addStmtProcedure("Eng1316Insert_P", "insert into P1 values (?, ?, ?, ?);");
-        project.addStmtProcedure("Eng1316Update_P", "update P1 set num = num + 1 where id < 104");
-        project.addStmtProcedure("Eng1316Insert_P1", "insert into P1 values (?, ?, ?, ?);", "P1.ID: 0");
-        project.addStmtProcedure("Eng1316Update_P1", "update P1 set num = num + 1 where id = ?", "P1.ID: 0");
+//        project.addMultiPartitionProcedures(MP_PROCEDURES);
+//
+//        project.addStmtProcedure("Eng397Limit1", "Select P1.NUM from P1 order by P1.NUM limit ?;");
+//        project.addStmtProcedure("InsertNullString", "Insert into STRINGPART values (?, ?, ?);",
+//                                 new ProcedurePartitionData("STRINGPART", "NAME", "0"));
+//        project.addStmtProcedure("Eng993Insert", "insert into P1 (ID,DESC,NUM,RATIO) VALUES(1+?,'NULL',NULL,1+?);");
+//        project.addStmtProcedure("Eng5926Insert", "insert into PWEE (ID,WEE,NUM,RATIO) VALUES(1+?,?||'WEE',NULL,1+?);");
+//
+//        project.addStmtProcedure("Eng1316Insert_R", "insert into R1 values (?, ?, ?, ?);");
+//        project.addStmtProcedure("Eng1316Update_R", "update R1 set num = num + 1 where id < 104");
+//        project.addStmtProcedure("Eng1316Insert_P", "insert into P1 values (?, ?, ?, ?);");
+//        project.addStmtProcedure("Eng1316Update_P", "update P1 set num = num + 1 where id < 104");
+//        project.addStmtProcedure("Eng1316Insert_P1", "insert into P1 values (?, ?, ?, ?);", "P1.ID: 0");
+//        project.addStmtProcedure("Eng1316Update_P1", "update P1 set num = num + 1 where id = ?", "P1.ID: 0");
 
         project.setUseDDLSchema(true);
 
         //* CONFIG #1: JNI -- keep this enabled by default with / / vs. / *
-        config = new LocalCluster("fixedsql-threesite.jar", 3, 1, 0, BackendTarget.NATIVE_EE_JNI);
+        config = new LocalCluster("fixedsql-threesite.jar", 1, 1, 0, BackendTarget.NATIVE_EE_JNI);
         success = config.compile(project);
         assertTrue(success);
         builder.addServerConfig(config);
@@ -3135,10 +3166,10 @@ public class TestFixedSQLSuite extends RegressionSuite {
         // end of normally disabled section */
 
         //* CONFIG #2: HSQL
-        config = new LocalCluster("fixedsql-hsql.jar", 1, 1, 0, BackendTarget.HSQLDB_BACKEND);
-        success = config.compile(project);
-        assertTrue(success);
-        builder.addServerConfig(config);
+//        config = new LocalCluster("fixedsql-hsql.jar", 1, 1, 0, BackendTarget.HSQLDB_BACKEND);
+//        success = config.compile(project);
+//        assertTrue(success);
+//        builder.addServerConfig(config);
         // end of HSQDB config */
         return builder;
     }
