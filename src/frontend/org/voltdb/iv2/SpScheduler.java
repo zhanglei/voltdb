@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -428,12 +429,18 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
             handleFragmentTaskMessage((FragmentTaskMessage)message);
         }
         else if (message instanceof FragmentResponseMessage) {
+            if (hostLog.isDebugEnabled()) {
+                hostLog.debug("DELIVER: " + message.toString());
+            }
             handleFragmentResponseMessage((FragmentResponseMessage)message);
         }
         else if (message instanceof CompleteTransactionMessage) {
             handleCompleteTransactionMessage((CompleteTransactionMessage)message);
         }
         else if (message instanceof CompleteTransactionResponseMessage) {
+            if (hostLog.isDebugEnabled()) {
+                hostLog.debug("DELIVER: " + message.toString());
+            }
             handleCompleteTransactionResponseMessage((CompleteTransactionResponseMessage) message);
         }
         else if (message instanceof BorrowTaskMessage) {
@@ -1756,4 +1763,28 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
             }
         }
     }
+
+    // When MPI fails over, MP txnId may go backwards, all pending MP RO transactions need a cleanup,
+    // otherwise the m_outstandingTxns and m_duplicateCounters will leak
+    @Override
+    public void pruneStaleMpROTxns() {
+        long maxSeenMpTxnId = -1;
+        Iterator<Entry<Long, TransactionState>> iter = m_outstandingTxns.entrySet().iterator();
+        while (iter.hasNext()) {
+            Entry<Long, TransactionState> entry = iter.next();
+            TransactionState txnState = entry.getValue();
+            if (TxnEgo.getPartitionId(entry.getKey()) == MpInitiator.MP_INIT_PID ) {
+                maxSeenMpTxnId = Math.max(entry.getKey(), maxSeenMpTxnId);
+                if (txnState.isReadOnly()) {
+                    txnState.setDone();
+                    m_duplicateCounters.entrySet().removeIf((e) -> e.getKey().m_txnId == entry.getKey());
+                    iter.remove();
+                }
+            }
+        }
+        if (maxSeenMpTxnId != -1) {
+            m_pendingTasks.flush(maxSeenMpTxnId);
+        }
+    }
+
 }

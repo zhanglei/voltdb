@@ -46,7 +46,8 @@ public class MpPromoteAlgo implements RepairAlgo
     private final String m_whoami;
 
     private final InitiatorMailbox m_mailbox;
-    private final long m_requestId = System.nanoTime();
+    // The last bit is isMPIFailover flag, 1 means true, 0 means false.
+    private final long m_requestId;
     private final List<Long> m_survivors;
     private long m_maxSeenTxnId = TxnEgo.makeZero(MpInitiator.MP_INIT_PID).getTxnId();
     private long m_maxSeenCompleteTxnId = TxnEgo.makeZero(MpInitiator.MP_INIT_PID).getTxnId();
@@ -57,6 +58,8 @@ public class MpPromoteAlgo implements RepairAlgo
     private final SettableFuture<RepairResult> m_promotionResult = SettableFuture.create();
     private final boolean m_isMigratePartitionLeader;
     private final MpRestartSequenceGenerator m_restartSeqGenerator;
+    // Is the PromoteAlgo created because of MPI failover?
+    private boolean m_isMpiFailover;
 
     long getRequestId()
     {
@@ -120,19 +123,24 @@ public class MpPromoteAlgo implements RepairAlgo
         m_isMigratePartitionLeader = false;
         m_whoami = whoami;
         m_restartSeqGenerator = seqGen;
+        m_isMpiFailover = false;
+        m_requestId = System.nanoTime() << 1;
     }
 
     /**
      * Setup a new RepairAlgo but don't take any action to take responsibility.
      */
     public MpPromoteAlgo(List<Long> survivors, InitiatorMailbox mailbox, MpRestartSequenceGenerator seqGen,
-            String whoami, boolean migratePartitionLeader)
+            String whoami, boolean migratePartitionLeader, boolean isMPIFailover)
     {
         m_survivors = new ArrayList<Long>(survivors);
         m_mailbox = mailbox;
         m_isMigratePartitionLeader = migratePartitionLeader;
         m_whoami = whoami;
         m_restartSeqGenerator = seqGen;
+        m_isMpiFailover = isMPIFailover;
+        // use the last bit to mark whether the repair request message is from newly promoted MPI (MPI failover)
+        m_requestId = (isMPIFailover? 1L : 0L) | System.nanoTime() << 1;
     }
 
     @Override

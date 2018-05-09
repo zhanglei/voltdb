@@ -114,7 +114,8 @@ public class InitiatorMailbox implements Mailbox
         enableWritingIv2FaultLogInternal();
     }
 
-    synchronized public RepairAlgo constructRepairAlgo(Supplier<List<Long>> survivors, String whoami, boolean isMigratePartitionLeader) {
+    synchronized public RepairAlgo constructRepairAlgo(Supplier<List<Long>> survivors, String whoami, boolean isMigratePartitionLeader,
+            boolean isMPIFailover) {
         RepairAlgo ra = new SpPromoteAlgo( survivors.get(), this, whoami, m_partitionId, isMigratePartitionLeader);
         if (hostLog.isDebugEnabled()) {
 
@@ -126,7 +127,7 @@ public class InitiatorMailbox implements Mailbox
     }
 
     synchronized public RepairAlgo constructRepairAlgo(Supplier<List<Long>> survivors, String whoami) {
-        return constructRepairAlgo(survivors, whoami, false);
+        return constructRepairAlgo(survivors, whoami, false, false);
     }
     protected void setRepairAlgoInternal(RepairAlgo algo)
     {
@@ -539,6 +540,10 @@ public class InitiatorMailbox implements Mailbox
     private void handleLogRequest(VoltMessage message)
     {
         Iv2RepairLogRequestMessage req = (Iv2RepairLogRequestMessage)message;
+        // The log request is from newly promoted MPI if the last bit of request Id is set
+        if (req.isMPIRequest() && (req.getRequestId() & 1L) == 1L) {
+            m_scheduler.pruneStaleMpROTxns();
+        }
         List<Iv2RepairLogResponseMessage> logs = m_repairLog.contents(req.getRequestId(),
                 req.isMPIRequest());
 
