@@ -145,6 +145,10 @@ public class StoredProcedureInvocation implements JSONString {
     }
 
     public ParameterSet getParams() {
+        if (params == null) {
+            return null;
+        }
+
         params.run();
         try {
             return params.get();
