@@ -2205,7 +2205,7 @@ public class SnapshotRestore extends VoltSystemProcedure {
 
                         // if any table at any site fails... then the whole proc fails
                         if (results[0].getString("RESULT").equalsIgnoreCase("FAILURE")) {
-                            noteOperationalFailure(RESTORE_FAILED);
+                            noteOperationalFailure(RESTORE_FAILED + ": " + results[0].getString("ERR_MSG"));
                         }
                     }
                 }
