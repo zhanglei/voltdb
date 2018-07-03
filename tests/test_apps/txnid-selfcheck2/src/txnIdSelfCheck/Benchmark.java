@@ -665,14 +665,14 @@ public class Benchmark {
         if (!(config.disabledThreads.contains("partNDlt") || config.disabledThreads.contains("NDlt"))) {
             partNDlt = new NibbleDeleteLoader(client, "nibdp",
                     100000, 1024, 50, permits, partitionCount);
-            partNDlt.start();
+//            partNDlt.start();
         }
 
         replNDlt = null;
         if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replNDlt") || config.disabledThreads.contains("NDlt"))) {
             replNDlt = new NibbleDeleteLoader(client, "nibdr",
                     100000, 1024, 3, permits, partitionCount);
-            replNDlt.start();
+//            replNDlt.start();
         }
 
         // print periodic statistics to the console
@@ -816,6 +816,13 @@ public class Benchmark {
                         exitcode = reportDeadThread(ct);
                     }
                 }
+                // truncate nibble delete tables to effectively stop nibblers
+//                if (partNDlt != null && partNDlt.isAlive()) {
+//                    partNDlt.shutdown();
+//                }
+//                if (replNDlt != null && replNDlt.isAlive()) {
+//                    replNDlt.shutdown();
+//                }
                 /*
                 replBiglt.shutdown();
                 partBiglt.shutdown();
