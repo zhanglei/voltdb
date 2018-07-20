@@ -65,8 +65,12 @@
     </logger -->
 
     <!-- logger name="EXPORT">
-        <level value="INFO"/>
-    </logger -->
+        <level value="TRACE"/>
+    </logger>
+
+    <logger name="EXPORTCLIENT">
+        <level value="DEBUG"/>
+    </logger> -->
 
     <!-- logger name="IMPORT">
         <level value="INFO"/>

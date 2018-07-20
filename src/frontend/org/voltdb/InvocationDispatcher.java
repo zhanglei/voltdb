@@ -448,7 +448,6 @@ public final class InvocationDispatcher {
                 }
                 if (m_isInitialRestore.compareAndSet(true, false) && toLoadSchemaFromSnapshot()) {
                     m_NTProcedureService.isRestoring = true;
-                    System.out.println("Loading data from Snapshot.");
                     return useSnapshotCatalogToRestoreSnapshotSchema(task, handler, ccxn, user, bypass);
                 }
             }
@@ -526,7 +525,6 @@ public final class InvocationDispatcher {
         if(tables.size() == 0) return true;
         boolean ret = true;
         for(Table t : tables) {
-            System.out.println(t.getSignature());
             if(!t.getSignature().startsWith("VOLTDB_AUTOGEN_")) {
                 ret = false;
             }
