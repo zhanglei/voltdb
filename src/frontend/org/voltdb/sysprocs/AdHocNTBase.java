@@ -42,6 +42,7 @@ import org.voltdb.compiler.AdHocPlannedStatement;
 import org.voltdb.compiler.AdHocPlannedStmtBatch;
 import org.voltdb.compiler.PlannerTool;
 import org.voltdb.parser.SQLLexer;
+import org.voltdb.planner.CompiledPlan;
 import org.voltdb.planner.StatementPartitioning;
 import org.voltdb.utils.MiscUtils;
 import org.voltdb.utils.VoltTrace;
@@ -361,7 +362,14 @@ public abstract class AdHocNTBase extends UpdateApplicationBase {
         VoltTable[] vt = new VoltTable[ size ];
         for (int i = 0; i < size; ++i) {
             vt[i] = new VoltTable(new VoltTable.ColumnInfo("EXECUTION_PLAN", VoltType.STRING));
-            String str = planBatch.explainStatement(i, db, false);
+
+            CompiledPlan compiledPlan;
+            String str = "";
+            if ((compiledPlan = planBatch.plannedStatements.get(i).plan) != null) {
+                String[] splitCompiledPlan = compiledPlan.toString().split(":");
+                assert(splitCompiledPlan.length == 2);
+                str = splitCompiledPlan[1].trim();
+            }
             vt[i].addRow(str);
         }
 

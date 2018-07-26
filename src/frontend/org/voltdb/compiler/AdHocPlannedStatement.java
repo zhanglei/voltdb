@@ -36,6 +36,7 @@ import org.voltdb.planner.CorePlan;
 public class AdHocPlannedStatement {
     public final CorePlan core;
     public final byte[] sql;
+    public CompiledPlan plan = null;
     private final ParameterSet extractedParamValues;
     private final int[] boundParamIndexes;
     private String[] boundParamStrings;
@@ -47,6 +48,7 @@ public class AdHocPlannedStatement {
      * @param core                      core immutable plan
      * @param extractedParamValues      params extracted from constant values
      * @param partitionParam            value used for partitioning
+     * @param plan                      best plan to execute sql command
      */
     AdHocPlannedStatement(byte[] sql,
                           CorePlan core,
@@ -63,6 +65,7 @@ public class AdHocPlannedStatement {
     AdHocPlannedStatement(CompiledPlan plan, CorePlan coreIn) {
         this(plan.sql.getBytes(Constants.UTF8ENCODING), coreIn,
              plan.extractedParamValues(), plan.boundParamIndexes());
+        this.plan = plan;
     }
 
     AdHocPlannedStatement(AdHocPlannedStatement original, CorePlan coreIn) {

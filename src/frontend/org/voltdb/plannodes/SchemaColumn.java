@@ -306,6 +306,7 @@ public class SchemaColumn {
             columnName = jobj.getString(Members.COLUMN_NAME);
         }
         expression = AbstractExpression.fromJSONChild(jobj, Members.EXPRESSION);
+
         return new SchemaColumn(tableName, tableAlias,
                 columnName, columnAlias, expression);
     }
