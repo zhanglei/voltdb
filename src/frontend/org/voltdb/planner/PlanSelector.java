@@ -174,6 +174,11 @@ public class PlanSelector implements Cloneable {
 
     public void finalizeOutput() {
         if (m_quietPlanner) {
+            // ENG-13542, the explain string is now stored as the plan.toString()
+            // copy it to plan.explainedPlan to preserve, we will use this as our final result
+            String explainedString[] = m_bestPlan.toString().split(":");
+            assert(explainedString.length == 2);
+            m_bestPlan.explainedPlan = explainedString[1].trim();
             return;
         }
         outputPlan(m_bestPlan, m_bestPlan.rootPlanGraph, m_bestFilename);
@@ -215,13 +220,14 @@ public class PlanSelector implements Cloneable {
      * @param filename
      */
     private void outputPlan(CompiledPlan plan, AbstractPlanNode planGraph, String filename) {
+        // get the explained plan for the node
+        plan.explainedPlan = planGraph.toExplainPlanString();
+
         if (!m_quietPlanner) {
             if (m_fullDebug) {
                 outputPlanFullDebug(plan, planGraph, filename);
             }
 
-            // get the explained plan for the node
-            plan.explainedPlan = planGraph.toExplainPlanString();
             outputExplainedPlan(plan, filename);
         }
     }

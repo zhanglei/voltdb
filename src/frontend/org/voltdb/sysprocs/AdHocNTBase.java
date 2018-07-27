@@ -362,14 +362,12 @@ public abstract class AdHocNTBase extends UpdateApplicationBase {
         VoltTable[] vt = new VoltTable[ size ];
         for (int i = 0; i < size; ++i) {
             vt[i] = new VoltTable(new VoltTable.ColumnInfo("EXECUTION_PLAN", VoltType.STRING));
-
             CompiledPlan compiledPlan;
             String str = "";
             if ((compiledPlan = planBatch.plannedStatements.get(i).plan) != null) {
-                String[] splitCompiledPlan = compiledPlan.toString().split(":");
-                assert(splitCompiledPlan.length == 2);
-                str = splitCompiledPlan[1].trim();
+                str = compiledPlan.explainedPlan;
             }
+//            String str = planBatch.explainStatement(i, db, false);
             vt[i].addRow(str);
         }
 
