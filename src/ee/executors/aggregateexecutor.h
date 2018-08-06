@@ -69,7 +69,7 @@ public:
     void operator delete(void*, Pool& memoryPool) { /* NOOP -- on alloc error unroll nothing */ }
     void operator delete(void*) { /* NOOP -- deallocate wholesale with pool */ }
 
-    Agg() : m_haveAdvanced(false), m_inlineCopiedToNonInline(false)
+    Agg()
     {
         m_value.setNull();
     }
@@ -96,8 +96,77 @@ protected:
     /**
      * Potentially, putting these two bool member variables will save memory.
      */
-    bool m_haveAdvanced;
-    bool m_inlineCopiedToNonInline;
+    bool m_haveAdvanced = false;
+    bool m_inlineCopiedToNonInline = false;
+};
+
+class UDAgg final : public Agg {
+   const int32_t m_funcId;
+   const size_t m_memoryCap;
+   Pool m_memoryPool;
+   SharedMemory m_sharedMem;
+public:
+   UDAgg(int32_t funcId, size_t cap):
+      Agg(), m_funcId(funcId), m_memoryCap(cap),
+      m_memoryPool(m_memoryCap, 1/* maxChunkCount */),
+      m_sharedMem(m_memoryPool.allocate(m_memoryCap), m_memoryCap) {
+         assert(m_memoryCap < 1024 * 1024);   // 1MB limit
+   }
+
+   /**
+    * A RW reference to the actual value of current aggregation.
+    * We need to expose it, because Java is responsible to update
+    * the value in finalize().
+    */
+   NValue& getNValue() {
+      return m_value;
+   }
+
+   /**
+    * "Accumulate" method. Reads one row and update internal
+    * state. The logic is defined in Java UDAggregation, where
+    * Java will mutate both val and SharedMemory, *before*
+    * calling this method.
+    */
+   void advance(const NValue& val) override {
+      // After each update of aggregate value from internal state
+      // and NValue, we need to reset pointers of SharedMemory.
+      m_sharedMem.reset();
+   }
+
+   /**
+    * How to calculate final aggregation value from internal
+    * state. Assumes that Java will use getNValue() method to
+    * update the final value, *before* calling this method.
+    */
+   NValue finalize(ValueType type) override {
+      return Agg::finalize(type);
+   }
+
+   /**
+    * Pre checks for merging two user-defined aggregations of two
+    * partitions nodes into one. Upon this check, Java can then
+    * retrieve the NValue and shared memory for internal states
+    * and do the update within Java.
+    */
+   void pre_merge(UDAgg const& rhs) const {
+      assert(rhs.m_funcId == m_funcId && m_memoryCap == rhs.m_memoryCap);
+   }
+
+   /**
+    * Post actions after Java had merged internal states of two
+    * partition nodes into one.
+    */
+   void post_merge(UDAgg const& rhs) {
+      m_sharedMem.reset();
+   }
+
+   /**
+    * Gives handle to Java to update internal state.
+    */
+   SharedMemory& getSharedMemory() {
+      return m_sharedMem;
+   }
 };
 
 /**

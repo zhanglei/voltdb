@@ -103,13 +103,29 @@ namespace voltdb {
 /** Abstract class for reading from memory buffers. */
 template <Endianess E> class SerializeInput {
 protected:
+    template <typename T>
+    T readPrimitive() {
+        T value;
+        ::memcpy(&value, current_, sizeof(value));
+        current_ += sizeof(value);
+        return value;
+    }
+
+    // Current read position.
+    const char* current_ = nullptr;
+    // End of the buffer. Valid byte range: current_ <= validPointer < end_.
+    const char* end_ = nullptr;
     /** Does no initialization. Subclasses must call initialize. */
-    SerializeInput() : current_(NULL), end_(NULL) {}
+    SerializeInput() = default;
 
     void initialize(const void* data, size_t length) {
         current_ = reinterpret_cast<const char*>(data);
         end_ = current_ + length;
     }
+
+    // No implicit copies
+    SerializeInput(const SerializeInput&) = delete;
+    SerializeInput& operator=(const SerializeInput&) = delete;
 
 public:
     virtual ~SerializeInput() {};
@@ -223,42 +239,24 @@ public:
         current_ -= bytes;
     }
 
-    bool hasRemaining() {
+    bool hasRemaining() const {
         return current_ < end_;
     }
 
-private:
-    template <typename T>
-    T readPrimitive() {
-        T value;
-        ::memcpy(&value, current_, sizeof(value));
-        current_ += sizeof(value);
-        return value;
-    }
-
-    // Current read position.
-    const char* current_;
-    // End of the buffer. Valid byte range: current_ <= validPointer < end_.
-    const char* end_;
-
-    // No implicit copies
-    SerializeInput(const SerializeInput&);
-    SerializeInput& operator=(const SerializeInput&);
 };
 
 /** Abstract class for writing to memory buffers. Subclasses may optionally support resizing. */
 class SerializeOutput {
 protected:
-    SerializeOutput() : buffer_(NULL), position_(0), capacity_(0) {}
-
+    SerializeOutput() = default;
     /** Set the buffer to buffer with capacity. Note this does not change the position. */
     void initialize(void* buffer, size_t capacity) {
-        buffer_ = reinterpret_cast<char*>(buffer);
         assert(position_ <= capacity);
+        buffer_ = reinterpret_cast<char*>(buffer);
         capacity_ = capacity;
     }
     void setPosition(size_t position) {
-        this->position_ = position;
+        position_ = position;
     }
 public:
     virtual ~SerializeOutput() {};
@@ -444,7 +442,7 @@ private:
     }
 
     // Beginning of the buffer.
-    char* buffer_;
+    char* buffer_ = nullptr;
 
     // No implicit copies
     SerializeOutput(const SerializeOutput&);
@@ -452,9 +450,9 @@ private:
 
 protected:
     // Current write position in the buffer.
-    size_t position_;
+    size_t position_ = 0;
     // Total bytes this buffer can contain.
-    size_t capacity_;
+    size_t capacity_ = 0;
 };
 
 /** Implementation of SerializeInput that references an existing buffer. */
@@ -500,8 +498,8 @@ class ReferenceSerializeOutput : public SerializeOutput {
 public:
     ReferenceSerializeOutput() : SerializeOutput() {
     }
-    ReferenceSerializeOutput(void* data, size_t length) : SerializeOutput() {
-        initialize(data, length);
+    ReferenceSerializeOutput(void* data, size_t capacity) : SerializeOutput() {
+        initialize(data, capacity);
     }
 
     /** Set the buffer to buffer with capacity and sets the position. */
@@ -525,6 +523,49 @@ protected:
             "Try a \"limit\" clause or a stronger predicate.");
     }
 };
+
+/**
+ * Bi-directional, one-chunk contiguous memory that Java can read from and write to.
+ */
+class SharedMemory final : public ReferenceSerializeInputBE, public ReferenceSerializeOutput {
+   using input_type = ReferenceSerializeInputBE;
+   using output_type = ReferenceSerializeOutput;
+   /**
+    * Where the memory chunk starts. Might get updated from JNI
+    * when Java needs more memory. Used as book keeping for the
+    * input memory start position.
+    */
+   const char* m_inputMemoryBegin;
+
+   /**
+    * Check and sync input/output memory to start at same
+    * location. Must be called before Java had written anything
+    * to the output memory. Otherwise
+    */
+   void checked_output() {
+      if (output_type::data() != m_inputMemoryBegin) {    // outputter gets a new Java memory address: refresh input from output buffer
+         input_type::initialize(output_type::data(), output_type::capacity_);
+      }
+   }
+public:
+   SharedMemory(void* data, size_t cap) :
+      input_type(data, cap), output_type(data, cap),
+      m_inputMemoryBegin(input_type::current_) {
+      assert(! SerializeOutput::isLittleEndian());
+   }
+   /**
+    * conceptually "rewinds" both input and output buffers.
+    * Because the output memory might get reset by JNI for expansion,
+    * we need to sync the start position and capacity of the
+    * input memory from output memory.
+    */
+   void reset() {
+      checked_output();
+      input_type::current_ = m_inputMemoryBegin;
+      output_type::setPosition(0);
+   }
+};
+
 
 /*
  * A serialize output class that falls back to allocating a 50 meg buffer

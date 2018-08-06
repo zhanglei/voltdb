@@ -95,20 +95,6 @@ public:
         init();
     }
 
-    void init() {
-#ifdef USE_MMAP
-        char *storage =
-                static_cast<char*>(::mmap( 0, m_allocationSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0 ));
-        if (storage == MAP_FAILED) {
-            std::cout << strerror( errno ) << std::endl;
-            throwFatalException("Failed mmap");
-        }
-#else
-        char *storage = new char[m_allocationSize];
-#endif
-        m_chunks.push_back(Chunk(m_allocationSize, storage));
-    }
-
     ~Pool() {
         for (std::size_t ii = 0; ii < m_chunks.size(); ii++) {
 #ifdef USE_MMAP
@@ -287,6 +273,20 @@ private:
     // No implicit copies
     Pool(const Pool&);
     Pool& operator=(const Pool&);
+
+    void init() {
+#ifdef USE_MMAP
+        char *storage =
+                static_cast<char*>(::mmap( 0, m_allocationSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0 ));
+        if (storage == MAP_FAILED) {
+            std::cout << strerror( errno ) << std::endl;
+            throwFatalException("Failed mmap");
+        }
+#else
+        char *storage = new char[m_allocationSize];
+#endif
+        m_chunks.push_back(Chunk(m_allocationSize, storage));
+    }
 };
 #else // for MEMCHECK builds
 /**
