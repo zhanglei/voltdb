@@ -19,80 +19,33 @@ package org.voltdb.compiler.statements;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Matcher;
 
 import org.hsqldb_voltpatches.FunctionCustom;
 import org.hsqldb_voltpatches.FunctionForVoltDB;
 import org.hsqldb_voltpatches.FunctionSQL;
 import org.hsqldb_voltpatches.VoltXMLElement;
-import org.voltcore.logging.VoltLogger;
-import org.voltcore.utils.CoreUtils;
 import org.voltdb.VoltType;
 import org.voltdb.catalog.Database;
 import org.voltdb.compiler.DDLCompiler;
 import org.voltdb.compiler.DDLCompiler.DDLStatement;
-import org.voltdb.compiler.DDLCompiler.StatementProcessor;
 import org.voltdb.compiler.ProcedureCompiler;
 import org.voltdb.compiler.VoltCompiler.DdlProceduresToLoad;
 import org.voltdb.compiler.VoltCompiler.VoltCompilerException;
 import org.voltdb.parser.SQLParser;
-import org.voltdb.types.GeographyPointValue;
-import org.voltdb.types.GeographyValue;
-import org.voltdb.types.TimestampType;
 
 /**
  * Process CREATE FUNCTION <function-name> FROM METHOD <class-name>.<method-name>
  */
-public class CreateFunctionFromMethod extends StatementProcessor {
-    private static VoltLogger m_logger = new VoltLogger("UDF");
-
-    static int ID_NOT_DEFINED = -1;
-    static Set<Class<?>> m_allowedDataTypes = new HashSet<>();
-
-    static {
-        m_allowedDataTypes.add(byte.class);
-        m_allowedDataTypes.add(byte[].class);
-        m_allowedDataTypes.add(short.class);
-        m_allowedDataTypes.add(int.class);
-        m_allowedDataTypes.add(long.class);
-        m_allowedDataTypes.add(double.class);
-        m_allowedDataTypes.add(Byte.class);
-        m_allowedDataTypes.add(Byte[].class);
-        m_allowedDataTypes.add(Short.class);
-        m_allowedDataTypes.add(Integer.class);
-        m_allowedDataTypes.add(Long.class);
-        m_allowedDataTypes.add(Double.class);
-        m_allowedDataTypes.add(BigDecimal.class);
-        m_allowedDataTypes.add(String.class);
-        m_allowedDataTypes.add(TimestampType.class);
-        m_allowedDataTypes.add(GeographyPointValue.class);
-        m_allowedDataTypes.add(GeographyValue.class);
-    }
+public class CreateFunctionFromMethod extends CreateFunction {
 
     public CreateFunctionFromMethod(DDLCompiler ddlCompiler) {
         super(ddlCompiler);
     }
 
-    /**
-     * Find out if the function is defined.  It might be defined in the
-     * FunctionForVoltDB table.  It also might be in the VoltXML.
-     *
-     * @param functionName
-     * @return
-     */
-    private boolean isDefinedFunctionName(String functionName) {
-        return FunctionForVoltDB.isFunctionNameDefined(functionName)
-                || FunctionSQL.isFunction(functionName)
-                || FunctionCustom.getFunctionId(functionName) != ID_NOT_DEFINED
-                || (null != m_schema.findChild("ud_function", functionName));
-    }
-
     @Override
-    protected boolean processStatement(DDLStatement ddlStatement, Database db, DdlProceduresToLoad whichProcs)
-            throws VoltCompilerException {
+    protected boolean processStatement(DDLStatement ddlStatement, Database db,
+            DdlProceduresToLoad whichProcs) throws VoltCompilerException {
 
         // Matches if it is CREATE FUNCTION <name> FROM METHOD <class-name>.<method-name>
         Matcher statementMatcher = SQLParser.matchCreateFunctionFromMethod(ddlStatement.statement);
@@ -100,7 +53,7 @@ public class CreateFunctionFromMethod extends StatementProcessor {
             return false;
         }
 
-        // Clean up the names
+        // Clean up the names (case insensitive)
         String functionName = checkIdentifierStart(statementMatcher.group(1), ddlStatement.statement).toLowerCase();
         // Class name and method name are case sensitive.
         String className = checkIdentifierStart(statementMatcher.group(2), ddlStatement.statement);
@@ -112,35 +65,14 @@ public class CreateFunctionFromMethod extends StatementProcessor {
                     "Function \"%s\" is already defined.",
                     functionName));
         }
-        // Load the function class
-        Class<?> funcClass;
-        try {
-            funcClass = Class.forName(className, true, m_classLoader);
-        }
-        catch (Throwable cause) {
-            // We are here because either the class was not found or the class was found and
-            // the initializer of the class threw an error we can't anticipate. So we will
-            // wrap the error with a runtime exception that we can trap in our code.
-            if (CoreUtils.isStoredProcThrowableFatalToServer(cause)) {
-                throw (Error)cause;
-            }
-            else {
-                throw m_compiler.new VoltCompilerException(String.format(
-                        "Cannot load class for user-defined function: %s",
-                        className), cause);
-            }
-        }
 
-        if (Modifier.isAbstract(funcClass.getModifiers())) {
-            throw m_compiler.new VoltCompilerException(String.format(
-                    "Cannot define a function using an abstract class %s",
-                    className));
-        }
+        // Load the function class
+        Class<?> funcClass = loadAndCheckClass(className);
 
         // get the short name of the class (no package)
         String shortName = ProcedureCompiler.deriveShortProcedureName(className);
 
-        // find the UDF method and get the params
+        // find the UDF method and get the parameters.
         Method functionMethod = null;
         for (final Method m : funcClass.getDeclaredMethods()) {
             if (! m.getName().equals(methodName)) {
@@ -183,7 +115,7 @@ public class CreateFunctionFromMethod extends StatementProcessor {
         }
 
         Class<?> returnTypeClass = functionMethod.getReturnType();
-        if (! m_allowedDataTypes.contains(returnTypeClass)) {
+        if (! allowDataType(returnTypeClass)) {
             String msg = String.format("Method %s.%s has an unsupported return type %s",
                     shortName, methodName, returnTypeClass.getName());
             throw m_compiler.new VoltCompilerException(msg);
@@ -193,7 +125,7 @@ public class CreateFunctionFromMethod extends StatementProcessor {
         int paramCount = paramTypeClasses.length;
         for (int i = 0; i < paramCount; i++) {
             Class<?> paramTypeClass = paramTypeClasses[i];
-            if (! m_allowedDataTypes.contains(paramTypeClass)) {
+            if (! allowDataType(paramTypeClass)) {
                 String msg = String.format("Method %s.%s has an unsupported parameter type %s at position %d",
                         shortName, methodName, paramTypeClass.getName(), i);
                 throw m_compiler.new VoltCompilerException(msg);
@@ -245,7 +177,7 @@ public class CreateFunctionFromMethod extends StatementProcessor {
         int functionId = FunctionForVoltDB.registerTokenForUDF(functionName, -1, voltReturnType, voltParamTypes);
         funcXML.attributes.put("functionid", String.valueOf(functionId));
 
-        m_logger.debug(String.format("Added XML for function \"%s\"", functionName));
+        s_logger.debug(String.format("Added XML for function \"%s\"", functionName));
         m_schema.children.add(funcXML);
         return true;
     }

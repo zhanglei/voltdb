@@ -211,6 +211,22 @@ public class SQLParser extends SQLPatternFactory
         ).compile("PAT_CREATE_FUNCTION_FROM_METHOD");
 
     /*
+     * CREATE FUNCTION <NAME> FROM CLASS <CLASS NAME>
+     *
+     * CREATE FUNCTION with the designated class (aggregate function)
+     *
+     * Capture groups:
+     *  (1) Function name
+     *  (2) The class name
+     */
+    private static final Pattern PAT_CREATE_FUNCTION_FROM_CLASS =
+        SPF.statement(
+            SPF.token("create"), SPF.token("function"), SPF.capture(SPF.functionName()),
+            SPF.token("from"), SPF.token("class"),
+            SPF.capture(SPF.classPath())
+        ).compile("PAT_CREATE_FUNCTION_FROM_CLASS");
+
+    /*
      * DROP FUNCTION <NAME> [IF EXISTS]
      *
      * Drop a user-defined function.
@@ -803,6 +819,17 @@ public class SQLParser extends SQLPatternFactory
     {
         return PAT_CREATE_FUNCTION_FROM_METHOD.matcher(statement);
     }
+
+    /**
+     * Match statement against the pattern for create function from class
+     * @param statement  statement to match against
+     * @return           pattern matcher object
+     */
+    public static Matcher matchCreateFunctionFromClass(String statement)
+    {
+        return PAT_CREATE_FUNCTION_FROM_CLASS.matcher(statement);
+    }
+
 
     /**
      * Match statement against the pattern for drop function

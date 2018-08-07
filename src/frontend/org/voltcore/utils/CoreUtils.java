@@ -1123,12 +1123,14 @@ public class CoreUtils {
         }
     }
 
-    /*
-     * This method manages the whitelist of all acceptable Throwables (and Exceptions) that
-     * will not cause the Server harm if they occur while invoking the initializer of a stored
-     * procedure or while calling the stored procedure.
+    /**
+     * This method manages the white list of all acceptable {@link java.lang.Throwable} that
+     * will not cause the server harm if they occur while invoking the initializer of a stored
+     * procedure/UDF or while calling the stored procedure/UDF.
+     * @param th The throwable.
+     * @return If the throwable is acceptable.
      */
-    public static final boolean isStoredProcThrowableFatalToServer(Throwable th) {
+    public static final boolean isJARThrowableFatalToServer(Throwable th) {
         if (th instanceof LinkageError || th instanceof AssertionError) {
             return false;
         }

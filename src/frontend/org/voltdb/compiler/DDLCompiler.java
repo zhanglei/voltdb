@@ -62,6 +62,7 @@ import org.voltdb.common.Constants;
 import org.voltdb.compiler.VoltCompiler.DdlProceduresToLoad;
 import org.voltdb.compiler.VoltCompiler.VoltCompilerException;
 import org.voltdb.compiler.statements.CatchAllVoltDBStatement;
+import org.voltdb.compiler.statements.CreateFunctionFromClass;
 import org.voltdb.compiler.statements.CreateFunctionFromMethod;
 import org.voltdb.compiler.statements.CreateProcedureAsSQL;
 import org.voltdb.compiler.statements.CreateProcedureAsScript;
@@ -198,6 +199,7 @@ public class DDLCompiler {
                                 .addNextProcessor(new CreateProcedureAsScript(this))
                                 .addNextProcessor(new CreateProcedureAsSQL(this))
                                 .addNextProcessor(new CreateFunctionFromMethod(this))
+                                .addNextProcessor(new CreateFunctionFromClass(this))
                                 .addNextProcessor(new DropFunction(this))
                                 .addNextProcessor(new DropProcedure(this))
                                 .addNextProcessor(new PartitionStatement(this))

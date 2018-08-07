@@ -393,7 +393,7 @@ public class ProcedureRunner {
                 catch (InvocationTargetException itex) {
                     //itex.printStackTrace();
                     Throwable ex = itex.getCause();
-                    if (CoreUtils.isStoredProcThrowableFatalToServer(ex)) {
+                    if (CoreUtils.isJARThrowableFatalToServer(ex)) {
                         // If the stored procedure attempted to do something other than linklibraray or instantiate
                         // a missing object that results in an error, throw the error and let the server deal with
                         // the condition as best as it can (usually a crashLocalVoltDB).
