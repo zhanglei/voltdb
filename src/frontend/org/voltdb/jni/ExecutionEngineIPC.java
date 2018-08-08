@@ -335,7 +335,7 @@ public class ExecutionEngineIPC extends ExecutionEngine {
                 udfBuffer.flip();
 
                 int functionId = udfBuffer.getInt();
-                ScalarUserDefinedFunctionRunner udfRunner = m_functionManager.getFunctionRunnerById(functionId);
+                ScalarUserDefinedFunctionRunner udfRunner = m_functionManager.getScalarFunctionRunnerById(functionId);
                 assert(udfRunner != null);
                 Throwable throwable = null;
                 Object returnValue = null;

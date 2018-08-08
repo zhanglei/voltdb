@@ -39,7 +39,7 @@ public class UserDefinedFunctionManager {
 
     ImmutableMap<Integer, ScalarUserDefinedFunctionRunner> m_udfs = ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder().build();
 
-    public ScalarUserDefinedFunctionRunner getFunctionRunnerById(int functionId) {
+    public ScalarUserDefinedFunctionRunner getScalarFunctionRunnerById(int functionId) {
         return m_udfs.get(functionId);
     }
 

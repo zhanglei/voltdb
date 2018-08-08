@@ -768,7 +768,7 @@ public class ExecutionEngineJNI extends ExecutionEngine {
         m_udfBuffer.clear();
         m_udfBuffer.getInt(); // skip the buffer size integer, it is only used by VoltDB IPC.
         int functionId = m_udfBuffer.getInt();
-        ScalarUserDefinedFunctionRunner udfRunner = m_functionManager.getFunctionRunnerById(functionId);
+        ScalarUserDefinedFunctionRunner udfRunner = m_functionManager.getScalarFunctionRunnerById(functionId);
         assert(udfRunner != null);
         Throwable throwable = null;
         Object returnValue = null;
