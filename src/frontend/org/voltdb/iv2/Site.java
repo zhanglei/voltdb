@@ -702,7 +702,7 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
             m_non_voltdb_backend = null;
             m_ee = initializeEE();
         }
-        m_ee.loadFunctions(m_context);
+        m_ee.loadAllUserDefinedFunctions(m_context);
 
         m_snapshotter = new SnapshotSiteProcessor(m_scheduler,
         m_snapshotPriority,
@@ -1571,7 +1571,7 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
         m_ee.setBatchTimeout(m_context.cluster.getDeployment().get("deployment").
                 getSystemsettings().get("systemsettings").getQuerytimeout());
         m_loadedProcedures.loadProcedures(m_context, isReplay);
-        m_ee.loadFunctions(m_context);
+        m_ee.loadAllUserDefinedFunctions(m_context);
 
         if (isMPI) {
             // the rest of the work applies to sites with real EEs
@@ -1647,7 +1647,7 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
         m_context = context;
         // here you could bring the timeout settings
         m_loadedProcedures.loadProcedures(m_context);
-        m_ee.loadFunctions(m_context);
+        m_ee.loadAllUserDefinedFunctions(m_context);
         return true;
     }
 

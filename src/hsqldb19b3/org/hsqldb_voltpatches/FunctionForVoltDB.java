@@ -197,9 +197,11 @@ public class FunctionForVoltDB extends FunctionSQL {
         static final int FUNC_VOLT_FORMAT_TIMESTAMP             = 21025;    // Convert a timestamp to a String in a given timezone.
 
         /*
-         * All VoltDB user-defined functions must have IDs in this range.
+         * All VoltDB scalar user-defined functions must have IDs in this range.
          */
-        static final int FUNC_VOLT_UDF_ID_START                 = 1000000;
+        static final int FUNC_VOLT_SCALAR_UDF_ID_START          = 1_000_000;
+        // This function ID start value should match the one specified in AggregateUserDefinedFunctionRunner
+        static final int FUNC_VOLT_AGG_UDF_ID_START             = 2_000_000;
 
         /*
          * Note: The name must be all lower case.
@@ -893,7 +895,7 @@ public class FunctionForVoltDB extends FunctionSQL {
     }
 
     // This is the unique sequential UDF Id we assign to every UDF defined by the user.
-    private static int m_udfSeqId = FunctionDescriptor.FUNC_VOLT_UDF_ID_START;
+    private static int m_udfSeqId = FunctionDescriptor.FUNC_VOLT_SCALAR_UDF_ID_START;
 
     public static int getNextFunctionId() {
         return m_udfSeqId++;
@@ -1026,7 +1028,7 @@ public class FunctionForVoltDB extends FunctionSQL {
             FunctionDescriptor fd = makeFunctionDescriptorFromParts(functionName, retFunctionId,
                                                             hsqlReturnType, hsqlParameterTypes);
             // if the function id belongs to UDF, put it into the defined_function map
-            if (isUserDefinedFunctionId(retFunctionId)) {
+            if (isScalarUserDefinedFunctionId(retFunctionId)) {
                 FunctionDescriptor.addDefinedFunction(functionName, fd);
             }
             m_logger.debug(String.format("Added UDF \"%s\"(%d) with %d parameters",
@@ -1086,8 +1088,9 @@ public class FunctionForVoltDB extends FunctionSQL {
         return (null != found);
     }
 
-    public static boolean isUserDefinedFunctionId(int functionId) {
-        return functionId >= FunctionDescriptor.FUNC_VOLT_UDF_ID_START;
+    public static boolean isScalarUserDefinedFunctionId(int functionId) {
+        return functionId >= FunctionDescriptor.FUNC_VOLT_SCALAR_UDF_ID_START
+                && functionId < FunctionDescriptor.FUNC_VOLT_AGG_UDF_ID_START;
     }
 
     public FunctionDescriptor getFunctionId() {

@@ -170,8 +170,8 @@ public abstract class ExecutionEngine implements FastDeserializer.Deserializatio
 
     protected UserDefinedFunctionManager m_functionManager = new UserDefinedFunctionManager();
 
-    public void loadFunctions(CatalogContext catalogContext) {
-        m_functionManager.loadFunctions(catalogContext);
+    public void loadAllUserDefinedFunctions(CatalogContext catalogContext) {
+        m_functionManager.loadAllUserDefinedFunctions(catalogContext);
     }
 
     /** Make the EE clean and ready to do new transactional work. */

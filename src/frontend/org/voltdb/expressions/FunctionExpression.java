@@ -377,7 +377,7 @@ public class FunctionExpression extends AbstractExpression {
      * @return True iff this function is user defined.
      */
     public boolean isUserDefined() {
-        return FunctionForVoltDB.isUserDefinedFunctionId(m_functionId);
+        return FunctionForVoltDB.isScalarUserDefinedFunctionId(m_functionId);
     }
 
     /**

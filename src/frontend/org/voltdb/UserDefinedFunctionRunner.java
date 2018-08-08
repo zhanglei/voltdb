@@ -41,6 +41,7 @@ public abstract class UserDefinedFunctionRunner {
     VoltType[] m_paramTypes;
     VoltType m_returnType;
     int m_paramCount;
+    boolean[] m_boxUpByteArray;
 
     static VoltLogger s_logger = new VoltLogger("UDF");
     private static final int VAR_LEN_SIZE = Integer.SIZE/8;

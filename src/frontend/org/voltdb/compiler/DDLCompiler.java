@@ -1916,7 +1916,7 @@ public class DDLCompiler {
             List<VoltXMLElement> exprs = deleteXml.findChildrenRecursively("function");
             for (VoltXMLElement expr : exprs) {
                 int functionId = Integer.parseInt(expr.attributes.get("function_id"));
-                if (FunctionForVoltDB.isUserDefinedFunctionId(functionId)) {
+                if (FunctionForVoltDB.isScalarUserDefinedFunctionId(functionId)) {
                     String functionName = expr.attributes.get("name");
                     throw m_compiler.new VoltCompilerException(
                             msgPrefix

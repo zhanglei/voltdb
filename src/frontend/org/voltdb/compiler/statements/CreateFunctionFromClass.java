@@ -21,6 +21,9 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 
+import org.hsqldb_voltpatches.VoltXMLElement;
+import org.voltdb.AggregateUserDefinedFunctionRunner;
+import org.voltdb.VoltType;
 import org.voltdb.catalog.Database;
 import org.voltdb.compiler.DDLCompiler;
 import org.voltdb.compiler.DDLCompiler.DDLStatement;
@@ -124,12 +127,22 @@ public class CreateFunctionFromClass extends CreateFunction {
                 accumulateMethod = m;
             }
             else if (m.getName().equals("finalize")) {
+                // The return type of the finalize() is the return type of the aggregate function.
+                if (m.getParameterCount() > 0) {
+                    throw m_compiler.new VoltCompilerException(shortName + ".finalize() cannot take any parameter.");
+                }
                 returnTypeClass = m.getReturnType();
                 if (! allowDataType(returnTypeClass)) {
                     throw m_compiler.new VoltCompilerException("Unsupported finalize() method return type: " + returnTypeClass.getName());
                 }
                 finalizeMethod = m;
             }
+        }
+        if (accumulateMethod == null) {
+            throw m_compiler.new VoltCompilerException("Cannot find a usable accumulate() method in class " + shortName);
+        }
+        if (finalizeMethod == null) {
+            throw m_compiler.new VoltCompilerException("Cannot find a usable finalize() method in class " + shortName);
         }
 
         try {
@@ -139,18 +152,24 @@ public class CreateFunctionFromClass extends CreateFunction {
             throw new RuntimeException(String.format("Error instantiating function \"%s\"", className), e);
         }
 
-//        //
-//        // Register the function and get the function id.  This lets HSQL use the name in
-//        // indexes, materialized views and tuple limit delete statements.  These are not
-//        // valid, but it helps us give a nice error message.  Note that this definition
-//        // may revive a saved user defined function, and that nothing is put into the
-//        // catalog here.
-//        //
-//        int functionId = FunctionForVoltDB.registerTokenForUDF(functionName, -1, voltReturnType, voltParamTypes);
-//        funcXML.attributes.put("functionid", String.valueOf(functionId));
-//
-//        m_logger.debug(String.format("Added XML for function \"%s\"", functionName));
-//        m_schema.children.add(funcXML);
+        VoltType voltReturnType = VoltType.typeFromClass(returnTypeClass);
+        VoltType[] voltParamTypes = new VoltType[paramTypeClasses.length];
+        VoltXMLElement funcXML = new VoltXMLElement("ud_function")
+                                    .withValue("name", functionName)
+                                    .withValue("className", className)
+                                    .withValue("returnType", String.valueOf(voltReturnType.getValue()));
+        for (int i = 0; i < paramTypeClasses.length; i++) {
+            VoltType voltParamType = VoltType.typeFromClass(paramTypeClasses[i]);
+            VoltXMLElement paramXML = new VoltXMLElement("udf_ptype")
+                                         .withValue("type", String.valueOf(voltParamType.getValue()));
+            funcXML.children.add(paramXML);
+            voltParamTypes[i] = voltParamType;
+        }
+
+        int functionId = AggregateUserDefinedFunctionRunner.getNextFunctionId();
+        funcXML.attributes.put("functionid", String.valueOf(functionId));
+        s_logger.debug(String.format("Added XML for function \"%s\"", functionName));
+        m_schema.children.add(funcXML);
         return true;
     }
 }

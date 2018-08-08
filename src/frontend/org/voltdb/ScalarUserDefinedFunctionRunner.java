@@ -26,8 +26,7 @@ import org.voltdb.catalog.Function;
 import org.voltdb.utils.SerializationHelper;
 
 public class ScalarUserDefinedFunctionRunner extends UserDefinedFunctionRunner {
-    Method m_functionMethod;
-    final boolean[] m_boxUpByteArray;
+    private Method m_functionMethod;
 
     public ScalarUserDefinedFunctionRunner(Function catalogFunction, Object funcInstance) {
         this(catalogFunction.getFunctionname(), catalogFunction.getFunctionid(),

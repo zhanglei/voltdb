@@ -37,26 +37,33 @@ public class UserDefinedFunctionManager {
             "VoltDB was unable to load a function (%s) which was expected to be " +
             "in the catalog jarfile and will now exit.";
 
-    ImmutableMap<Integer, ScalarUserDefinedFunctionRunner> m_udfs = ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder().build();
+    ImmutableMap<Integer, ScalarUserDefinedFunctionRunner> m_scalarUDFs = ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder().build();
+    ImmutableMap<Integer, AggregateUserDefinedFunctionRunner> m_aggUDFs = ImmutableMap.<Integer, AggregateUserDefinedFunctionRunner>builder().build();
 
     public ScalarUserDefinedFunctionRunner getScalarFunctionRunnerById(int functionId) {
-        return m_udfs.get(functionId);
+        return m_scalarUDFs.get(functionId);
     }
 
-    // Load all the UDFs recorded in the catalog. Instantiate and register them in the system.
-    public void loadFunctions(CatalogContext catalogContext) {
+    /**
+     * Load all the UDFs recorded in the catalog. Instantiate and register them in the system.
+     * @param catalogContext The current catalog context.
+     */
+    public void loadAllUserDefinedFunctions(CatalogContext catalogContext) {
         final CatalogMap<Function> catalogFunctions = catalogContext.database.getFunctions();
         // Remove obsolete tokens
-        for (UserDefinedFunctionRunner runner : m_udfs.values()) {
+        for (UserDefinedFunctionRunner runner : m_scalarUDFs.values()) {
             // The function that the current UserDefinedFunctionRunner is referring to
             // does not exist in the catalog anymore, we need to remove its token.
-            if (catalogFunctions.get(runner.m_functionName) == null) {
+            if (catalogFunctions.get(runner.getFunctionName()) == null) {
                 FunctionForVoltDB.deregisterUserDefinedFunction(runner.m_functionName);
             }
         }
+
         // Build new UDF runners
-        ImmutableMap.Builder<Integer, ScalarUserDefinedFunctionRunner> builder =
+        ImmutableMap.Builder<Integer, ScalarUserDefinedFunctionRunner> scalarFuncMapBuilder =
                             ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder();
+        ImmutableMap.Builder<Integer, AggregateUserDefinedFunctionRunner> aggFuncMapBuilder =
+                ImmutableMap.<Integer, AggregateUserDefinedFunctionRunner>builder();
         for (final Function catalogFunction : catalogFunctions) {
             final String className = catalogFunction.getClassname();
             Class<?> funcClass = null;
@@ -81,11 +88,19 @@ public class UserDefinedFunctionManager {
                 throw new RuntimeException(String.format("Error instantiating function \"%s\"", className), e);
             }
             assert(funcInstance != null);
-            builder.put(catalogFunction.getFunctionid(), new ScalarUserDefinedFunctionRunner(catalogFunction, funcInstance));
+            // User-defined aggregate functions
+            int functionId = catalogFunction.getFunctionid();
+            if (AggregateUserDefinedFunctionRunner.isUserDefinedAggregateID(functionId)) {
+                aggFuncMapBuilder.put(functionId, new AggregateUserDefinedFunctionRunner(catalogFunction, funcInstance));
+            }
+            // User-defined scalar functions
+            else {
+                scalarFuncMapBuilder.put(functionId, new ScalarUserDefinedFunctionRunner(catalogFunction, funcInstance));
+            }
         }
-
-        loadBuiltInJavaFunctions(builder);
-        m_udfs = builder.build();
+        loadBuiltInJavaFunctions(scalarFuncMapBuilder);
+        m_scalarUDFs = scalarFuncMapBuilder.build();
+        m_aggUDFs = aggFuncMapBuilder.build();
     }
 
     private void loadBuiltInJavaFunctions(ImmutableMap.Builder<Integer, ScalarUserDefinedFunctionRunner> builder) {
