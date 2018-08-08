@@ -27,10 +27,11 @@ import org.voltcore.utils.DBBPool.BBContainer;
 import org.voltcore.utils.Pair;
 import org.voltdb.ParameterSet;
 import org.voltdb.PrivateVoltTableFactory;
+import org.voltdb.ScalarUserDefinedFunctionRunner;
 import org.voltdb.StatsSelector;
 import org.voltdb.TableStreamType;
 import org.voltdb.TheHashinator.HashinatorConfig;
-import org.voltdb.UserDefinedFunctionManager.UserDefinedFunctionRunner;
+import org.voltdb.UserDefinedFunctionRunner;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltTable;
 import org.voltdb.VoltType;
@@ -767,7 +768,7 @@ public class ExecutionEngineJNI extends ExecutionEngine {
         m_udfBuffer.clear();
         m_udfBuffer.getInt(); // skip the buffer size integer, it is only used by VoltDB IPC.
         int functionId = m_udfBuffer.getInt();
-        UserDefinedFunctionRunner udfRunner = m_functionManager.getFunctionRunnerById(functionId);
+        ScalarUserDefinedFunctionRunner udfRunner = m_functionManager.getFunctionRunnerById(functionId);
         assert(udfRunner != null);
         Throwable throwable = null;
         Object returnValue = null;
