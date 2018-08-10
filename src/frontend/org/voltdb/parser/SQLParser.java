@@ -397,6 +397,7 @@ public class SQLParser extends SQLPatternFactory
             "\\APARTITION|" +
             "\\AREPLICATE|" +
             "\\AIMPORT|" +
+            "\\AEXPORT|" +
             "\\ADR|" +
             "\\ASET" +
             ")" +                                  // end (group 1)
@@ -411,6 +412,16 @@ public class SQLParser extends SQLPatternFactory
             "(?:\\s+(DISABLE))?" +                  //     (2) optional DISABLE argument
             "\\s*;\\z"                              // (end statement)
             );
+
+    private static final Pattern PAT_EXPORT_TABLE = Pattern.compile(
+            "(?i)" +                                // (ignore case)
+            "\\A"  +                                // start statement
+            "EXPORT\\s+TABLE\\s+" +                 // EXPORT TABLE
+            "([\\w.$|\\\\*]+)" +                    // (1) <table name>
+            "\\s+TO\\s+TARGET\\s+" +                // TO TARGET
+            "([\\w.$|\\\\*]+)" +                    // (2) <connector name>
+            "\\s*;\\z" +                            // (end statement)
+            "");
 
     //========== Patterns from SQLCommand ==========
 
@@ -717,6 +728,16 @@ public class SQLParser extends SQLPatternFactory
     public static Matcher matchDRTable(String statement)
     {
         return PAT_DR_TABLE.matcher(statement);
+    }
+
+    /**
+     * Match statement against Export table pattern
+     * @param statement  statement to match against
+     * @return           pattern matcher object
+     */
+    public static Matcher matchExportTable(String statement)
+    {
+        return PAT_EXPORT_TABLE.matcher(statement);
     }
 
     /**

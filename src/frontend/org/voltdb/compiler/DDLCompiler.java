@@ -72,6 +72,7 @@ import org.voltdb.compiler.statements.DropFunction;
 import org.voltdb.compiler.statements.DropProcedure;
 import org.voltdb.compiler.statements.DropRole;
 import org.voltdb.compiler.statements.DropStream;
+import org.voltdb.compiler.statements.ExportTable;
 import org.voltdb.compiler.statements.PartitionStatement;
 import org.voltdb.compiler.statements.ReplicateTable;
 import org.voltdb.compiler.statements.SetGlobalParam;
@@ -206,6 +207,7 @@ public class DDLCompiler {
                                 .addNextProcessor(new DropRole(this))
                                 .addNextProcessor(new DropStream(this))
                                 .addNextProcessor(new DRTable(this))
+                                .addNextProcessor(new ExportTable(this))
                                 .addNextProcessor(new SetGlobalParam(this))
                                 // CatchAllVoltDBStatement need to be the last processor in the chain.
                                 .addNextProcessor(new CatchAllVoltDBStatement(this, m_voltStatementProcessor));
@@ -590,7 +592,7 @@ public class DDLCompiler {
      * @param whichProcs
      * @throws VoltCompilerException
      */
-    private void processCreateStreamStatement(DDLStatement stmt, Database db, DdlProceduresToLoad whichProcs)
+    public void processCreateStreamStatement(DDLStatement stmt, Database db, DdlProceduresToLoad whichProcs)
             throws VoltCompilerException {
         String statement = stmt.statement;
         Matcher statementMatcher = SQLParser.matchCreateStream(statement);
