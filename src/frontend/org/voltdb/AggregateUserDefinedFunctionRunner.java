@@ -31,7 +31,7 @@ public class AggregateUserDefinedFunctionRunner extends UserDefinedFunctionRunne
     private Method m_initMethod;
     private Method m_mergeMethod;
     private Method m_accumulateMethod;
-    private Method m_finalizeMethod;
+    private Method m_terminateMethod;
 
     public AggregateUserDefinedFunctionRunner(Function catalogFunction, Object funcInstance) {
         super(catalogFunction.getFunctionname(), catalogFunction.getFunctionid(), funcInstance);
@@ -59,13 +59,13 @@ public class AggregateUserDefinedFunctionRunner extends UserDefinedFunctionRunne
                     }
                     m_accumulateMethod = m;
                 }
-                else if (m.getName().equals("finalize") && m_finalizeMethod == null) {
+                else if (m.getName().equals("terminate") && m_terminateMethod == null) {
                     // The return type of the finalize() is the return type of the aggregate function.
                     if (m.getParameterCount() > 0) {
                         continue;
                     }
                     m_returnType = VoltType.typeFromClass(m.getReturnType());
-                    m_finalizeMethod = m;
+                    m_terminateMethod = m;
                 }
             }
         }

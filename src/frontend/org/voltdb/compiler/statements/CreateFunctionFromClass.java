@@ -103,7 +103,7 @@ public class CreateFunctionFromClass extends CreateFunction {
         }
 
         Method accumulateMethod = null;
-        Method finalizeMethod = null;
+        Method terminateMethod = null;
         Class<?> returnTypeClass = null;
         Class<?>[] paramTypeClasses = null;
         for (final Method m : funcClass.getDeclaredMethods()) {
@@ -126,23 +126,23 @@ public class CreateFunctionFromClass extends CreateFunction {
                 }
                 accumulateMethod = m;
             }
-            else if (m.getName().equals("finalize")) {
-                // The return type of the finalize() is the return type of the aggregate function.
+            else if (m.getName().equals("terminate")) {
+                // The return type of the terminate() is the return type of the aggregate function.
                 if (m.getParameterCount() > 0) {
-                    throw m_compiler.new VoltCompilerException(shortName + ".finalize() cannot take any parameter.");
+                    throw m_compiler.new VoltCompilerException(shortName + ".terminate() cannot take any parameter.");
                 }
                 returnTypeClass = m.getReturnType();
                 if (! allowDataType(returnTypeClass)) {
-                    throw m_compiler.new VoltCompilerException("Unsupported finalize() method return type: " + returnTypeClass.getName());
+                    throw m_compiler.new VoltCompilerException("Unsupported terminate() method return type: " + returnTypeClass.getName());
                 }
-                finalizeMethod = m;
+                terminateMethod = m;
             }
         }
         if (accumulateMethod == null) {
             throw m_compiler.new VoltCompilerException("Cannot find a usable accumulate() method in class " + shortName);
         }
-        if (finalizeMethod == null) {
-            throw m_compiler.new VoltCompilerException("Cannot find a usable finalize() method in class " + shortName);
+        if (terminateMethod == null) {
+            throw m_compiler.new VoltCompilerException("Cannot find a usable terminate() method in class " + shortName);
         }
 
         try {

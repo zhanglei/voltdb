@@ -32,6 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.hsqldb_voltpatches.HSQLInterface;
 import org.hsqldb_voltpatches.TimeToLiveVoltDB;
 import org.json_voltpatches.JSONException;
+import org.voltdb.AggregateUserDefinedFunctionRunner;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltType;
 import org.voltdb.catalog.Catalog;
@@ -435,8 +436,14 @@ public abstract class CatalogSchemaTools {
 
     public static void toSchema(StringBuilder sb, Function func)
     {
-        String functionDDLTemplate = "CREATE FUNCTION %s FROM METHOD %s.%s;\n\n";
-        sb.append(String.format(functionDDLTemplate, func.getFunctionname(), func.getClassname(), func.getMethodname()));
+        String scalarFunctionDDLTemplate = "CREATE FUNCTION %s FROM METHOD %s.%s;\n\n";
+        String aggFunctionDDLTemplate = "CREATE FUNCTION %s FROM CLASS %s;\n\n";
+        if (AggregateUserDefinedFunctionRunner.isUserDefinedAggregateID(func.getFunctionid())) {
+            sb.append(String.format(aggFunctionDDLTemplate, func.getFunctionname(), func.getClassname()));
+        }
+        else {
+            sb.append(String.format(scalarFunctionDDLTemplate, func.getFunctionname(), func.getClassname(), func.getMethodname()));
+        }
     }
 
     /**

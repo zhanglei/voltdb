@@ -38,7 +38,8 @@ public class UserDefinedFunctionManager {
             "in the catalog jarfile and will now exit.";
 
     ImmutableMap<Integer, ScalarUserDefinedFunctionRunner> m_scalarUDFs = ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder().build();
-    ImmutableMap<Integer, AggregateUserDefinedFunctionRunner> m_aggUDFs = ImmutableMap.<Integer, AggregateUserDefinedFunctionRunner>builder().build();
+    ImmutableMap<String, AggregateUserDefinedFunctionRunner> m_aggUDFs = ImmutableMap.<String, AggregateUserDefinedFunctionRunner>builder().build();
+
 
     public ScalarUserDefinedFunctionRunner getScalarFunctionRunnerById(int functionId) {
         return m_scalarUDFs.get(functionId);
@@ -62,8 +63,8 @@ public class UserDefinedFunctionManager {
         // Build new UDF runners
         ImmutableMap.Builder<Integer, ScalarUserDefinedFunctionRunner> scalarFuncMapBuilder =
                             ImmutableMap.<Integer, ScalarUserDefinedFunctionRunner>builder();
-        ImmutableMap.Builder<Integer, AggregateUserDefinedFunctionRunner> aggFuncMapBuilder =
-                ImmutableMap.<Integer, AggregateUserDefinedFunctionRunner>builder();
+        ImmutableMap.Builder<String, AggregateUserDefinedFunctionRunner> aggFuncMapBuilder =
+                ImmutableMap.<String, AggregateUserDefinedFunctionRunner>builder();
         for (final Function catalogFunction : catalogFunctions) {
             final String className = catalogFunction.getClassname();
             Class<?> funcClass = null;
@@ -91,7 +92,7 @@ public class UserDefinedFunctionManager {
             // User-defined aggregate functions
             int functionId = catalogFunction.getFunctionid();
             if (AggregateUserDefinedFunctionRunner.isUserDefinedAggregateID(functionId)) {
-                aggFuncMapBuilder.put(functionId, new AggregateUserDefinedFunctionRunner(catalogFunction, funcInstance));
+                aggFuncMapBuilder.put(catalogFunction.getFunctionname(), new AggregateUserDefinedFunctionRunner(catalogFunction, funcInstance));
             }
             // User-defined scalar functions
             else {
