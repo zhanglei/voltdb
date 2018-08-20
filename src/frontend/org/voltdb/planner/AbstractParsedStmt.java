@@ -358,6 +358,15 @@ public abstract class AbstractParsedStmt {
         return expr;
     }
 
+    /**
+     * @return True if this kind of statement can support LTTs.
+     *         DML cannot.  Also some kinds of select statements
+     *         cannot.
+     */
+    public boolean canCanSupportLargeTempTables() {
+        return ! isDML();
+    }
+
     private interface XMLElementExpressionParser {
         AbstractExpression parse(AbstractParsedStmt stmt,
                                  VoltXMLElement element);

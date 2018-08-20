@@ -2676,13 +2676,13 @@ public class ParsedSelectStmt extends AbstractParsedStmt {
     private void parseTableSchemaFromXML(String tableName,
                                          StmtCommonTableScanShared tableScan,
                                          VoltXMLElement voltXMLElement) {
-        assert("table".equals(voltXMLElement.name));
+        assert ("table".equals(voltXMLElement.name));
         List<VoltXMLElement> columnSet = voltXMLElement.findChildren("columns");
-        assert(columnSet.size() == 1);
+        assert (columnSet.size() == 1);
         columnSet = columnSet.get(0).children;
         for (int idx = 0; idx < columnSet.size(); idx += 1) {
             VoltXMLElement columnXML = columnSet.get(idx);
-            assert("column".equals(columnXML.name));
+            assert ("column".equals(columnXML.name));
             String columnName = columnXML.attributes.get("name");
             // If valuetype is not defined, then we will get type
             // "none", about which typeFromString will complain.
@@ -2694,7 +2694,7 @@ public class ParsedSelectStmt extends AbstractParsedStmt {
             // will not see the widening here.
             VoltType valueType = VoltType.typeFromString(columnXML.getStringAttribute("valuetype", "none"));
             Integer columnIndex = columnXML.getIntAttribute("index", null);
-            assert(columnIndex != null);
+            assert (columnIndex != null);
             // These appear to be optional.  Certainly "bytes"
             // only appears if the type is variably sized.
             Integer size = columnXML.getIntAttribute("size", 0);
@@ -2706,8 +2706,7 @@ public class ParsedSelectStmt extends AbstractParsedStmt {
             if (size == 0) {
                 if (valueType.isVariableLength()) {
                     size = valueType.defaultLengthForVariableLengthType();
-                }
-                else {
+                } else {
                     size = valueType.getLengthInBytesForFixedTypes();
                 }
             }
@@ -2722,4 +2721,4 @@ public class ParsedSelectStmt extends AbstractParsedStmt {
             tableScan.addOutputColumn(schemaColumn);
         }
     }
-}
+ }

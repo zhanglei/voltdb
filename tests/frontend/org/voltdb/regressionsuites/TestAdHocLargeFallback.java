@@ -50,10 +50,9 @@ public class TestAdHocLargeFallback extends JUnit4LocalClusterTest {
                 "insert into t values (5, '6', '7', '8');",
                 "delete from t where i = 1;",
                 "update t set i = 0;",
-                "select count(*) over (partition by i) from t;",
                 "truncate table t;"
         };
-        String logMessage = "6 queries planned through @AdHocLarge were converted to normal @AdHoc plans.";
+        String logMessage = "5 queries planned through @AdHocLarge were converted to normal @AdHoc plans.";
         boolean adHocLarge = false;
         // First try normal @AdHoc, which will not generate any log message,
         // then try @AdHocLarge, which will generate the message.

@@ -195,6 +195,10 @@ public class TestAdHocLargeSuite extends RegressionSuite {
         }, cr.getResults()[0]);
     }
 
+    public void testWindowFunctions() throws Exception {
+
+    }
+
     static public junit.framework.Test suite() throws Exception {
         VoltServerConfig config = null;
         MultiConfigSuiteBuilder builder = new MultiConfigSuiteBuilder(TestAdHocLargeSuite.class);

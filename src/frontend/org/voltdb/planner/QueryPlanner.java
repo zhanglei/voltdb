@@ -415,12 +415,9 @@ public class QueryPlanner implements AutoCloseable {
         }
         m_planSelector.outputParsedStatement(parsedStmt);
 
-        if (m_isLargeQuery) {
-            if (parsedStmt.isDML()
-                    || (parsedStmt instanceof ParsedSelectStmt
-                            && ((ParsedSelectStmt)parsedStmt).hasWindowFunctionExpression())) {
-                m_isLargeQuery = false;
-            }
+        // ENG-13879: Window functions are precluded here.
+        if (m_isLargeQuery && ! parsedStmt.canCanSupportLargeTempTables()) {
+            m_isLargeQuery = false;
         }
 
         // Init Assembler. Each plan assembler requires a new instance of the PlanSelector
