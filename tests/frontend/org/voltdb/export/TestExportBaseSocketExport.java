@@ -491,7 +491,7 @@ public class TestExportBaseSocketExport extends RegressionSuite {
         }
     }
 
-    public void closeClientAndServer() throws IOException {
+    public static void closeClientAndServer() throws IOException {
         for (Entry<String, Integer> target : m_portForTable.entrySet()) {
             ServerListener m_serverSocket = m_serverSockets.remove(target.getKey());
             if (m_serverSocket != null) {
