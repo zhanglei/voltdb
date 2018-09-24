@@ -108,4 +108,4 @@ create table PI1 (
     v varchar(32));
     partition table PI1 on column i;
     CREATE INDEX PI1_IND1 ON PI1 (ii);
-
+    CREATE INDEX PI1_IND2 ON PI1 (ii, f);

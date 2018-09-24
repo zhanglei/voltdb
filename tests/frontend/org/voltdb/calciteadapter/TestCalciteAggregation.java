@@ -311,6 +311,21 @@ public class TestCalciteAggregation extends TestCalciteBase {
         assertEquals(expectedPlan, calcitePlan);
     }
 
+    public void testPartitionedAggr71() throws Exception {
+        String sql;
+        // Merge Receive with Serial aggregation
+        //            select indexed_non_partition_key, max(col)
+        //            from partitioned
+        //            group by indexed_non_partition_key
+        //            order by column;"
+        sql = "select F, II, max(BI) from PI1 where II > 0 group by II, F order by F";
+
+        comparePlans(sql);
+        String expectedPlan = "";
+        String calcitePlan = testPlan(sql, PlannerType.CALCITE);
+        assertEquals(expectedPlan, calcitePlan);
+    }
+
     public void testPartitionedAggr8() throws Exception {
         String sql;
         // Calcite Merge Receive with Serial aggregation
