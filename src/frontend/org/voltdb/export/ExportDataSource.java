@@ -547,65 +547,50 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             exportLog.trace("pushExportBufferImpl with uso=" + uso + ", sync=" + sync + ", poll=" + poll);
         }
         if (buffer != null) {
-            //There will be header bytes of no data that we can ignore, it is header space for storing
-            //the USO in stream block
-            if (buffer.capacity() > StreamBlock.HEADER_SIZE) {
-                // Drop already acked buffer
-                final BBContainer cont = DBBPool.wrapBB(buffer);
-                long bufferSize = (buffer.capacity() - StreamBlock.HEADER_SIZE) - 1;
-                if (m_lastReleasedUso > 0 && m_lastReleasedUso >= (uso + bufferSize)) {
-                    m_tupleCount += tupleCount;
-                    m_tuplesPending += tupleCount;
-                    //What ack from future is known?
-                    if (exportLog.isDebugEnabled()) {
-                        exportLog.debug("Dropping already acked USO: " + m_lastReleasedUso
-                                + " Buffer info: " + uso + " Size: " + buffer.capacity());
-                    }
-                    cont.discard();
-                    return;
-                }
-
-                try {
-                    StreamBlock sb = new StreamBlock(
-                            new BBContainer(buffer) {
-                                @Override
-                                public void discard() {
-                                    checkDoubleFree();
-                                    cont.discard();
-                                    deleted.set(true);
-                                }
-                            }, uso, tupleCount, false);
-                    // Mark release uso to partially acked buffer.
-                    if (m_lastReleasedUso > 0 && m_lastReleasedUso >= sb.uso()) {
-                        if (exportLog.isDebugEnabled()) {
-                            exportLog.debug("Setting releaseUso as " + m_lastReleasedUso +
-                                    " for sb with uso " + sb.uso() + " for partition " + m_partitionId);
-                        }
-                        sb.releaseUso(m_lastReleasedUso);
-                    }
-
-                    m_lastPushedUso = uso + bufferSize;
-
-                    m_tupleCount += tupleCount;
-                    m_tuplesPending += tupleCount;
-                    m_committedBuffers.offer(sb);
-                } catch (IOException e) {
-                    VoltDB.crashLocalVoltDB("Unable to write to export overflow.", true, e);
-                }
-            } else {
-                /*
-                 * TupleStreamWrapper::setBytesUsed propagates the USO by sending
-                 * over an empty stream block. The block will be deleted
-                 * on the native side when this method returns
-                 */
+            // header space along is 8 bytes
+            assert (buffer.capacity() > StreamBlock.HEADER_SIZE);
+            // Drop already acked buffer
+            final BBContainer cont = DBBPool.wrapBB(buffer);
+            long bufferSize = (buffer.capacity() - StreamBlock.HEADER_SIZE) - 1;
+            if (m_lastReleasedUso > 0 && m_lastReleasedUso >= (uso + bufferSize)) {
+                m_tupleCount += tupleCount;
+                m_tuplesPending += tupleCount;
+                //What ack from future is known?
                 if (exportLog.isDebugEnabled()) {
-                    exportLog.debug("Last USO from EE is " + uso + " for table "
-                            + m_tableName + " partition " + m_partitionId);
+                    exportLog.debug("Dropping already acked USO: " + m_lastReleasedUso
+                            + " Buffer info: " + uso + " Size: " + buffer.capacity());
                 }
-                // Commenting this setting of firstUnpolledUso because
-                // the value that come from EE now is the lastUSO, not necessarily the last unpolled one.
-                // It used to be always 0 before changes to fix ENG-13480, so this had no effect, except in rejoin.
-                //m_firstUnpolledUso = uso;
+                cont.discard();
+                return;
+            }
+
+            try {
+                StreamBlock sb = new StreamBlock(
+                        new BBContainer(buffer) {
+                            @Override
+                            public void discard() {
+                                checkDoubleFree();
+                                cont.discard();
+                                deleted.set(true);
+                            }
+                        }, uso, tupleCount, false);
+
+                // Mark release uso to partially acked buffer.
+                if (m_lastReleasedUso > 0 && m_lastReleasedUso >= sb.uso()) {
+                    if (exportLog.isDebugEnabled()) {
+                        exportLog.debug("Setting releaseUso as " + m_lastReleasedUso +
+                                " for sb with uso " + sb.uso() + " for partition " + m_partitionId);
+                    }
+                    sb.releaseUso(m_lastReleasedUso);
+                }
+
+                m_lastPushedUso = uso + bufferSize;
+                m_tupleCount += tupleCount;
+                m_tuplesPending += tupleCount;
+
+                m_committedBuffers.offer(sb);
+            } catch (IOException e) {
+                VoltDB.crashLocalVoltDB("Unable to write to export overflow.", true, e);
             }
         }
         if (sync) {
