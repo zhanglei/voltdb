@@ -137,6 +137,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     private final File m_adFile;
     private ExportClientBase m_client;
     private boolean m_readyForPolling;
+    // This flag is specifically added for XDCR conflicts stream, which export conflict logs
+    // on every host. Every data source with this flag set to true is an export master.
+    private boolean m_runEveryWhere = false;
 
     public final ArrayList<String> m_columnNames = new ArrayList<>();
     public final ArrayList<Integer> m_columnTypes = new ArrayList<>();
@@ -958,6 +961,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     private void forwardAckToOtherReplicas(long uso, int tuplesSent) {
+        // In RunEveryWhere mode, every data source is master, no need to send out acks.
+        if (m_runEveryWhere) {
+            return;
+        }
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0) {
@@ -989,7 +996,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     // In case of newly joined or rejoined streams miss any RELEASE_BUFFER event,
     // master stream resend the event when the export mailbox is aware of new streams.
     public void forwardAckToNewJoinedReplicas(Set<Long> newReplicas) {
-        if (!m_mastershipAccepted.get()) {
+        // In RunEveryWhere mode, every data source is master, no need to send out acks.
+        if (!m_mastershipAccepted.get() || m_runEveryWhere) {
             return;
         }
 
@@ -1266,6 +1274,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
      *                      replicated export stream is its own master.
      */
     public void runEveryWhere(boolean runEveryWhere) {
+        m_runEveryWhere = runEveryWhere;
         if (runEveryWhere) {
             acceptMastership();
         }
