@@ -77,7 +77,7 @@ public class VoltDBPSortExchangeTransposeRule extends RelOptRule {
 
         RelNode result = transposeExchange(exchangeRel, newSortRel);
 
-        // Not only is newExchane equivalent to sort;
+        // Not only is newExchange equivalent to sort;
         // newSort is equivalent to exchangeRel's input
         Map<RelNode, RelNode> equiv;
         if (newSortRel.getCluster().getPlanner().getRelTraitDefs()
