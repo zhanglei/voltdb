@@ -38,10 +38,10 @@ import org.voltcore.utils.DBBPool;
 import org.voltcore.utils.Pair;
 import org.voltdb.CatalogContext;
 import org.voltdb.ExportStatsBase;
+import org.voltdb.ExportStatsBase.ExportStatsRow;
 import org.voltdb.RealVoltDB;
 import org.voltdb.StatsSelector;
 import org.voltdb.VoltDB;
-import org.voltdb.ExportStatsBase.ExportStatsRow;
 import org.voltdb.catalog.CatalogMap;
 import org.voltdb.catalog.Cluster;
 import org.voltdb.catalog.Connector;
@@ -660,10 +660,11 @@ public class ExportManager
     public static void pushExportBuffer(
             int partitionId,
             String signature,
-            long uso,
+            long startSequenceNumber,
+            long tupleCount,
             long bufferPtr,
             ByteBuffer buffer,
-            boolean sync, long tupleCount) {
+            boolean sync) {
         //For validating that the memory is released
         if (bufferPtr != 0) DBBPool.registerUnsafeMemory(bufferPtr);
         ExportManager instance = instance();
@@ -675,7 +676,7 @@ public class ExportManager
                 }
                 return;
             }
-            generation.pushExportBuffer(partitionId, signature, uso, buffer, sync, tupleCount);
+            generation.pushExportBuffer(partitionId, signature, startSequenceNumber, buffer, sync, tupleCount);
         } catch (Exception e) {
             //Don't let anything take down the execution site thread
             exportLog.error("Error pushing export buffer", e);

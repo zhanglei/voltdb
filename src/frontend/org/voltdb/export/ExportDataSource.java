@@ -100,12 +100,12 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     private final ExportFormat m_format;
 
-    private long m_firstUnpolledUso = 0;
-    private long m_lastReleasedUso = 0;
+    private long m_firstUnpolledSeqNo = 0;
+    private long m_lastReleasedSeqNo = 0;
     // End uso of most recently pushed export buffer
-    private long m_lastPushedUso = 0L;
+    private long m_lastPushedSeqNo = 0L;
     // Relinquishes export master after this uso
-    private long m_usoToDrain = -1L;
+    private long m_seqNoToDrain = -1L;
     //This is released when all mailboxes are set.
     private final Semaphore m_allowAcceptingMastership = new Semaphore(0);
     // This EDS is export master when the flag set to true
@@ -347,37 +347,33 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return m_client;
     }
 
-    private synchronized void releaseExportBytes(long releaseUso, long tuplesSent) throws IOException {
-        // if released offset is in an already-released past, just return success
-        if (!m_committedBuffers.isEmpty() && releaseUso < m_committedBuffers.peek().uso()) {
-            return;
-        }
-
-        if (!m_committedBuffers.isEmpty() && releaseUso < m_committedBuffers.peek().uso()) {
+    private synchronized void releaseExportBytes(long releaseSeqNo, long tuplesSent) throws IOException {
+        // Released offset is in an already-released past
+        if (!m_committedBuffers.isEmpty() && releaseSeqNo < m_committedBuffers.peek().startSequenceNumber()) {
             tuplesSent = 0;
         }
-        if (m_lastReleasedUso == releaseUso) {
+        if (m_lastReleasedSeqNo == releaseSeqNo) {
             tuplesSent = 0;
         }
 
-        long lastUso = m_firstUnpolledUso;
-        while (!m_committedBuffers.isEmpty() && releaseUso >= m_committedBuffers.peek().uso()) {
+        long lastSeqNo = m_firstUnpolledSeqNo;
+        while (!m_committedBuffers.isEmpty() && releaseSeqNo >= m_committedBuffers.peek().startSequenceNumber()) {
             StreamBlock sb = m_committedBuffers.peek();
-            if (releaseUso >= sb.uso() + sb.totalSize()-1) {
+            if (releaseSeqNo >= sb.startSequenceNumber() + sb.rowCount() - 1) {
                 m_committedBuffers.pop();
                 try {
-                    lastUso = sb.uso() + sb.totalSize()-1;
+                    lastSeqNo = sb.startSequenceNumber() + sb.rowCount() - 1;
                 } finally {
                     sb.discard();
                 }
-            } else if (releaseUso >= sb.uso()) {
-                sb.releaseUso(releaseUso);
-                lastUso = releaseUso;
+            } else if (releaseSeqNo >= sb.startSequenceNumber()) {
+                sb.releaseTo(releaseSeqNo);
+                lastSeqNo = releaseSeqNo;
                 break;
             }
         }
-        m_lastReleasedUso = releaseUso;
-        m_firstUnpolledUso = Math.max(m_firstUnpolledUso, lastUso+1);
+        m_lastReleasedSeqNo = releaseSeqNo;
+        m_firstUnpolledSeqNo = Math.max(m_firstUnpolledSeqNo, lastSeqNo + 1);
         m_tuplesPending -= tuplesSent;
 
         return;
@@ -540,28 +536,28 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     private void pushExportBufferImpl(
-            long uso,
+            long startSequenceNumber,
             ByteBuffer buffer,
             boolean sync,
             boolean poll,
             int tupleCount) throws Exception {
         final java.util.concurrent.atomic.AtomicBoolean deleted = new java.util.concurrent.atomic.AtomicBoolean(false);
         if (exportLog.isTraceEnabled()) {
-            exportLog.trace("pushExportBufferImpl with uso=" + uso + ", sync=" + sync + ", poll=" + poll);
+            exportLog.trace("pushExportBufferImpl with seqNo=" + startSequenceNumber + ", sync=" + sync + ", poll=" + poll);
         }
         if (buffer != null) {
             // header space along is 8 bytes
             assert (buffer.capacity() > StreamBlock.HEADER_SIZE);
             // Drop already acked buffer
             final BBContainer cont = DBBPool.wrapBB(buffer);
-            long bufferSize = (buffer.capacity() - StreamBlock.HEADER_SIZE) - 1;
-            if (m_lastReleasedUso > 0 && m_lastReleasedUso >= (uso + bufferSize)) {
+            long lastSequenceNumber = startSequenceNumber + (long)tupleCount;
+            if (m_lastReleasedSeqNo > 0 && m_lastReleasedSeqNo >= lastSequenceNumber) {
                 m_tupleCount += tupleCount;
                 m_tuplesPending += tupleCount;
                 //What ack from future is known?
                 if (exportLog.isDebugEnabled()) {
-                    exportLog.debug("Dropping already acked USO: " + m_lastReleasedUso
-                            + " Buffer info: " + uso + " Size: " + buffer.capacity());
+                    exportLog.debug("Dropping already acked SeqNo: " + m_lastReleasedSeqNo
+                            + " Buffer info: " + startSequenceNumber + " Size: " + tupleCount);
                 }
                 cont.discard();
                 return;
@@ -576,18 +572,19 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                                 cont.discard();
                                 deleted.set(true);
                             }
-                        }, uso, tupleCount, false);
+                        }, startSequenceNumber, tupleCount, false);
 
-                // Mark release uso to partially acked buffer.
-                if (m_lastReleasedUso > 0 && m_lastReleasedUso >= sb.uso()) {
+                // Mark release sequence number to partially acked buffer.
+                if (m_lastReleasedSeqNo > 0 && m_lastReleasedSeqNo >= sb.startSequenceNumber()) {
                     if (exportLog.isDebugEnabled()) {
-                        exportLog.debug("Setting releaseUso as " + m_lastReleasedUso +
-                                " for sb with uso " + sb.uso() + " for partition " + m_partitionId);
+                        exportLog.debug("Setting releaseSeqNo as " + m_lastReleasedSeqNo +
+                                " for SB with sequence number " + sb.startSequenceNumber() +
+                                " for partition " + m_partitionId);
                     }
-                    sb.releaseUso(m_lastReleasedUso);
+                    sb.releaseTo(m_lastReleasedSeqNo);
                 }
 
-                m_lastPushedUso = uso + bufferSize;
+                m_lastPushedSeqNo = lastSequenceNumber;
                 m_tupleCount += tupleCount;
                 m_tuplesPending += tupleCount;
 
@@ -622,7 +619,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     public void pushExportBuffer(
-            final long uso,
+            final long startSequenceNumber,
             final ByteBuffer buffer,
             final boolean sync,
             final int tupleCount) {
@@ -635,7 +632,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         if (m_es.isShutdown()) {
             //If we are shutting down push it to PBD
             try {
-                pushExportBufferImpl(uso, buffer, sync, false, tupleCount);
+                pushExportBufferImpl(startSequenceNumber, buffer, sync, false, tupleCount);
             } catch (Throwable t) {
                 VoltDB.crashLocalVoltDB("Error pushing export  buffer", true, t);
             } finally {
@@ -649,7 +646,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 public void run() {
                     try {
                         if (!m_es.isShutdown()) {
-                            pushExportBufferImpl(uso, buffer, sync, m_readyForPolling, tupleCount);
+                            pushExportBufferImpl(startSequenceNumber, buffer, sync, m_readyForPolling, tupleCount);
                         }
                     } catch (Throwable t) {
                         VoltDB.crashLocalVoltDB("Error pushing export  buffer", true, t);
@@ -821,8 +818,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     //If replica we poll from lowest of ack rcvd or last poll point.
-    private long getFirstUnpolledUso() {
-        return m_firstUnpolledUso;
+    private long getFirstUnpolledSeqNo() {
+        return m_firstUnpolledSeqNo;
     }
 
     private synchronized void pollImpl(SettableFuture<AckingContainer> fut) {
@@ -854,13 +851,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             //Copying and sending the data will take place outside the critical section
             try {
                 Iterator<StreamBlock> iter = m_committedBuffers.iterator();
-                long fuso = getFirstUnpolledUso();
+                long seqnum = getFirstUnpolledSeqNo();
                 while (iter.hasNext()) {
                     StreamBlock block = iter.next();
                     // find the first block that has unpolled data
-                    if (fuso < block.uso() + block.totalSize()) {
+                    if (seqnum < block.startSequenceNumber() + block.rowCount()) {
                         first_unpolled_block = block;
-                        m_firstUnpolledUso = (block.uso() + block.totalSize());
+                        m_firstUnpolledSeqNo = (block.startSequenceNumber() + block.rowCount());
                         break;
                     } else {
                         blocksToDelete.add(block);
@@ -886,7 +883,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             } else {
                 final AckingContainer ackingContainer =
                         new AckingContainer(first_unpolled_block.unreleasedContainer(),
-                                first_unpolled_block.uso() + first_unpolled_block.totalSize() - 1,
+                                first_unpolled_block.startSequenceNumber() + first_unpolled_block.rowCount() - 1,
                                 first_unpolled_block.rowCount());
                 try {
                     fut.set(ackingContainer);
@@ -960,7 +957,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
     }
 
-    private void forwardAckToOtherReplicas(long uso, int tuplesSent) {
+    private void forwardAckToOtherReplicas(long seqNo, int tuplesSent) {
         // In RunEveryWhere mode, every data source is master, no need to send out acks.
         if (m_runEveryWhere) {
             return;
@@ -969,7 +966,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0) {
             // partition:int(4) + length:int(4) +
-            // signaturesBytes.length + ackUSO:long(8) + tuplesSent:int(4).
+            // signaturesBytes.length + ackSeqNo:long(8) + tuplesSent:int(4).
             final int msgLen = 4 + 4 + m_signatureBytes.length + 8 + 4;
 
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
@@ -977,7 +974,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
-            buf.putLong(uso);
+            buf.putLong(seqNo);
             buf.putInt(tuplesSent);
 
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
@@ -986,7 +983,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 mbx.send(siteId, bpm);
             }
             if (exportLog.isDebugEnabled()) {
-                exportLog.debug("Send RELEASE_BUFFER " + toString() + " with uso " + uso
+                exportLog.debug("Send RELEASE_BUFFER " + toString() + " with sequence number " + seqNo
                         + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                         + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
@@ -1016,7 +1013,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     buf.putInt(m_partitionId);
                     buf.putInt(m_signatureBytes.length);
                     buf.put(m_signatureBytes);
-                    buf.putLong(m_lastReleasedUso);
+                    buf.putLong(m_lastReleasedSeqNo);
                     buf.putInt(0);
 
                     BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
@@ -1025,7 +1022,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                         mbx.send(siteId, bpm);
                     }
                     if (exportLog.isDebugEnabled()) {
-                        exportLog.debug("Send RELEASE_BUFFER " + toString() + " with uso " + m_lastReleasedUso
+                        exportLog.debug("Send RELEASE_BUFFER " + toString() + " with sequence number " + m_lastReleasedSeqNo
                                 + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                                 + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
                     }
@@ -1034,7 +1031,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-    public void ack(final long uso, long tuplesSent) {
+    public void ack(final long seqNo, long tuplesSent) {
 
         //In replicated only master will be doing this.
         m_es.execute(new Runnable() {
@@ -1056,7 +1053,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     // are already promoted to be the master. If so, ignore the
                     // ack.
                     if (!m_es.isShutdown() && !m_mastershipAccepted.get()) {
-                        ackImpl(uso, tuplesSent);
+                        ackImpl(seqNo, tuplesSent);
                     }
                 } catch (Exception e) {
                     exportLog.error("Error acking export buffer", e);
@@ -1067,20 +1064,20 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-     private void ackImpl(long uso, long tuplesSent) {
+     private void ackImpl(long seqNo, long tuplesSent) {
 
-        //Process the ack if any and add blocks to the delete list or move the released USO pointer
-        if (uso > 0) {
+        //Process the ack if any and add blocks to the delete list or move the released sequence number
+        if (seqNo > 0) {
             try {
-                releaseExportBytes(uso, tuplesSent);
+                releaseExportBytes(seqNo, tuplesSent);
             } catch (IOException e) {
                 VoltDB.crashLocalVoltDB("Error attempting to release export bytes", true, e);
                 return;
             }
             // Current master sends migrate event to all export replicas
-            if (m_newLeaderHostId != null && uso >= m_usoToDrain) {
+            if (m_newLeaderHostId != null && seqNo >= m_seqNoToDrain) {
                 unacceptMastership();
-                sendTakeMastershipEvent(uso);
+                sendTakeMastershipEvent(seqNo);
             }
         }
     }
@@ -1102,11 +1099,11 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 }
                 m_newLeaderHostId = newLeaderHostId;
                 // memorize end USO of the most recently pushed buffer from EE
-                m_usoToDrain = m_lastPushedUso;
+                m_seqNoToDrain = m_lastPushedSeqNo;
                 // if no new buffer to be drained, send the migrate event right away
-                if (m_usoToDrain == m_lastReleasedUso) {
+                if (m_seqNoToDrain == m_lastReleasedSeqNo) {
                     unacceptMastership();
-                    sendTakeMastershipEvent(m_usoToDrain);
+                    sendTakeMastershipEvent(m_seqNoToDrain);
                 }
             }
         });
@@ -1142,7 +1139,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 }
             }
 
-            m_usoToDrain = -1L;
+            m_seqNoToDrain = -1L;
             m_newLeaderHostId = null;
         }
     }
@@ -1152,23 +1149,20 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0) {
             m_responseHSIds.clear();
-            // msg type(1) + partition:int(4) + length:int(4) +
-            // signaturesBytes.length + ackUSO:long(8).
+            // msg type(1) + partition:int(4) + length:int(4) + signaturesBytes.length
             final int msgLen = 1 + 4 + 4 + m_signatureBytes.length;
-
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.QUERY_MEMBERSHIP);
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
-
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
-
             for( Long siteId: p.getSecond()) {
                 mbx.send(siteId, bpm);
             }
             if (exportLog.isDebugEnabled()) {
-                exportLog.debug("Send QUERY_MEMBERSHIP for partition " + m_partitionId + "source signature " + m_tableName
+                exportLog.debug("Send QUERY_MEMBERSHIP for partition " + m_partitionId
+                        + "source signature " + m_tableName
                         + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                         + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
@@ -1182,16 +1176,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0 && p.getSecond().contains(newLeaderHSId)) {
-            // msg type(1) + partition:int(4) + length:int(4) +
-            // signaturesBytes.length + ackUSO:long(8).
+            // msg type(1) + partition:int(4) + length:int(4) + signaturesBytes.length
             final int msgLen = 1 + 4 + 4 + m_signatureBytes.length;
-
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.QUERY_RESPONSE);
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
-
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
             mbx.send(newLeaderHSId, bpm);
             if (exportLog.isDebugEnabled()) {
@@ -1311,11 +1302,11 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 public void run() {
                     m_newLeaderHostId = CoreUtils.getHostIdFromHSId(newLeaderHSId);
                     // memorize end USO of the most recently pushed buffer from EE
-                    m_usoToDrain = m_lastPushedUso;
+                    m_seqNoToDrain = m_lastPushedSeqNo;
                     // if no new buffer to be drained, send the migrate event right away
-                    if (m_usoToDrain == m_lastReleasedUso) {
+                    if (m_seqNoToDrain == m_lastReleasedSeqNo) {
                         unacceptMastership();
-                        sendTakeMastershipEvent(m_usoToDrain);
+                        sendTakeMastershipEvent(m_seqNoToDrain);
                     }
                 }
             });
@@ -1348,8 +1339,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     public byte[] getTableSignature() {
         return m_signatureBytes;
     }
-    public long getLastReleaseUso() {
-        return m_lastReleasedUso;
+    public long getLastReleaseSeqNo() {
+        return m_lastReleasedSeqNo;
     }
 
     public void setStatus(STREAM_STATUS status) {

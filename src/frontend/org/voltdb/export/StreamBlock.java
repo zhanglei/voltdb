@@ -46,13 +46,14 @@ public class StreamBlock {
 
     public static final int HEADER_SIZE = 12;
 
-    StreamBlock(BBContainer cont, long uso, int rowCount, boolean isPersisted) {
+    StreamBlock(BBContainer cont, long startSequenceNumber, long rowCount, boolean isPersisted) {
         m_buffer = cont;
-        m_uso = uso;
+        m_startSequenceNumber = startSequenceNumber;
         m_rowCount = rowCount;
-        //The first 8 bytes are space for us to store the USO if we end up persisting
+        // The first 12 bytes are space for us to store the sequence number and row count if we end up persisting
         m_buffer.b().position(HEADER_SIZE);
         m_totalSize = m_buffer.b().remaining();
+        //The first 8 bytes are space for us to store the sequence number if we end up persisting
         m_isPersisted = isPersisted;
     }
 
@@ -71,21 +72,24 @@ public class StreamBlock {
         }
     }
 
-    long uso() {
-        return m_uso;
+    long startSequenceNumber() {
+        return m_startSequenceNumber;
+    }
+
+    long lastSequenceNumber() {
+        return m_startSequenceNumber + m_rowCount;
     }
 
     /**
-     * Returns the USO of the first unreleased octet in this block
+     * Returns the sequence number of the first unreleased export row in this block
      */
-    long unreleasedUso()
+    long unreleasedSequenceNumber()
     {
-        // if nothing is released, m_releaseOffset is -1
-        return m_uso + m_releaseOffset + 1;
+        return m_startSequenceNumber + m_releaseOffset + 1;
     }
 
     int rowCount() {
-        return m_rowCount;
+        return (int)m_rowCount;
     }
 
     /**
@@ -97,34 +101,32 @@ public class StreamBlock {
     }
 
     /**
-     * Returns the size of the unreleased data in this block.
-     * -4 due to the length prefix that isn't part of the USO
+     * Returns the number of the unreleased rows in this block.
      */
-    long unreleasedSize()
+    long unreleasedRowCount()
     {
-        // if nothing is released, m_releaseOffset is -1
-        return totalSize() - m_releaseOffset - 1;
+        return m_rowCount - m_releaseOffset;
     }
 
-    // The USO for octets up to which are being released
-    void releaseUso(long releaseUso)
+    // The sequence number for export rows up to which are being released
+    void releaseTo(long releaseSequenceNumber)
     {
-        assert(releaseUso >= m_uso);
-        m_releaseOffset = releaseUso - m_uso;
+        assert(releaseSequenceNumber >= m_startSequenceNumber);
+        m_releaseOffset = releaseSequenceNumber - m_startSequenceNumber;
         // if it is fully released, we will discard the block
-        assert(m_releaseOffset < totalSize()-1);
+        assert(m_releaseOffset < m_rowCount);
     }
 
     boolean isPersisted() {
         return m_isPersisted;
     }
 
-    private final long m_uso;
-    private final int m_rowCount;
+    private final long m_startSequenceNumber;
+    private final long m_rowCount;
     private final long m_totalSize;
     private BBContainer m_buffer;
-    // index of the last byte that has been released.
-    private long m_releaseOffset=-1;
+    // index of the last row that has been released.
+    private long m_releaseOffset = 0;
 
     /*
      * True if this block is still backed by a file and false
@@ -152,7 +154,7 @@ public class StreamBlock {
      * and should only be called once to get a container for pushing the data to disk
      */
     BBContainer asBBContainer() {
-        m_buffer.b().putLong(0, uso());
+        m_buffer.b().putLong(0, startSequenceNumber());
         m_buffer.b().putInt(8, rowCount());
         m_buffer.b().position(0);
         return getRefCountingContainer(m_buffer.b().asReadOnlyBuffer());

@@ -66,7 +66,10 @@ public class StreamBlockQueue {
         m_nonce = nonce;
         m_reader = m_persistentDeque.openForRead(m_nonce);
         // temporary debug stmt
-        exportLog.info(m_nonce + " At SBQ creation, PBD size is " + (m_reader.sizeInBytes() - (8 * m_reader.getNumObjects())));
+        if (exportLog.isDebugEnabled()) {
+            exportLog.info(m_nonce + " At SBQ creation, PBD size is "
+                           + (m_reader.sizeInBytes() - (StreamBlock.HEADER_SIZE * m_reader.getNumObjects())));
+        }
     }
 
     public boolean isEmpty() throws IOException {
@@ -98,13 +101,13 @@ public class StreamBlockQueue {
         } else {
             //If the container is not null, unpack it.
             final BBContainer fcont = cont;
-            long uso = cont.b().getLong(0);
+            long seqNo = cont.b().getLong(0);
             int tupleCount = cont.b().getInt(8);
             //Pass the stream block a subset of the bytes, provide
             //a container that discards the original returned by the persistent deque
             StreamBlock block = new StreamBlock( fcont,
-                uso,
-                tupleCount,
+                seqNo,
+                (long)tupleCount,
                 true);
 
             //Optionally store a reference to the block in the in memory deque
@@ -202,12 +205,13 @@ public class StreamBlockQueue {
      */
     public void offer(StreamBlock streamBlock) throws IOException {
         m_persistentDeque.offer(streamBlock.asBBContainer());
-        long unreleasedUso = streamBlock.unreleasedUso();
+        long unreleasedSeqNo = streamBlock.unreleasedSequenceNumber();
         if (m_memoryDeque.size() < 2) {
             StreamBlock fromPBD = pollPersistentDeque(false);
-            if ((streamBlock.uso() == fromPBD.uso()) && (unreleasedUso > streamBlock.uso())) {
-                fromPBD.releaseUso(unreleasedUso - 1);
-                assert(fromPBD.unreleasedUso() < fromPBD.uso() + fromPBD.totalSize() - 1);
+            if ((streamBlock.startSequenceNumber() == fromPBD.startSequenceNumber()) &&
+                    (unreleasedSeqNo > streamBlock.startSequenceNumber())) {
+                fromPBD.releaseTo(unreleasedSeqNo - 1);
+                assert(fromPBD.unreleasedSequenceNumber() <= fromPBD.lastSequenceNumber());
             }
         }
     }
@@ -227,7 +231,7 @@ public class StreamBlockQueue {
             //Use only unreleased size, but throw in the USO
             //to make book keeping consistent when flushed to disk
             //Also dont count persisted blocks.
-            memoryBlockUsage += b.unreleasedSize();
+            memoryBlockUsage += b.totalSize();
         }
         //Subtract USO from on disk size
         return memoryBlockUsage + m_reader.sizeInBytes() - (StreamBlock.HEADER_SIZE * m_reader.getNumObjects());

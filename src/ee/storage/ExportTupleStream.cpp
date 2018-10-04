@@ -110,8 +110,9 @@ size_t ExportTupleStream::appendTuple(int64_t lastCommittedSpHandle,
     }
     if ((m_currBlock->remaining() < tupleMaxLength) ) {
         //If we can not fit the data get a new block with size that includes schemaSize as well.
-        extendBufferChain(tupleMaxLength+schemaSize);
+        extendBufferChain(tupleMaxLength + schemaSize);
     }
+    m_currBlock->recordStartExportSequenceNumber(seqNo);
     bool includeSchema = (m_new || m_currBlock->needsSchema());
 
     // initialize the full row header to 0. This also

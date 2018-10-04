@@ -45,9 +45,9 @@ import org.voltcore.utils.DBBPool;
 import org.voltcore.utils.Pair;
 import org.voltcore.zk.ZKUtil;
 import org.voltdb.CatalogContext;
+import org.voltdb.ExportStatsBase.ExportStatsRow;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltZK;
-import org.voltdb.ExportStatsBase.ExportStatsRow;
 import org.voltdb.catalog.CatalogMap;
 import org.voltdb.catalog.Connector;
 import org.voltdb.catalog.ConnectorTableInfo;
@@ -261,8 +261,8 @@ public class ExportGeneration implements Generation {
                     }
 
                     if (msgType == ExportManager.RELEASE_BUFFER) {
-                        final long ackUSO = buf.getLong();
-                        long tuplesSent = buf.getLong();  // STAKUTIS
+                        final long seqNo = buf.getLong();
+                        long tuplesSent = buf.getLong();
                         if (tuplesSent < 0 ) {
                             exportLog.warn("Received an export ack for partition "+eds.getTableName()+" Partition:"+eds.getPartitionId());
                             tuplesSent = 0;
@@ -273,11 +273,11 @@ public class ExportGeneration implements Generation {
                         try {
                             if (exportLog.isDebugEnabled()) {
                                 exportLog.debug("Received RELEASE_BUFFER message for " + eds.toString() +
-                                        " with uso: " + ackUSO +
+                                        " with sequence number: " + seqNo +
                                         " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                         " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                             }
-                            eds.ack(ackUSO, tuplesSent);
+                            eds.ack(seqNo, tuplesSent);
                         } catch (RejectedExecutionException ignoreIt) {
                             // ignore it: as it is already shutdown
                         }
@@ -610,7 +610,7 @@ public class ExportGeneration implements Generation {
 
     @Override
     public void pushExportBuffer(int partitionId, String signature,
-            long uso, ByteBuffer buffer, boolean sync, long tupleCount) {
+            long startSequenceNumber, ByteBuffer buffer, boolean sync, long tupleCount) {
         Map<String, ExportDataSource> sources = m_dataSourcesByPartition.get(partitionId);
 
         if (sources == null) {
@@ -632,7 +632,7 @@ public class ExportGeneration implements Generation {
             return;
         }
 
-        source.pushExportBuffer(uso, buffer, sync, (int)tupleCount);
+        source.pushExportBuffer(startSequenceNumber, buffer, sync, (int)tupleCount);
     }
 
     @Override
