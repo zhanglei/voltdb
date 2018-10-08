@@ -107,7 +107,7 @@ public class StreamBlockQueue {
             //a container that discards the original returned by the persistent deque
             StreamBlock block = new StreamBlock( fcont,
                 seqNo,
-                (long)tupleCount,
+                tupleCount,
                 true);
 
             //Optionally store a reference to the block in the in memory deque
@@ -263,7 +263,7 @@ public class StreamBlockQueue {
             b.order(ByteOrder.LITTLE_ENDIAN);
             try {
                 final int headerSize = 8 + 4 + 4 + 1; // generation, partition index + column count + byte for schema flag.
-                b.position(b.position() + 8);//Don't need the USO
+                b.position(b.position() + StreamBlock.HEADER_SIZE);//Don't need sequence number and tuple count
                 while (b.hasRemaining()) {
                     int rowLength = b.getInt();
                     //Get Generation

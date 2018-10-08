@@ -262,7 +262,7 @@ public class ExportGeneration implements Generation {
 
                     if (msgType == ExportManager.RELEASE_BUFFER) {
                         final long seqNo = buf.getLong();
-                        long tuplesSent = buf.getLong();
+                        int tuplesSent = buf.getInt();
                         if (tuplesSent < 0 ) {
                             exportLog.warn("Received an export ack for partition "+eds.getTableName()+" Partition:"+eds.getPartitionId());
                             tuplesSent = 0;
@@ -274,6 +274,7 @@ public class ExportGeneration implements Generation {
                             if (exportLog.isDebugEnabled()) {
                                 exportLog.debug("Received RELEASE_BUFFER message for " + eds.toString() +
                                         " with sequence number: " + seqNo +
+                                        " tuples sent " + tuplesSent +
                                         " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                         " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                             }
@@ -282,8 +283,8 @@ public class ExportGeneration implements Generation {
                             // ignore it: as it is already shutdown
                         }
                     } else if (msgType == ExportManager.TAKE_MASTERSHIP) {
-                        final long ackUSO = buf.getLong();
-                        long tuplesSent = buf.getLong();  // STAKUTIS
+                        final long ackSeqNo = buf.getLong();
+                        int tuplesSent = buf.getInt();
                         if (tuplesSent < 0 ) {
                             exportLog.warn("Received an export ack for partition "+eds.getTableName()+" Partition:"+eds.getPartitionId());
                             tuplesSent = 0;
@@ -294,11 +295,11 @@ public class ExportGeneration implements Generation {
                         try {
                             if (exportLog.isDebugEnabled()) {
                                 exportLog.debug("Received TAKE_MASTERSHIP message for " + eds.toString() +
-                                        " with uso:" + ackUSO +
+                                        " with sequence number:" + ackSeqNo +
                                         " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                         " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                             }
-                            eds.ack(ackUSO, tuplesSent);
+                            eds.ack(ackSeqNo, tuplesSent);
                         } catch (RejectedExecutionException ignoreIt) {
                             // ignore it: as it is already shutdown
                         }
@@ -610,7 +611,7 @@ public class ExportGeneration implements Generation {
 
     @Override
     public void pushExportBuffer(int partitionId, String signature,
-            long startSequenceNumber, ByteBuffer buffer, boolean sync, long tupleCount) {
+            long startSequenceNumber, int tupleCount, ByteBuffer buffer, boolean sync) {
         Map<String, ExportDataSource> sources = m_dataSourcesByPartition.get(partitionId);
 
         if (sources == null) {
@@ -632,7 +633,7 @@ public class ExportGeneration implements Generation {
             return;
         }
 
-        source.pushExportBuffer(startSequenceNumber, buffer, sync, (int)tupleCount);
+        source.pushExportBuffer(startSequenceNumber, tupleCount, buffer, sync);
     }
 
     @Override

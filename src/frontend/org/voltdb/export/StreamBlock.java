@@ -46,7 +46,7 @@ public class StreamBlock {
 
     public static final int HEADER_SIZE = 12;
 
-    StreamBlock(BBContainer cont, long startSequenceNumber, long rowCount, boolean isPersisted) {
+    StreamBlock(BBContainer cont, long startSequenceNumber, int rowCount, boolean isPersisted) {
         m_buffer = cont;
         m_startSequenceNumber = startSequenceNumber;
         m_rowCount = rowCount;
@@ -89,7 +89,7 @@ public class StreamBlock {
     }
 
     int rowCount() {
-        return (int)m_rowCount;
+        return m_rowCount;
     }
 
     /**
@@ -105,14 +105,14 @@ public class StreamBlock {
      */
     long unreleasedRowCount()
     {
-        return m_rowCount - m_releaseOffset;
+        return m_rowCount - (m_releaseOffset + 1);
     }
 
     // The sequence number for export rows up to which are being released
     void releaseTo(long releaseSequenceNumber)
     {
         assert(releaseSequenceNumber >= m_startSequenceNumber);
-        m_releaseOffset = releaseSequenceNumber - m_startSequenceNumber;
+        m_releaseOffset = (int)(releaseSequenceNumber - m_startSequenceNumber);
         // if it is fully released, we will discard the block
         assert(m_releaseOffset < m_rowCount);
     }
@@ -122,11 +122,11 @@ public class StreamBlock {
     }
 
     private final long m_startSequenceNumber;
-    private final long m_rowCount;
+    private final int m_rowCount;
     private final long m_totalSize;
     private BBContainer m_buffer;
     // index of the last row that has been released.
-    private long m_releaseOffset = 0;
+    private int m_releaseOffset = -1;
 
     /*
      * True if this block is still backed by a file and false

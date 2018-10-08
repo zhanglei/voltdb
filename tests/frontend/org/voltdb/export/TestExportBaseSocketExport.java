@@ -295,7 +295,7 @@ public class TestExportBaseSocketExport extends RegressionSuite {
     public void waitForStreamedTargetAllocatedMemoryZero(Client client) throws Exception {
         boolean passed = false;
 
-        // Quiesc to see all data flushed.
+        // Quiesce to see all data flushed.
         System.out.println("Quiesce client....");
         quiesce(client);
         System.out.println("Quiesce done....");

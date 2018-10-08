@@ -100,10 +100,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     private final ExportFormat m_format;
 
-    private long m_firstUnpolledSeqNo = 0;
-    private long m_lastReleasedSeqNo = 0;
+    private long m_firstUnpolledSeqNo = -1L;
+    private long m_lastReleasedSeqNo = -1L;
     // End uso of most recently pushed export buffer
-    private long m_lastPushedSeqNo = 0L;
+    private long m_lastPushedSeqNo = -1L;
     // Relinquishes export master after this uso
     private long m_seqNoToDrain = -1L;
     //This is released when all mailboxes are set.
@@ -347,7 +347,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return m_client;
     }
 
-    private synchronized void releaseExportBytes(long releaseSeqNo, long tuplesSent) throws IOException {
+    private synchronized void releaseExportBytes(long releaseSeqNo, int tuplesSent) throws IOException {
         // Released offset is in an already-released past
         if (!m_committedBuffers.isEmpty() && releaseSeqNo < m_committedBuffers.peek().startSequenceNumber()) {
             tuplesSent = 0;
@@ -550,10 +550,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             assert (buffer.capacity() > StreamBlock.HEADER_SIZE);
             // Drop already acked buffer
             final BBContainer cont = DBBPool.wrapBB(buffer);
-            long lastSequenceNumber = startSequenceNumber + (long)tupleCount;
+            long lastSequenceNumber = startSequenceNumber + tupleCount;
             if (m_lastReleasedSeqNo > 0 && m_lastReleasedSeqNo >= lastSequenceNumber) {
                 m_tupleCount += tupleCount;
-                m_tuplesPending += tupleCount;
                 //What ack from future is known?
                 if (exportLog.isDebugEnabled()) {
                     exportLog.debug("Dropping already acked SeqNo: " + m_lastReleasedSeqNo
@@ -620,9 +619,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     public void pushExportBuffer(
             final long startSequenceNumber,
+            final int tupleCount,
             final ByteBuffer buffer,
-            final boolean sync,
-            final int tupleCount) {
+            final boolean sync) {
         try {
             m_bufferPushPermits.acquire();
         } catch (InterruptedException e) {
@@ -898,14 +897,14 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     public class AckingContainer extends BBContainer {
-        final long m_uso;
+        final long m_seqNo;
         final int m_tuplesSent;
         final BBContainer m_backingCont;
         long m_startTime = 0;
 
-        public AckingContainer(BBContainer cont, long uso, int tuplesSent) {
+        public AckingContainer(BBContainer cont, long seqNo, int tuplesSent) {
             super(cont.b());
-            m_uso = uso;
+            m_seqNo = seqNo;
             m_tuplesSent = tuplesSent;
             m_backingCont = cont;
         }
@@ -922,7 +921,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     @Override
                     public void run() {
                         if (exportLog.isTraceEnabled()) {
-                            exportLog.trace("AckingContainer.discard with uso: " + m_uso);
+                            exportLog.trace("AckingContainer.discard with sequence number: " + m_seqNo + " tuples sent: " + m_tuplesSent);
                         }
                         assert(m_tuplesSent == 0 || m_startTime != 0);
                         long elapsedMS = System.currentTimeMillis() - m_startTime;
@@ -937,10 +936,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                              m_backingCont.discard();
                             try {
                                 if (!m_es.isShutdown()) {
-                                    ackImpl(m_uso, m_tuplesSent);
+                                    ackImpl(m_seqNo, m_tuplesSent);
                                 }
                             } finally {
-                                forwardAckToOtherReplicas(m_uso, m_tuplesSent);
+                                forwardAckToOtherReplicas(m_seqNo, m_tuplesSent);
                             }
                         } catch (Exception e) {
                             exportLog.error("Error acking export buffer", e);
@@ -965,9 +964,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0) {
-            // partition:int(4) + length:int(4) +
+            // msg type(1) + partition:int(4) + length:int(4) +
             // signaturesBytes.length + ackSeqNo:long(8) + tuplesSent:int(4).
-            final int msgLen = 4 + 4 + m_signatureBytes.length + 8 + 4;
+            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8 + 4;
 
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.RELEASE_BUFFER);
@@ -984,6 +983,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             }
             if (exportLog.isDebugEnabled()) {
                 exportLog.debug("Send RELEASE_BUFFER " + toString() + " with sequence number " + seqNo
+                        + " tuples sent " + tuplesSent
                         + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                         + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
@@ -1031,7 +1031,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-    public void ack(final long seqNo, long tuplesSent) {
+    public void ack(final long seqNo, int tuplesSent) {
 
         //In replicated only master will be doing this.
         m_es.execute(new Runnable() {
@@ -1064,10 +1064,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-     private void ackImpl(long seqNo, long tuplesSent) {
+     private void ackImpl(long seqNo, int tuplesSent) {
 
         //Process the ack if any and add blocks to the delete list or move the released sequence number
-        if (seqNo > 0) {
+        if (seqNo >= 0) {
             try {
                 releaseExportBytes(seqNo, tuplesSent);
             } catch (IOException e) {
