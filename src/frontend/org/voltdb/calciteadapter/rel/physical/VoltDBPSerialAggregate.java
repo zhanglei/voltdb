@@ -27,11 +27,18 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.util.ImmutableBitSet;
+import org.voltdb.plannodes.AbstractPlanNode;
 import org.voltdb.plannodes.AggregatePlanNode;
+import org.voltdb.plannodes.LimitPlanNode;
 
 public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
+
+    // Inline Rels
+    final private RexNode m_offset;
+    final private RexNode m_limit;
 
     /** Constructor */
     public VoltDBPSerialAggregate(
@@ -44,7 +51,10 @@ public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
             List<AggregateCall> aggCalls,
             RexNode postPredicate,
             int splitCount,
-            boolean isCoordinatorAggr) {
+            boolean isCoordinatorAggr,
+            RexNode offset,
+            RexNode limit
+            ) {
       super(cluster,
             traitSet,
             child,
@@ -55,6 +65,33 @@ public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
             postPredicate,
             splitCount,
             isCoordinatorAggr);
+      m_offset = offset;
+      m_limit = limit;
+    }
+
+    public VoltDBPSerialAggregate(
+            RelOptCluster cluster,
+            RelTraitSet traitSet,
+            RelNode child,
+            boolean indicator,
+            ImmutableBitSet groupSet,
+            List<ImmutableBitSet> groupSets,
+            List<AggregateCall> aggCalls,
+            RexNode postPredicate,
+            int splitCount,
+            boolean isCoordinatorAggr) {
+      this(cluster,
+            traitSet,
+            child,
+            indicator,
+            groupSet,
+            groupSets,
+            aggCalls,
+            postPredicate,
+            splitCount,
+            isCoordinatorAggr,
+            null,
+            null);
     }
 
     public VoltDBPSerialAggregate(
@@ -117,7 +154,9 @@ public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
                 aggCalls,
                 m_postPredicate,
                 m_splitCount,
-                m_isCoordinatorAggr);
+                m_isCoordinatorAggr,
+                m_offset,
+                m_limit);
     }
 
     @Override
@@ -142,7 +181,9 @@ public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
                 aggCalls,
                 postPredicate,
                 splitCount,
-                isCoordinatorAggr);
+                isCoordinatorAggr,
+                m_offset,
+                m_limit);
     }
 
     @Override
@@ -156,4 +197,37 @@ public class VoltDBPSerialAggregate extends AbstractVoltDBPAggregate {
         return new AggregatePlanNode();
     }
 
+    private boolean hasLimitOffset() {
+        return (m_limit != null || m_offset != null);
+    }
+
+    @Override
+    AbstractPlanNode toPlanNode(RelDataType inputRowType) {
+        AbstractPlanNode planNode = super.toPlanNode(inputRowType);
+        if (hasLimitOffset()) {
+            LimitPlanNode limitPlanNode = VoltDBPLimit.toPlanNode(m_limit, m_offset);
+            planNode.addInlinePlanNode(limitPlanNode);
+        }
+        return planNode;
+    }
+
+    public RexNode getOffset() {
+        return m_offset;
+    }
+
+    public RexNode getLimit() {
+        return m_limit;
+    }
+
+    @Override
+    protected String computeDigest() {
+        String digest = super.computeDigest();
+        if (m_limit != null) {
+            digest += "_limit_" + m_limit.toString();
+        }
+        if (m_offset != null) {
+            digest += "_offset_" + m_offset.toString();
+        }
+        return digest;
+    }
 }
