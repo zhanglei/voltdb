@@ -28,7 +28,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.voltdb.calciteadapter.util.VoltDBRexUtil;
 import org.voltdb.plannodes.AbstractPlanNode;
@@ -98,13 +97,7 @@ public class VoltDBPSort extends Sort implements VoltDBPRel {
 
         LimitPlanNode lpn = null;
         if (fetch != null || offset != null) {
-            lpn = new LimitPlanNode();
-            if (fetch != null) {
-                lpn.setLimit(RexLiteral.intValue(fetch));
-            }
-            if (offset != null) {
-                lpn.setOffset(RexLiteral.intValue(offset));
-            }
+            lpn = VoltDBPLimit.toPlanNode(fetch, offset);
         }
         OrderByPlanNode opn = null;
         RelCollation collation = getCollation();

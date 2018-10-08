@@ -17,7 +17,11 @@
 
 package org.voltdb.calciteadapter.planner;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.calcite.plan.Convention;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
@@ -50,6 +54,11 @@ import org.voltdb.plannodes.AbstractPlanNode;
 import org.voltdb.plannodes.SendPlanNode;
 
 public class CalcitePlanner {
+
+    // Set to keep rules that are added for a specific query and need to be removed
+    // once the query is compiled
+    // Thread safety???
+    private static Set<RelOptRule> queryRuleSet = new HashSet<>();
 
     private static SchemaPlus schemaPlusFromDatabase(Database db) {
         SchemaPlus rootSchema = Frameworks.createRootSchema(false);
@@ -246,4 +255,31 @@ public class CalcitePlanner {
         return traitSet;
     }
 
+    /**
+     * Add a new rule to the current rule set
+     * @param planner
+     * @param newRule
+     * @return
+     */
+    public static boolean addRule(RelOptPlanner planner, RelOptRule newRule) {
+        boolean result = planner.addRule(newRule);
+        if (result) {
+            queryRuleSet.add(newRule);
+        }
+        return result;
+    }
+
+    /**
+     * Remove all query specific rules that were added during planning.
+     * Not sure though at what time to invoke it. It requires the access to the RelOptPlanner
+     * which is not available from the org.apache.calcite.tools.Planner - private member.
+     * Any rule has access to the RelOptPlanner
+     *
+     * @param planner
+     */
+    public static void clearQueryRules(RelOptPlanner planner) {
+        for(RelOptRule rule : queryRuleSet) {
+            planner.removeRule(rule);
+        }
+    }
 }

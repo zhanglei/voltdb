@@ -136,7 +136,6 @@ public class VoltDBTable implements TranslatableTable {
     public RelNode toRel(ToRelContext context, RelOptTable relOptTable) {
         RelOptCluster cluster = context.getCluster();
         // Start conservatively with a Logical Scan
-        RelDistribution distribution = relOptTable.getDistribution();
         RelNode node = new VoltDBLTableScan(cluster,
                 cluster.traitSet(),
                 relOptTable,

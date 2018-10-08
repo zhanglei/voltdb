@@ -29,11 +29,11 @@ import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptRuleOperandChildPolicy;
 import org.apache.calcite.plan.RelOptRuleOperandChildren;
-import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelCollations;
+import org.apache.calcite.rel.RelDistribution;
+import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
@@ -51,6 +51,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.CompositeList;
+import org.voltdb.calciteadapter.planner.CalcitePlanner;
 import org.voltdb.calciteadapter.rel.physical.AbstractVoltDBPAggregate;
 import org.voltdb.calciteadapter.rel.physical.AbstractVoltDBPExchange;
 import org.voltdb.calciteadapter.rel.physical.VoltDBPHashAggregate;
@@ -83,12 +84,6 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                                             operand(VoltDBPSingletonExchange.class, any())))),
                     true, "VoltDBPAggregateSingletonExchangeTransposeRule");
 
-//    public static final VoltDBPAggregateExchangeTransposeRule INSTANCE_1 =
-//            new VoltDBPAggregateExchangeTransposeRule(
-//                    operand(AbstractVoltDBPAggregate.class,
-//                            operand(VoltDBPSingletonExchange.class, any())),
-//                    true, "VoltDBPAggregateSingletonExchangeTransposeRule");
-
     public static final VoltDBPAggregateExchangeTransposeRule INSTANCE_2 =
             new VoltDBPAggregateExchangeTransposeRule(
                     operand(AbstractVoltDBPAggregate.class,
@@ -99,12 +94,6 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                                             operand(VoltDBPUnionExchange.class, any())))),
                     false, "VoltDBPAggregateUnionExchangeTransposeRule");
 
-//    public static final VoltDBPAggregateExchangeTransposeRule INSTANCE_2 =
-//            new VoltDBPAggregateExchangeTransposeRule(
-//                    operand(AbstractVoltDBPAggregate.class,
-//                            operand(VoltDBPUnionExchange.class, any())),
-//                    false, "VoltDBPAggregateUnionExchangeTransposeRule");
-
     public static final VoltDBPAggregateExchangeTransposeRule INSTANCE_3 =
             new VoltDBPAggregateExchangeTransposeRule(
                     operand(AbstractVoltDBPAggregate.class,
@@ -114,12 +103,6 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                                     ImmutableList.of(
                                             operand(VoltDBPMergeExchange.class, any())))),
                     false, "VoltDBPAggregateMergeExchangeTransposeRule");
-
-//    public static final VoltDBPAggregateExchangeTransposeRule INSTANCE_3 =
-//            new VoltDBPAggregateExchangeTransposeRule(
-//                    operand(AbstractVoltDBPAggregate.class,
-//                            operand(VoltDBPMergeExchange.class, any())),
-//                    false, "VoltDBPAggregateMergeExchangeTransposeRule");
 
     // Aggregate functions that require transformation for a distributed query
     private static final Set<SqlKind> FRAGEMENT_AGGR_FUNCTIONS =
@@ -137,13 +120,15 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
         private final AbstractVoltDBPAggregate m_origAggrRelNode;
 
         private final boolean m_isCoordinatorAggr;
+        private final boolean m_mustHaveHashAggregate;
 
         // The root of the converted relation
         private RelNode m_voltRootNode = null;
 
-        RewriteRelVisitor(AbstractVoltDBPAggregate origAggrRelNode, boolean isCoordinatorAggr) {
+        RewriteRelVisitor(AbstractVoltDBPAggregate origAggrRelNode, boolean isCoordinatorAggr, boolean mustHaveHashAggregate) {
             m_origAggrRelNode = origAggrRelNode;
             m_isCoordinatorAggr = isCoordinatorAggr;
+            m_mustHaveHashAggregate = mustHaveHashAggregate;
         }
 
         public RelNode getRootNode() {
@@ -162,7 +147,7 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
             RelNode voltRelNode = null;
             if (relNode instanceof LogicalAggregate) {
                 LogicalAggregate aggregate = (LogicalAggregate) relNode;
-                if (m_origAggrRelNode instanceof VoltDBPHashAggregate) {
+                if (m_origAggrRelNode instanceof VoltDBPHashAggregate || m_mustHaveHashAggregate) {
                     voltRelNode = new VoltDBPHashAggregate(
                             aggregate.getCluster(),
                             traitSet,
@@ -186,6 +171,8 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                             m_origAggrRelNode.getPostPredicate(),
                             1,
                             m_isCoordinatorAggr);
+                } else {
+                    assert(false);
                 }
             } else if (relNode instanceof LogicalProject) {
                 LogicalProject project = (LogicalProject) relNode;
@@ -241,45 +228,36 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
             result = transformSingletonExchange(aggr, (VoltDBPSingletonExchange) exchange);
         } else {
             result = transformDistributedExchange(call, aggr, exchange);
+            // Is there a better place for that?
+            // Add Limit / SerialAggregate / MergeExchange Transpose rule
+            // to push the Limit to the fragment
+            RelDistribution distributionTrait = exchange.getTraitSet().getTrait(RelDistributionTraitDef.INSTANCE);
+            CalcitePlanner.addRule(call.getPlanner(), VoltDBPLimitExchangeTransposeRule.makeRule(distributionTrait));
+
         }
-//        RelCollation aggrCollation = aggr.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-//        RelCollation resultCollation = result.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-//        Map<RelNode, RelNode> equiv;
-//        if (aggrCollation.equals(RelCollations.EMPTY) && !resultCollation.equals(RelCollations.EMPTY)) {
-//            VoltDBPSort sort = new VoltDBPSort(
-//                    result.getCluster(),
-//                    result.getTraitSet(),
-//                    result,
-//                    resultCollation,
-//                    1);
-//              equiv = ImmutableMap.of((RelNode) sort, aggr);
-//
-//            result = sort;
-//        } else {
-//            equiv = ImmutableMap.of();
-//        }
-//        call.transformTo(result, equiv);
+
         call.transformTo(result);
     }
 
     private RelNode transformSingletonExchange(AbstractVoltDBPAggregate aggr, VoltDBPSingletonExchange exchange) {
         // Preserve Aggregate's collation trait if any
-        // If agg is serial, the exchange better has the collation matching the group by
-        // otherwise it has to be converted to hash
-        // aggr is hash, new exchange should not have collation
+        // If aggregation is serial, the exchange better has the collation matching the group by
         RelTraitSet exchangeTraits = exchange.getTraitSet();
         RelTraitSet aggrTraits = aggr.getTraitSet();
         if (aggr instanceof VoltDBPSerialAggregate) {
-            // need to check
-            aggrTraits = aggr.getTraitSet();
-            RelTrait exchangeColl = exchangeTraits.getTrait(RelCollationTraitDef.INSTANCE);
-            aggrTraits = aggrTraits.replace(exchangeColl);
+            assert(aggrTraits.getTrait(RelCollationTraitDef.INSTANCE).equals(
+                    exchangeTraits.getTrait(RelCollationTraitDef.INSTANCE)));
         } else {
+            // Hash aggregate's outptu is unordered
             exchangeTraits = exchangeTraits.replace(RelCollations.EMPTY);
         }
         if (!exchange.isTopExchange()) {
+            // This is not a distributed query so we can can set a new aggregate's distribution
+            // right here. For a distributed query it will be done when aggregate will be trasposed
+            // with a union / merge exchange
             aggrTraits = aggrTraits.replace(exchange.getDistribution());
         }
+        // Not used
         boolean isCoordinatorAggregate = exchange.isTopExchange();
         // Simply push the aggregate below the exchange
         AbstractVoltDBPAggregate newAggr = aggr.copy(
@@ -308,39 +286,36 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
             AbstractVoltDBPExchange exchange) {
 
         // Preserve Aggregate's collation trait if any
-        // If agg is serial, the exchange better has the collation matching the group by
-        // otherwise it has to be converted to hash
-        // aggr is hash, new exchange should not have collation
+        // If agg is serial, the exchange better has a collation matching the group by
         RelTraitSet exchangeTraits = exchange.getTraitSet();
         RelTraitSet aggrTraits = aggr.getTraitSet();
         if (aggr instanceof VoltDBPSerialAggregate) {
-            // need to check
-            aggrTraits = aggr.getTraitSet();
-            RelTrait exchangeColl = exchangeTraits.getTrait(RelCollationTraitDef.INSTANCE);
-            aggrTraits = aggrTraits.replace(exchangeColl);
+            assert(aggrTraits.getTrait(RelCollationTraitDef.INSTANCE).equals(
+                    exchangeTraits.getTrait(RelCollationTraitDef.INSTANCE)));
         } else {
+            // Hash aggregate's outptu is unordered
             exchangeTraits = exchangeTraits.replace(RelCollations.EMPTY);
         }
 
         // Fragment aggregate
         RelNode fragmentAggr;
         // Do we need to transform a fragment aggregate?
-        if (!needTransformation(FRAGEMENT_AGGR_FUNCTIONS, aggr)) {
+//        if (!needTransformation(FRAGEMENT_AGGR_FUNCTIONS, aggr)) {
             // Simply copy the original aggregate and add correct distribution trait to it.
-            RelCollation aggrCollation = aggrTraits.getTrait(RelCollationTraitDef.INSTANCE);
-            if (aggrCollation.equals(RelCollations.EMPTY)) {
-                fragmentAggr = new VoltDBPHashAggregate(
-                        aggr.getCluster(),
-                        aggrTraits.replace(exchange.getDistribution()),
-                        exchange.getInput(),
-                        aggr.indicator,
-                        aggr.getGroupSet(),
-                        aggr.getGroupSets(),
-                        aggr.getAggCallList(),
-                        aggr.getPostPredicate(),
-                        exchange.getSplitCount(),
-                        false);
-            } else {
+//            RelCollation aggrCollation = aggrTraits.getTrait(RelCollationTraitDef.INSTANCE);
+//            if (aggrCollation.equals(RelCollations.EMPTY)) {
+//                fragmentAggr = new VoltDBPHashAggregate(
+//                        aggr.getCluster(),
+//                        aggrTraits.replace(exchange.getDistribution()),
+//                        exchange.getInput(),
+//                        aggr.indicator,
+//                        aggr.getGroupSet(),
+//                        aggr.getGroupSets(),
+//                        aggr.getAggCallList(),
+//                        aggr.getPostPredicate(),
+//                        exchange.getSplitCount(),
+//                        false);
+//            } else {
                 fragmentAggr = aggr.copy(
                         aggr.getCluster(),
                         aggrTraits.replace(exchange.getDistribution()),
@@ -353,21 +328,20 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                         exchange.getSplitCount(),
                         false);
 
-            }
-        } else {
-            // Transform new fragment aggregate
-            // Don't forget to update aggregate traits - aggrTraits
-            fragmentAggr = transformAggregates(call, aggr, exchange.getInput());
-            // Convert new LogicalAggregates to VoltDBPAggregates
-            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, false);
-            visitor.visit(fragmentAggr, 0, null);
-            fragmentAggr = visitor.getRootNode();
+//            }
+//        } else {
+//            // Transform new fragment aggregate
+//            // Don't forget to update aggregate traits - aggrTraits
+//            fragmentAggr = transformAggregates(call, aggr, exchange.getInput());
+//            // Convert new LogicalAggregates to VoltDBPAggregates
+//            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, false);
+//            visitor.visit(fragmentAggr, 0, null);
+//            fragmentAggr = visitor.getRootNode();
+//
+//        }
 
-        }
-
-        // Distribute Exchange - UnionExchange only for now
         AbstractVoltDBPExchange distributedExchange;
-        if (aggr instanceof VoltDBPSerialAggregate) {
+        if (fragmentAggr instanceof VoltDBPSerialAggregate) {
             distributedExchange = exchange.copy(
                     exchangeTraits,
                     fragmentAggr,
@@ -388,7 +362,7 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
 
         // Coordinator aggregate
         RelNode topAggr;
-        // Do we need to transform a fragment aggregate?
+        // Do we need to transform a coordinator's aggregate?
         if (!needTransformation(COORDINATOR_AGGR_FUNCTIONS, fragmentAggr)) {
             if (distributedExchange instanceof VoltDBPUnionExchange) {
                 topAggr = new VoltDBPHashAggregate(
@@ -403,23 +377,23 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
                         distributedExchange.getSplitCount(),
                         true);
             } else {
-            topAggr = aggr.copy(
-                    aggr.getCluster(),
-                    aggrTraits.replace(exchange.getDistribution()),
-                    distributedExchange,
-                    aggr.indicator,
-                    aggr.getGroupSet(),
-                    aggr.getGroupSets(),
-                    aggr.getAggCallList(),
-                    aggr.getPostPredicate(),
-                    distributedExchange.getSplitCount(),
-                    true);
+                topAggr = aggr.copy(
+                        aggr.getCluster(),
+                        aggrTraits.replace(exchange.getDistribution()),
+                        distributedExchange,
+                        aggr.indicator,
+                        aggr.getGroupSet(),
+                        aggr.getGroupSets(),
+                        aggr.getAggCallList(),
+                        aggr.getPostPredicate(),
+                        distributedExchange.getSplitCount(),
+                        true);
             }
         } else {
             // Don't forget to replace aggrTraits
             topAggr = transformAggregates(call, aggr, distributedExchange);
             // Convert new LogicalAggregates to VoltDBPAggregates
-            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, true);
+            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, true, distributedExchange instanceof VoltDBPUnionExchange);
             visitor.visit(topAggr, 0, null);
             topAggr = visitor.getRootNode();
         }

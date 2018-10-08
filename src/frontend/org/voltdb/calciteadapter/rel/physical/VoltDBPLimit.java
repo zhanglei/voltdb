@@ -160,4 +160,15 @@ public class VoltDBPLimit extends SingleRel implements VoltDBPRel {
         return m_splitCount;
     }
 
+    public static LimitPlanNode toPlanNode(RexNode limit, RexNode offset) {
+        LimitPlanNode lpn = new LimitPlanNode();
+        lpn = new LimitPlanNode();
+        if (limit != null) {
+            lpn.setLimit(RexLiteral.intValue(limit));
+        }
+        if (offset != null) {
+            lpn.setOffset(RexLiteral.intValue(offset));
+        }
+        return lpn;
+    }
 }

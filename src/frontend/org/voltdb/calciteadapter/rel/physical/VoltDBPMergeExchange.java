@@ -25,7 +25,6 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.voltdb.calciteadapter.util.VoltDBRexUtil;
 import org.voltdb.plannodes.AbstractPlanNode;
@@ -89,13 +88,7 @@ public class VoltDBPMergeExchange extends AbstractVoltDBPExchange implements Vol
 
         // Inline Limit and / or Offset
         if (m_limit != null || m_offset != null) {
-            LimitPlanNode inlineLimitPlanNode = new LimitPlanNode();
-            if (m_limit != null) {
-                inlineLimitPlanNode.setLimit(RexLiteral.intValue(m_limit));
-            }
-            if (m_offset != null) {
-                inlineLimitPlanNode.setOffset(RexLiteral.intValue(m_offset));
-            }
+            LimitPlanNode inlineLimitPlanNode = VoltDBPLimit.toPlanNode(m_limit, m_offset);
             rpn.addInlinePlanNode(inlineLimitPlanNode);
         }
         return rpn;

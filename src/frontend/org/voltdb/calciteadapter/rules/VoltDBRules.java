@@ -33,6 +33,7 @@ import org.voltdb.calciteadapter.rules.inlining.VoltDBPCalcAggregateMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPCalcScanMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitMergeExchangeMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitScanMergeRule;
+import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitSerialAggregateMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitSortMergeRule;
 import org.voltdb.calciteadapter.rules.logical.VoltDBLAggregateRule;
 import org.voltdb.calciteadapter.rules.logical.VoltDBLCalcRule;
@@ -94,9 +95,9 @@ public class VoltDBRules {
             , VoltDBPLimitRule.INSTANCE
             , VoltDBPAggregateRule.INSTANCE
 
-            // Exchage Rules
+            // Exchange Rules
             , VoltDBPCalcExchangeTransposeRule.INSTANCE
-            , VoltDBPLimitExchangeTransposeRule.INSTANCE
+            , VoltDBPLimitExchangeTransposeRule.INSTANCE_1
             , VoltDBPSortExchangeTransposeRule.INSTANCE
             , VoltDBPAggregateExchangeTransposeRule.INSTANCE_1
             , VoltDBPAggregateExchangeTransposeRule.INSTANCE_2
@@ -111,6 +112,7 @@ public class VoltDBRules {
             , VoltDBPLimitMergeExchangeMergeRule.INSTANCE_2
             , VoltDBPCalcAggregateMergeRule.INSTANCE
             , VoltDBPCalcScanMergeRule.INSTANCE
+            , VoltDBPLimitSerialAggregateMergeRule.INSTANCE
             , VoltDBPLimitSortMergeRule.INSTANCE_1
             , VoltDBPLimitSortMergeRule.INSTANCE_2
             , VoltDBPAggregateScanMergeRule.INSTANCE

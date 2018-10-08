@@ -229,15 +229,7 @@ public abstract class AbstractVoltDBPTableScan extends AbstractVoltDBTableScan i
      */
     protected AbstractPlanNode addLimitOffset(AbstractPlanNode node) {
         if (hasLimitOffset()) {
-            LimitPlanNode limitPlanNode = new LimitPlanNode();
-            if (m_limit != null) {
-                int limit = getLimit();
-                limitPlanNode.setLimit(limit);
-            }
-            if (m_offset != null) {
-                int offset = RexLiteral.intValue(m_offset);
-                limitPlanNode.setOffset(offset);
-            }
+            LimitPlanNode limitPlanNode = VoltDBPLimit.toPlanNode(m_limit, m_offset);
             node.addInlinePlanNode(limitPlanNode);
         }
         return node;
