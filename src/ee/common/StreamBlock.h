@@ -160,7 +160,7 @@ namespace voltdb
         }
 
         int64_t lastExportSequenceNumber() const {
-            return m_startExportSequenceNumber + (int64_t)getRowCountforExport();
+            return m_startExportSequenceNumber + (int64_t)getRowCountforExport() - 1;
         }
 
         void recordCompletedSequenceNumForDR(int64_t lastDRSequenceNumber) {

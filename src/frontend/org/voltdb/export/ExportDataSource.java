@@ -537,10 +537,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     private void pushExportBufferImpl(
             long startSequenceNumber,
+            int tupleCount,
             ByteBuffer buffer,
             boolean sync,
-            boolean poll,
-            int tupleCount) throws Exception {
+            boolean poll) throws Exception {
         final java.util.concurrent.atomic.AtomicBoolean deleted = new java.util.concurrent.atomic.AtomicBoolean(false);
         if (exportLog.isTraceEnabled()) {
             exportLog.trace("pushExportBufferImpl with seqNo=" + startSequenceNumber + ", sync=" + sync + ", poll=" + poll);
@@ -631,7 +631,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         if (m_es.isShutdown()) {
             //If we are shutting down push it to PBD
             try {
-                pushExportBufferImpl(startSequenceNumber, buffer, sync, false, tupleCount);
+                pushExportBufferImpl(startSequenceNumber, tupleCount, buffer, sync, false);
             } catch (Throwable t) {
                 VoltDB.crashLocalVoltDB("Error pushing export  buffer", true, t);
             } finally {
@@ -645,7 +645,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 public void run() {
                     try {
                         if (!m_es.isShutdown()) {
-                            pushExportBufferImpl(startSequenceNumber, buffer, sync, m_readyForPolling, tupleCount);
+                            pushExportBufferImpl(startSequenceNumber, tupleCount, buffer, sync, m_readyForPolling);
                         }
                     } catch (Throwable t) {
                         VoltDB.crashLocalVoltDB("Error pushing export  buffer", true, t);
@@ -672,12 +672,12 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     }
                     m_tupleCount = sequenceNumber;
                     if (isRecover) {
-                        if (truncationPoint == null) {
-                            exportLog.error("Snapshot does not include truncation point for partition " +
+                        if (sequenceNumber < 0) {
+                            exportLog.error("Snapshot does not include valid truncation point for partition " +
                                     m_partitionId);
                         }
                         else {
-                            m_committedBuffers.truncateToTxnId(truncationPoint);
+                            m_committedBuffers.truncateToSequenceNumber(sequenceNumber);
                         }
                     }
                 } catch (Throwable t) {

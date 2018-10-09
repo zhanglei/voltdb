@@ -18,6 +18,7 @@
 package org.voltdb.export;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.voltcore.utils.DBBPool.BBContainer;
@@ -77,7 +78,7 @@ public class StreamBlock {
     }
 
     long lastSequenceNumber() {
-        return m_startSequenceNumber + m_rowCount;
+        return m_startSequenceNumber + m_rowCount - 1;
     }
 
     /**
@@ -114,7 +115,7 @@ public class StreamBlock {
         assert(releaseSequenceNumber >= m_startSequenceNumber);
         m_releaseOffset = (int)(releaseSequenceNumber - m_startSequenceNumber);
         // if it is fully released, we will discard the block
-        assert(m_releaseOffset < m_rowCount);
+        assert(m_releaseOffset < (m_rowCount - 1));
     }
 
     boolean isPersisted() {
@@ -154,9 +155,11 @@ public class StreamBlock {
      * and should only be called once to get a container for pushing the data to disk
      */
     BBContainer asBBContainer() {
+        m_buffer.b().order(ByteOrder.LITTLE_ENDIAN);
         m_buffer.b().putLong(0, startSequenceNumber());
         m_buffer.b().putInt(8, rowCount());
         m_buffer.b().position(0);
+        m_buffer.b().order(ByteOrder.BIG_ENDIAN);
         return getRefCountingContainer(m_buffer.b().asReadOnlyBuffer());
     }
 }

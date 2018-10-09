@@ -101,8 +101,10 @@ public class StreamBlockQueue {
         } else {
             //If the container is not null, unpack it.
             final BBContainer fcont = cont;
+            cont.b().order(ByteOrder.LITTLE_ENDIAN);
             long seqNo = cont.b().getLong(0);
             int tupleCount = cont.b().getInt(8);
+            cont.b().order(ByteOrder.BIG_ENDIAN);
             //Pass the stream block a subset of the bytes, provide
             //a container that discards the original returned by the persistent deque
             StreamBlock block = new StreamBlock( fcont,
@@ -253,87 +255,58 @@ public class StreamBlockQueue {
         }
     }
 
-    public void truncateToTxnId(final long txnId) throws IOException {
+    public void truncateToSequenceNumber(final long truncationSeqNo) throws IOException {
         assert(m_memoryDeque.isEmpty());
         m_persistentDeque.parseAndTruncate(new BinaryDequeTruncator() {
 
+        /*
+         * Export PBD buffer layout:
+         *    --- Buffer Header   ---
+         *    seqNo(8) + tupleCount(4) +
+         *    --- Row Header      ---
+         *    rowLength(4) + genId(8) + partitionColumnIndex(4) + columnCount(4) + hasSchemaFlag(1) +
+         *    nullArrayLength(4) + nullArray(var length)
+         *    --- Optional Schema ---
+         *    tableNameLength(4) + tableName(var length) + colNameLength(4) + colName(var length) + colType(1) + colLength(4) + ...
+         *    --- Row Data        ---
+         *    RowTxnId(8) + rowData(var length)
+         *
+         *    repeat row header, optional schema and row data...
+         */
         @Override
         public TruncatorResponse parse(BBContainer bbc) {
             ByteBuffer b = bbc.b();
             b.order(ByteOrder.LITTLE_ENDIAN);
             try {
-                final int headerSize = 8 + 4 + 4 + 1; // generation, partition index + column count + byte for schema flag.
-                b.position(b.position() + StreamBlock.HEADER_SIZE);//Don't need sequence number and tuple count
+                final long startSequenceNumber = b.getLong();
+                // If the truncation point was the first row in the block, the entire block is to be discard
+                // We know it is the first row if the start sequence number of buffer is the truncation point
+                if (startSequenceNumber >= truncationSeqNo) {
+                    return PersistentBinaryDeque.fullTruncateResponse();
+                }
+                final int tupleCount = b.getInt();
+                // There is nothing to do with this buffer
+                final long lastSequenceNumber = startSequenceNumber + tupleCount - 1;
+                if (lastSequenceNumber < truncationSeqNo) {
+                    return null;
+                }
+                // Partial truncation
+                int offset = 0;
                 while (b.hasRemaining()) {
-                    int rowLength = b.getInt();
-                    //Get Generation
-                    b.getLong();
-                    //Get partition col index
-                    b.getInt();
-                    //Get column count includes metadata column count.
-                    int columnCount = b.getInt();
-                    //Get schema flag.
-                    byte hasSchema = b.get();
-
-                    int nullArrayLength = ((columnCount + 7) & -8) >> 3;
-                    b.position(b.position() + nullArrayLength);
-
-                    int skiplen = 0;
-                    if (hasSchema == 1) {
-                        //Table Name + Its length size
-                        skiplen += 4;
-                        int tlen = b.getInt();
-                        byte[] bx = new byte[tlen];
-                        b.get(bx);
-                        skiplen += tlen;
-
-                        for (int i = 0; i < columnCount; i++) {
-                            //Col Name length
-                            tlen = b.getInt();
-                            skiplen += 4;
-                            bx = new byte[tlen];
-                            //Col Name
-                            b.get(bx);
-                            skiplen += tlen;
-                            //Type Byte
-                            b.get();
-                            skiplen++;
-                            //Get length of column
-                            b.getInt();
-                            skiplen += 4;
-                        }
-                    }
-
-                    long rowTxnId = b.getLong();
-                    if (exportLog.isTraceEnabled()) {
-                        exportLog.trace("Evaluating row with txnId " + rowTxnId + " for truncation, skiplen=" + skiplen);
-                    }
-                    if (rowTxnId > txnId) {
-                        if (exportLog.isDebugEnabled()) {
-                            exportLog.debug(
-                                    "Export stream " + m_nonce + " found export data to truncate at txn " + rowTxnId);
-                        }
-                        //The txnid of this row is the greater then the truncation txnid.
-                        //Don't want this row, but want to preserve all rows before it.
-                        //Move back before the row length prefix, txnId and header
-                        b.position(b.position() - (skiplen + 12 + headerSize + nullArrayLength));
-
-                        //If the truncation point was the first row in the block, the entire block is to be discard
-                        //We know it is the first row if the position before the row is after the uso (8 bytes)
-                        if (b.position() == 8) {
-                            return PersistentBinaryDeque.fullTruncateResponse();
-                        } else {
-                            //Return everything in the block before the truncation point.
-                            //Indicate this is the end of the interesting data.
-                            b.limit(b.position());
-                            b.position(0);
-                            return new ByteBufferTruncatorResponse(b);
-                        }
-                    } else {
-                        //Not the row we are looking to truncate at. Skip past it keeping in mind
-                        //we read the first 8 bytes for the txn id, the null array which
-                        //is included in the length prefix and the header size
-                        b.position(b.position() + (rowLength - (skiplen + 8 + headerSize + nullArrayLength)));
+                    final int rowLength = b.getInt();
+                    // Not the row we are looking to truncate at. Skip past it keeping in mind
+                    // we read the first 4 bytes for the row length
+                    b.position(b.position() + rowLength - 4);
+                    offset++;
+                    if (startSequenceNumber + offset > truncationSeqNo) {
+                        // The sequence number of this row is the greater then the truncation sequence number.
+                        // Don't want this row, but want to preserve all rows before it.
+                        // Move back before the row length prefix, txnId and header
+                        // Return everything in the block before the truncation point.
+                        // Indicate this is the end of the interesting data.
+                        b.limit(b.position());
+                        b.position(0);
+                        return new ByteBufferTruncatorResponse(b);
                     }
                 }
             } finally {
