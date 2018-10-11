@@ -33,6 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop_voltpatches.util.PureJavaCrc32;
@@ -56,7 +57,6 @@ import org.voltdb.catalog.CatalogMap;
 import org.voltdb.catalog.Column;
 import org.voltdb.export.AdvertisedDataSource.ExportFormat;
 import org.voltdb.exportclient.ExportClientBase;
-import org.voltdb.iv2.TxnEgo;
 import org.voltdb.utils.CatalogUtil;
 import org.voltdb.utils.VoltFile;
 
@@ -89,7 +89,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     private final int m_siteId;
     private String m_exportTargetName = "";
     private long m_tupleCount = 0;
-    private long m_tuplesPending = 0;
+    private AtomicInteger m_tuplesPending = new AtomicInteger(0);
     private long m_averageLatency = 0; // for current counting-session
     private long m_maxLatency = 0; // for current counting-session
     private long m_blocksSentSinceClear = 0;
@@ -374,7 +374,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
         m_lastReleasedSeqNo = releaseSeqNo;
         m_firstUnpolledSeqNo = Math.max(m_firstUnpolledSeqNo, lastSeqNo + 1);
-        m_tuplesPending -= tuplesSent;
+        int pendingCount = m_tuplesPending.get();
+        m_tuplesPending.set(pendingCount - tuplesSent);
 
         return;
     }
@@ -530,7 +531,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 }
 
                 return new ExportStatsRow(m_partitionId, m_siteId, m_tableName, m_exportTargetName,
-                        m_tupleCount, m_tuplesPending, avgLatency, maxLatency, m_status.toString());
+                        m_tupleCount, m_tuplesPending.get(), avgLatency, maxLatency, m_status.toString());
             }
         });
     }
@@ -585,7 +586,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
                 m_lastPushedSeqNo = lastSequenceNumber;
                 m_tupleCount += tupleCount;
-                m_tuplesPending += tupleCount;
+                m_tuplesPending.addAndGet(tupleCount);
 
                 m_committedBuffers.offer(sb);
             } catch (IOException e) {
@@ -661,14 +662,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
     }
 
-    public ListenableFuture<?> truncateExportToTxnId(boolean isRecover, Long truncationPoint,
-            long sequenceNumber) {
+    public ListenableFuture<?> truncateExportToSeqNo(boolean isRecover, long sequenceNumber) {
         return m_es.submit(new Runnable() {
             @Override
             public void run() {
                 try {
                     if (exportLog.isDebugEnabled()) {
-                        exportLog.debug("Truncating to txnId: " + TxnEgo.txnIdToString(truncationPoint));
+                        exportLog.debug(toString() + " truncating to sequence number: " + sequenceNumber);
                     }
                     m_tupleCount = sequenceNumber;
                     if (isRecover) {
@@ -681,8 +681,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                         }
                     }
                 } catch (Throwable t) {
-                    VoltDB.crashLocalVoltDB("Error while trying to truncate export to txnid " +
-                            TxnEgo.txnIdToString(truncationPoint), true, t);
+                    VoltDB.crashLocalVoltDB("Error while trying to truncate export to seqNo " +
+                            sequenceNumber, true, t);
                 }
             }
         });
@@ -1109,12 +1109,12 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-    private void sendTakeMastershipEvent(long uso) {
+    private void sendTakeMastershipEvent(long seqNo) {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0 && m_newLeaderHostId != null) {
             // msg type(1) + partition:int(4) + length:int(4) +
-            // signaturesBytes.length + ackUSO:long(8).
+            // signaturesBytes.length + ackSeqNo:long(8) + tuplesSent:int(4).
             final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8;
 
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
@@ -1122,7 +1122,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
-            buf.putLong(uso);
+            buf.putLong(seqNo);
+            buf.putInt(0);
 
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
 

@@ -37,8 +37,8 @@ public interface Generation {
 
     public void pushExportBuffer(int partitionId, String signature, long seqNo, int tupleCount, ByteBuffer buffer, boolean sync);
     public void pushEndOfStream(int partitionId, String signature);
-    public void updateInitialExportStateToTxnId(int partitionId, String signature,
-            boolean isRecover, Long truncationPoint, long sequenceNumber);
+    public void updateInitialExportStateToSeqNo(int partitionId, String signature,
+            boolean isRecover, long sequenceNumber);
 
     public Map<Integer, Map<String, ExportDataSource>> getDataSourceByPartition();
 }

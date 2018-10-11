@@ -676,21 +676,22 @@ public class ExportManager
                 }
                 return;
             }
-            generation.pushExportBuffer(partitionId, signature, startSequenceNumber, (int)tupleCount, buffer, sync);
+            generation.pushExportBuffer(partitionId, signature, startSequenceNumber,
+                    (int)tupleCount, buffer, sync);
         } catch (Exception e) {
             //Don't let anything take down the execution site thread
             exportLog.error("Error pushing export buffer", e);
         }
     }
 
-    public void updateInitialExportStateToTxnId(int partitionId, String signature,
-            boolean isRecover, Long truncationPoint, long sequenceNumber) {
+    public void updateInitialExportStateToSeqNo(int partitionId, String signature,
+            boolean isRecover, long sequenceNumber) {
         //If the generation was completely drained, wait for the task to finish running
         //by waiting for the permit that will be generated
         ExportGeneration generation = m_generation.get();
         if (generation != null) {
-            generation.updateInitialExportStateToTxnId(partitionId, signature,
-                    isRecover, truncationPoint, sequenceNumber);
+            generation.updateInitialExportStateToSeqNo(partitionId, signature,
+                    isRecover, sequenceNumber);
         }
     }
 

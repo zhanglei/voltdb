@@ -678,8 +678,8 @@ public class ExportGeneration implements Generation {
     }
 
     @Override
-    public void updateInitialExportStateToTxnId(int partitionId, String signature,
-            boolean isRecover, Long truncationPoint, long sequenceNumber) {
+    public void updateInitialExportStateToSeqNo(int partitionId, String signature,
+            boolean isRecover, long sequenceNumber) {
         // pre-iv2, the truncation point is the snapshot transaction id.
         // In iv2, truncation at the per-partition txn id recorded in the snapshot.
 
@@ -688,7 +688,7 @@ public class ExportGeneration implements Generation {
         if (dataSource != null) {
             ExportDataSource source = dataSource.get(signature);
             if (source != null) {
-                ListenableFuture<?> task = source.truncateExportToTxnId(isRecover, truncationPoint, sequenceNumber);
+                ListenableFuture<?> task = source.truncateExportToSeqNo(isRecover, sequenceNumber);
                 try {
                     task.get();
                 } catch (Exception e) {

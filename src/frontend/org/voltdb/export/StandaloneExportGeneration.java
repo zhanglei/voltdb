@@ -249,8 +249,8 @@ public class StandaloneExportGeneration implements Generation {
     }
 
     @Override
-    public void updateInitialExportStateToTxnId(int partitionId, String signature,
-            boolean isRecover, Long truncationPoint, long sequenceNumber) {
+    public void updateInitialExportStateToSeqNo(int partitionId, String signature,
+            boolean isRecover, long sequenceNumber) {
     }
 
     @Override
