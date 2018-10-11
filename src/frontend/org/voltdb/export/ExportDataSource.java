@@ -141,6 +141,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     // on every host. Every data source with this flag set to true is an export master.
     private boolean m_runEveryWhere = false;
 
+    private ExportSequenceNumberTracker m_gapTracker = new ExportSequenceNumberTracker();
+
     public final ArrayList<String> m_columnNames = new ArrayList<>();
     public final ArrayList<Integer> m_columnTypes = new ArrayList<>();
     public final ArrayList<Integer> m_columnLengths = new ArrayList<>();
@@ -257,7 +259,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         m_tableName + " partition " + m_partitionId, 1);
     }
 
-    public ExportDataSource(Generation generation, File adFile, List<Pair<Integer, Integer>> localPartitionsToSites) throws IOException {
+    public ExportDataSource(Generation generation, File adFile,
+            List<Pair<Integer, Integer>> localPartitionsToSites) throws IOException {
         m_generation = generation;
         m_adFile = adFile;
         String overflowPath = adFile.getParent();
@@ -373,6 +376,11 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             }
         }
         m_lastReleasedSeqNo = releaseSeqNo;
+        // If persistent log contains gap, mostly due to node failures and rejoins, acks from leader might
+        // fill the gap gradually.
+        if (m_gapTracker.size() > 0) {
+            m_gapTracker.truncate(releaseSeqNo);
+        }
         m_firstUnpolledSeqNo = Math.max(m_firstUnpolledSeqNo, lastSeqNo + 1);
         int pendingCount = m_tuplesPending.get();
         m_tuplesPending.set(pendingCount - tuplesSent);
@@ -680,6 +688,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                             m_committedBuffers.truncateToSequenceNumber(sequenceNumber);
                         }
                     }
+                    ExportSequenceNumberTracker tracker = m_committedBuffers.detectPersistentLogGap();
+                    m_gapTracker.mergeTracker(tracker);
                 } catch (Throwable t) {
                     VoltDB.crashLocalVoltDB("Error while trying to truncate export to seqNo " +
                             sequenceNumber, true, t);
