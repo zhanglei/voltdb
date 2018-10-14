@@ -20,10 +20,12 @@ package org.voltdb.calciteadapter.rules.physical;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
@@ -51,6 +53,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.CompositeList;
+import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.mapping.Mappings;
 import org.voltdb.calciteadapter.planner.CalcitePlanner;
 import org.voltdb.calciteadapter.rel.physical.AbstractVoltDBPAggregate;
 import org.voltdb.calciteadapter.rel.physical.AbstractVoltDBPExchange;
@@ -391,11 +395,11 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
             }
         } else {
             // Don't forget to replace aggrTraits
-            topAggr = transformAggregates(call, aggr, distributedExchange);
-            // Convert new LogicalAggregates to VoltDBPAggregates
-            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, true, distributedExchange instanceof VoltDBPUnionExchange);
-            visitor.visit(topAggr, 0, null);
-            topAggr = visitor.getRootNode();
+            topAggr = transformAggregates(COORDINATOR_AGGR_FUNCTIONS, aggr, aggrTraits.replace(exchange.getDistribution()), distributedExchange);
+//            // Convert new LogicalAggregates to VoltDBPAggregates
+//            RewriteRelVisitor visitor = new RewriteRelVisitor(aggr, true, distributedExchange instanceof VoltDBPUnionExchange);
+//            visitor.visit(topAggr, 0, null);
+//            topAggr = visitor.getRootNode();
         }
 
         return topAggr;
@@ -434,53 +438,115 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
      * @param newInput
      * @return
      */
-    private RelNode transformAggregates(RelOptRuleCall ruleCall, Aggregate oldAggRel, RelNode newInput) {
-        RexBuilder rexBuilder = oldAggRel.getCluster().getRexBuilder();
+    private RelNode transformAggregates(
+            Set<SqlKind> aggrFunctionSet,
+            AbstractVoltDBPAggregate oldAggRel,
+            RelTraitSet newTraits,
+            RelNode newInput) {
+        List<AggregateCall> oldAggrCalls = oldAggRel.getAggCallList();
+        List<AggregateCall> newAggrCalls = new ArrayList<>();
 
-        List<AggregateCall> oldCalls = oldAggRel.getAggCallList();
-        final int groupCount = oldAggRel.getGroupCount();
-        final int indicatorCount = oldAggRel.getIndicatorCount();
+        for(AggregateCall oldAggrCall : oldAggrCalls) {
+            AggregateCall newAggrCall;
+            if (aggrFunctionSet.contains(oldAggrCall.getAggregation().getKind())) {
+                final SqlKind kind = oldAggrCall.getAggregation().getKind();
+                switch (kind) {
+                case COUNT:
+                    // The input to the new SUM aggregate is the old COUNT aggregate
+                    int newSumInput = -1;
+                    for (RelDataTypeField inputField : oldAggRel.getRowType().getFieldList()) {
+                        assert(inputField.getName() != null);
+                        if (inputField.getName().equals(oldAggrCall.name)) {
+                            newSumInput = inputField.getIndex();
+                            break;
+                        }
+                    }
+                    assert(newSumInput != -1);
+                    List<Integer> newArgInputList = ImmutableList.of(newSumInput);
+                    newAggrCall = AggregateCall.create(
+                            SqlStdOperatorTable.SUM0,
+                            oldAggrCall.isDistinct(),
+                            oldAggrCall.isApproximate(),
+                            newArgInputList,
+                            oldAggrCall.filterArg,
+                            oldAggRel.getGroupCount(),
+                            newInput,
+                            oldAggrCall.getType(),
+                            oldAggrCall.getName());
+                    break;
 
-        final List<AggregateCall> newCalls = Lists.newArrayList();
-        final Map<AggregateCall, RexNode> aggCallMapping = Maps.newHashMap();
+                default:
+                    // anything else: preserve original call
+                    newAggrCall = oldAggrCall.copy(oldAggrCall.getArgList(), oldAggrCall.filterArg);
+                }
 
-        final List<RexNode> projList = Lists.newArrayList();
-
-        // pass through group key (+ indicators if present)
-        for (int i = 0; i < groupCount + indicatorCount; ++i) {
-          projList.add(
-              rexBuilder.makeInputRef(
-                  getFieldType(oldAggRel, i),
-                  i));
+            } else {
+                newAggrCall = oldAggrCall.copy(oldAggrCall.getArgList(), oldAggrCall.filterArg);
+            }
+            newAggrCalls.add(newAggrCall);
         }
+        AbstractVoltDBPAggregate newAggRel = oldAggRel.copy(
+                oldAggRel.getCluster(),
+                newTraits,
+                newInput,
+                oldAggRel.indicator,
+                oldAggRel.getGroupSet(),
+                oldAggRel.getGroupSets(),
+                newAggrCalls,
+                oldAggRel.getPostPredicate(),
+                oldAggRel.getSplitCount(),
+                oldAggRel.isCoordinatorAggr());
 
-        // List of input expressions. If a particular aggregate needs more, it
-        // will add an expression to the end, and we will create an extra
-        // project.
-        final RelBuilder relBuilder = ruleCall.builder();
-        relBuilder.push(newInput);
-        final List<RexNode> inputExprs = new ArrayList<>(relBuilder.fields());
-
-        // create new agg function calls and rest of project list together
-        int oldCallIdx = 0;
-        for (AggregateCall oldCall : oldCalls) {
-          projList.add(
-                  transformAggregate(
-                          oldAggRel, oldCall, oldCallIdx++, newCalls, aggCallMapping, inputExprs));
-        }
-
-        final int extraArgCount =
-            inputExprs.size() - relBuilder.peek().getRowType().getFieldCount();
-        if (extraArgCount > 0) {
-          relBuilder.project(inputExprs,
-              CompositeList.of(
-                  relBuilder.peek().getRowType().getFieldNames(),
-                  Collections.<String>nCopies(extraArgCount, null)));
-        }
-        newAggregateRel(relBuilder, oldAggRel, newCalls);
-        relBuilder.project(projList, oldAggRel.getRowType().getFieldNames());
-        return relBuilder.build();
+        return newAggRel;
     }
+
+//    private RelNode transformAggregates(RelOptRuleCall ruleCall, Aggregate oldAggRel, RelNode newInput) {
+//        RexBuilder rexBuilder = oldAggRel.getCluster().getRexBuilder();
+//
+//        List<AggregateCall> oldCalls = oldAggRel.getAggCallList();
+//        final int groupCount = oldAggRel.getGroupCount();
+//        final int indicatorCount = oldAggRel.getIndicatorCount();
+//
+//        final List<AggregateCall> newCalls = Lists.newArrayList();
+//        final Map<AggregateCall, RexNode> aggCallMapping = Maps.newHashMap();
+//
+//        final List<RexNode> projList = Lists.newArrayList();
+//
+//        // pass through group key (+ indicators if present)
+//        for (int i = 0; i < groupCount + indicatorCount; ++i) {
+//          projList.add(
+//              rexBuilder.makeInputRef(
+//                  getFieldType(oldAggRel, i),
+//                  i));
+//        }
+//
+//        // List of input expressions. If a particular aggregate needs more, it
+//        // will add an expression to the end, and we will create an extra
+//        // project.
+//        final RelBuilder relBuilder = ruleCall.builder();
+//        relBuilder.push(newInput);
+//        final List<RexNode> inputExprs = new ArrayList<>(relBuilder.fields());
+//
+//        // create new agg function calls and rest of project list together
+//        int oldCallIdx = 0;
+//        for (AggregateCall oldCall : oldCalls) {
+//          projList.add(
+//                  transformAggregate(
+//                          oldAggRel, oldCall, oldCallIdx++, newCalls, aggCallMapping, inputExprs));
+//        }
+//
+//        final int extraArgCount =
+//            inputExprs.size() - relBuilder.peek().getRowType().getFieldCount();
+//        if (extraArgCount > 0) {
+//          relBuilder.project(inputExprs,
+//              CompositeList.of(
+//                  relBuilder.peek().getRowType().getFieldNames(),
+//                  Collections.<String>nCopies(extraArgCount, null)));
+//        }
+//        newAggregateRel(relBuilder, oldAggRel, newCalls);
+//        relBuilder.project(projList, oldAggRel.getRowType().getFieldNames());
+//        return relBuilder.build();
+//    }
 
     private RexNode transformAggregate(Aggregate oldAggRel,
             AggregateCall oldCall,
