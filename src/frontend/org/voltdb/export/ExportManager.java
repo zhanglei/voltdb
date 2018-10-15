@@ -253,10 +253,15 @@ public class ExportManager
      */
     synchronized public void acceptMastership(int partitionId) {
         m_masterOfPartitions.add(partitionId);
-        /*
-         * Only the first generation will have a processor which
-         * makes it safe to accept mastership.
-         */
+        reassignExportStreamMaster(partitionId);
+
+    }
+
+    /**
+     * Broadcast queries to see if there is a active master, if not try promote self.
+     * @param partitionId
+     */
+    synchronized public void reassignExportStreamMaster(int partitionId) {
         ExportGeneration generation = m_generation.get();
         if (generation == null) {
             return;

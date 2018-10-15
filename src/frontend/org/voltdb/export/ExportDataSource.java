@@ -140,6 +140,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     // This flag is specifically added for XDCR conflicts stream, which export conflict logs
     // on every host. Every data source with this flag set to true is an export master.
     private boolean m_runEveryWhere = false;
+    // sequence number
+    private long m_currentRequestId = 0L;
 
     private ExportSequenceNumberTracker m_gapTracker = new ExportSequenceNumberTracker();
 
@@ -1158,48 +1160,55 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     private void queryExportMembership() {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
+        long requestId = System.nanoTime();
+        m_currentRequestId = requestId;
         if (mbx != null && p.getSecond().size() > 0) {
             m_responseHSIds.clear();
             // msg type(1) + partition:int(4) + length:int(4) + signaturesBytes.length
-            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length;
+            // requestId(8)
+            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8;
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.QUERY_MEMBERSHIP);
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
+            buf.putLong(requestId);
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
             for( Long siteId: p.getSecond()) {
                 mbx.send(siteId, bpm);
             }
             if (exportLog.isDebugEnabled()) {
-                exportLog.debug("Send QUERY_MEMBERSHIP for partition " + m_partitionId
+                exportLog.debug("Send QUERY_MEMBERSHIP message(" + requestId
+                        + ") for partition " + m_partitionId
                         + "source signature " + m_tableName
                         + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                         + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
-        } else {
+        } else if (canCoverNextSequenceNumber(m_firstUnpolledSeqNo)){
             // If there is no other replica, promote current stream as master
             acceptMastership();
         }
     }
 
-    private void sendQueryResponse(long newLeaderHSId) {
+    private void sendQueryResponse(long newLeaderHSId, long requestId) {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0 && p.getSecond().contains(newLeaderHSId)) {
             // msg type(1) + partition:int(4) + length:int(4) + signaturesBytes.length
-            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length;
+            // requestId(8)
+            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8;
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.QUERY_RESPONSE);
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
+            buf.putLong(requestId);
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
             mbx.send(newLeaderHSId, bpm);
             if (exportLog.isDebugEnabled()) {
                 exportLog.debug("Partition " + m_partitionId + " mailbox hsid (" +
-                        CoreUtils.hsIdToString(mbx.getHSId()) + ") send QUERY_RESPONSE message to " +
-                        CoreUtils.hsIdToString(newLeaderHSId));
+                        CoreUtils.hsIdToString(mbx.getHSId()) + ") send QUERY_RESPONSE message(" +
+                        requestId + ") to " + CoreUtils.hsIdToString(newLeaderHSId));
             }
         }
     }
@@ -1238,6 +1247,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             public void run() {
                 try {
                     if (!m_es.isShutdown() || !m_closed) {
+//                        if (m_gapTracker.size() > 0) {
+//
+//                        }
                         if (exportLog.isDebugEnabled()) {
                             exportLog.debug("Export table " + getTableName() + " accepting mastership for partition " + getPartitionId());
                         }
@@ -1306,13 +1318,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
     }
 
-    public void handleQueryMessage(final long newLeaderHSId) {
-        if (m_mastershipAccepted.get()) {
+    public void handleQueryMessage(final long newLeaderHSId, long requestId) {
+        if (m_mastershipAccepted.get() && canCoverNextSequenceNumber(m_firstUnpolledSeqNo)) {
             m_es.execute(new Runnable() {
                 @Override
                 public void run() {
                     m_newLeaderHostId = CoreUtils.getHostIdFromHSId(newLeaderHSId);
-                    // memorize end USO of the most recently pushed buffer from EE
+                    // mark the last pushed sequence number as trigger
                     m_seqNoToDrain = m_lastPushedSeqNo;
                     // if no new buffer to be drained, send the migrate event right away
                     if (m_seqNoToDrain == m_lastReleasedSeqNo) {
@@ -1325,14 +1337,14 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             m_es.execute(new Runnable() {
                 @Override
                 public void run() {
-                    sendQueryResponse(newLeaderHSId);
+                    sendQueryResponse(newLeaderHSId, requestId);
                 }
             });
         }
     }
 
-    public void handleQueryResponse(VoltMessage message) {
-        if (!m_mastershipAccepted.get()) {
+    public void handleQueryResponse(VoltMessage message, long requestId) {
+        if (m_currentRequestId == requestId && !m_mastershipAccepted.get()) {
             m_es.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -1361,5 +1373,12 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     @Override
     public String toString() {
         return "ExportDataSource for Table " + getTableName() + " at Partition " + getPartitionId();
+    }
+
+    private boolean canCoverNextSequenceNumber(long nextSeqNo) {
+        if (m_gapTracker.size() == 0) {
+            return true;
+        }
+        return m_gapTracker.contains(nextSeqNo, nextSeqNo);
     }
 }

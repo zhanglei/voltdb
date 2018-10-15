@@ -305,19 +305,23 @@ public class ExportGeneration implements Generation {
                         }
                         eds.acceptMastership();
                     } else if (msgType == ExportManager.QUERY_MEMBERSHIP) {
+                        final long requestId = buf.getLong();
                         if (exportLog.isDebugEnabled()) {
-                            exportLog.debug("Received QUERY_MEMBERSHIP message for " + eds.toString() +
+                            exportLog.debug("Received QUERY_MEMBERSHIP message(" + requestId +
+                                    ") for " + eds.toString() +
                                     " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                     " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                         }
-                        eds.handleQueryMessage(message.m_sourceHSId);
+                        eds.handleQueryMessage(message.m_sourceHSId, requestId);
                     } else if (msgType == ExportManager.QUERY_RESPONSE) {
+                        final long requestId = buf.getLong();
                         if (exportLog.isDebugEnabled()) {
-                            exportLog.debug("Received QUERY_RESPONSE message for " + eds.toString() +
+                            exportLog.debug("Received QUERY_RESPONSE message(" + requestId +
+                                    ") for " + eds.toString() +
                                     " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                     " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                         }
-                        eds.handleQueryResponse(message);
+                        eds.handleQueryResponse(message, requestId);
                     } else {
                         exportLog.error("Receive unsupported message type " + message + " in export subsystem");
                     }
