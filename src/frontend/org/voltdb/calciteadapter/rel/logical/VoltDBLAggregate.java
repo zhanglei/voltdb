@@ -20,10 +20,13 @@ package org.voltdb.calciteadapter.rel.logical;
 import java.util.List;
 
 import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelOptCost;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.util.ImmutableBitSet;
 
 public class VoltDBLAggregate extends Aggregate  implements VoltDBLRel {
@@ -71,4 +74,22 @@ public class VoltDBLAggregate extends Aggregate  implements VoltDBLRel {
                 groupSets,
                 aggCalls);
     }
+
+    @Override 
+    public RelOptCost computeSelfCost(RelOptPlanner planner,
+            RelMetadataQuery mq) {
+        // REVIEW jvs 24-Aug-2008:  This is bogus, but no more bogus
+        // than what's currently in Join.
+        double rowCount = mq.getRowCount(this);
+        // Aggregates with more aggregate functions cost a bit more
+        float multiplier = 1f;
+        for (AggregateCall aggCall : aggCalls) {
+            if (aggCall.getAggregation().getName().equals("AVG")) {
+                // to make sure that AVG loses to SUM / COUNT
+                multiplier *= 10.f;
+            }
+        }
+        return planner.getCostFactory().makeCost(rowCount * multiplier, 0, 0);
+    }
+
 }

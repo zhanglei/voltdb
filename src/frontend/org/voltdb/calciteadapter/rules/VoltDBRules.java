@@ -19,6 +19,7 @@ package org.voltdb.calciteadapter.rules;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.CalcMergeRule;
 import org.apache.calcite.rel.rules.FilterCalcMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
@@ -65,6 +66,7 @@ public class VoltDBRules {
             , ProjectToCalcRule.INSTANCE
             , ProjectMergeRule.INSTANCE
             , FilterProjectTransposeRule.INSTANCE
+            , AggregateReduceFunctionsRule.INSTANCE
 
             // VoltDBLogical Conversion Rules
             , VoltDBLSortRule.INSTANCE
