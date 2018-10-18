@@ -369,7 +369,7 @@ public class ExportGeneration implements Generation {
                     // master stream resends the event when the export mailbox is aware of new streams.
                     eds.forwardAckToNewJoinedReplicas(newHSIds);
                     // New data source may contain the data which current master doesn't have,
-                    // do a gap detection only on master stream in case it is paused by the missing data
+                    // do a gap detection only on master stream if it is paused by the missing data
                     eds.queryForBestCandidate();
                 }
             }

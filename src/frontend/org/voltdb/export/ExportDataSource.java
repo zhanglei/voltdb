@@ -1391,7 +1391,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         m_es.execute(new Runnable() {
             @Override
             public void run() {
-                // Query export membership if current stream is not the master
                 sendGapQuery();
             }
         });
@@ -1420,7 +1419,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             m_es.execute(new Runnable() {
                 @Override
                 public void run() {
-                    boolean canCover = m_gapTracker.contains(gapStart, gapStart);
+                    boolean canCover = canCoverNextSequenceNumber(gapStart);
                     long lastSeq = m_gapTracker.getRangeContaining(gapStart);
                     sendQueryResponse(senderHSId, requestId, canCover, lastSeq);
                 }
