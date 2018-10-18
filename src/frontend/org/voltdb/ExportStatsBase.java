@@ -25,21 +25,28 @@ import com.google_voltpatches.common.collect.ImmutableSet;
 
 public class ExportStatsBase extends StatsSource {
 
+    public static enum ExportRole {
+        MASTER,
+        REPLICA,
+    }
+
     public static class ExportStatsRow {
         public final int m_partitionId;
         public final int m_siteId;
         public final String m_streamName;
+        public final String m_role;
         public final String m_exportTarget;
         public final long m_tupleCount;
         public final long m_tuplesPending;
         public final long m_averageLatency;
         public final long m_maxLatency;
         public final String m_status;
-        public ExportStatsRow(int partitionId, int siteId, String streamName, String exportTarget,
+        public ExportStatsRow(int partitionId, int siteId, String streamName, String role, String exportTarget,
                 long tupleCount, long tuplesPending, long averageLatency, long maxLatency, String status) {
             m_partitionId = partitionId;
             m_siteId = siteId;
             m_streamName = streamName;
+            m_role = role;
             m_exportTarget = exportTarget;
             m_tupleCount = tupleCount;
             m_tuplesPending = tuplesPending > 0 ? tuplesPending : 0;
@@ -59,6 +66,7 @@ public class ExportStatsBase extends StatsSource {
         public static final String SITE_ID = "SITE_ID";
         public static final String PARTITION_ID = "PARTITION_ID";
         public static final String STREAM_NAME = "STREAM_NAME";
+        public static final String ROLE = "ROLE";
         public static final String EXPORT_TARGET = "EXPORT_TARGET";
         public static final String TUPLE_COUNT = "TUPLE_COUNT";
         public static final String TUPLE_PENDING = "TUPLE_PENDING";
@@ -78,6 +86,7 @@ public class ExportStatsBase extends StatsSource {
         columns.add(new ColumnInfo(VoltSystemProcedure.CNAME_SITE_ID, VoltSystemProcedure.CTYPE_ID));
         columns.add(new ColumnInfo(Columns.PARTITION_ID, VoltType.BIGINT));
         columns.add(new ColumnInfo(Columns.STREAM_NAME, VoltType.STRING));
+        columns.add(new ColumnInfo(Columns.ROLE, VoltType.STRING));
         columns.add(new ColumnInfo(Columns.EXPORT_TARGET, VoltType.STRING));
         columns.add(new ColumnInfo(Columns.TUPLE_COUNT, VoltType.BIGINT));
         columns.add(new ColumnInfo(Columns.TUPLE_PENDING, VoltType.BIGINT));

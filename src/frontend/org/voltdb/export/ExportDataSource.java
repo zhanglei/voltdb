@@ -52,6 +52,7 @@ import org.voltcore.utils.CoreUtils;
 import org.voltcore.utils.DBBPool;
 import org.voltcore.utils.DBBPool.BBContainer;
 import org.voltcore.utils.Pair;
+import org.voltdb.ExportStatsBase.ExportRole;
 import org.voltdb.ExportStatsBase.ExportStatsRow;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltType;
@@ -158,7 +159,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     static enum STREAM_STATUS {
         ACTIVE,
-        DROPPED
+        DROPPED,
+        PAUSED
     }
     private STREAM_STATUS m_status = STREAM_STATUS.ACTIVE;
 
@@ -559,8 +561,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     }
                     maxLatency = m_overallMaxLatency;
                 }
+                ExportRole role = m_mastershipAccepted.get() ? ExportRole.MASTER : ExportRole.REPLICA;
 
-                return new ExportStatsRow(m_partitionId, m_siteId, m_tableName, m_exportTargetName,
+                return new ExportStatsRow(m_partitionId, m_siteId, m_tableName, role.toString(), m_exportTargetName,
                         m_tupleCount, m_tuplesPending.get(), avgLatency, maxLatency, m_status.toString());
             }
         });
@@ -1213,6 +1216,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                         " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
         } else {
+            setStatus(STREAM_STATUS.PAUSED);
             Pair<Long, Long> gap = m_gapTracker.getFirstGap();
             exportLog.error(toString() + " hit a gap from sequence number " + gap.getFirst() +
                     " to " + gap.getSecond());
@@ -1437,6 +1441,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                                            .findFirst()
                                            .get();
                         } catch (NoSuchElementException e) {
+                            setStatus(STREAM_STATUS.PAUSED);
                             Pair<Long, Long> gap = m_gapTracker.getFirstGap();
                             exportLog.error(toString() + " is paused because hits a gap from sequence number " +
                                     gap.getFirst() + " to " + gap.getSecond());

@@ -213,6 +213,7 @@ public class ExportManager
             rowValues[columnNameToIndex.get(Columns.SITE_ID)] = stat.m_siteId;
             rowValues[columnNameToIndex.get(Columns.PARTITION_ID)] = stat.m_partitionId;
             rowValues[columnNameToIndex.get(Columns.STREAM_NAME)] = stat.m_streamName;
+            rowValues[columnNameToIndex.get(Columns.ROLE)] = stat.m_role;
             rowValues[columnNameToIndex.get(Columns.EXPORT_TARGET)] = stat.m_exportTarget;
             rowValues[columnNameToIndex.get(Columns.TUPLE_COUNT)] = stat.m_tupleCount;
             rowValues[columnNameToIndex.get(Columns.TUPLE_PENDING)] = stat.m_tuplesPending;
