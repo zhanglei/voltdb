@@ -282,19 +282,20 @@ public class ExportGeneration implements Generation {
                         } catch (RejectedExecutionException ignoreIt) {
                             // ignore it: as it is already shutdown
                         }
-                    } else if (msgType == ExportManager.TAKE_MASTERSHIP) {
+                    } else if (msgType == ExportManager.GIVE_MASTERSHIP) {
                         final long ackSeqNo = buf.getLong();
-                        int tuplesSent = buf.getInt();
-                        if (tuplesSent < 0 ) {
-                            exportLog.warn("Received an export ack for partition "+eds.getTableName()+" Partition:"+eds.getPartitionId());
-                            tuplesSent = 0;
-                        }
-                        if (m_mbox.getHSId() == message.m_sourceHSId) {
-                            tuplesSent = 0;
-                        }
+                        final long endOfGap = buf.getLong();
+                        int tuplesSent = 0;
+//                        if (tuplesSent < 0 ) {
+//                            exportLog.warn("Received an export ack for " + eds.toString());
+//                            tuplesSent = 0;
+//                        }
+//                        if (m_mbox.getHSId() == message.m_sourceHSId) {
+//                            tuplesSent = 0;
+//                        }
                         try {
                             if (exportLog.isDebugEnabled()) {
-                                exportLog.debug("Received TAKE_MASTERSHIP message for " + eds.toString() +
+                                exportLog.debug("Received GIVE_MASTERSHIP message for " + eds.toString() +
                                         " with sequence number:" + ackSeqNo +
                                         " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                         " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
@@ -303,25 +304,45 @@ public class ExportGeneration implements Generation {
                         } catch (RejectedExecutionException ignoreIt) {
                             // ignore it: as it is already shutdown
                         }
+                        if (endOfGap != Long.MAX_VALUE) {
+                            eds.markEndOfGapPoint(message.m_sourceHSId, endOfGap);
+                        }
                         eds.acceptMastership();
-                    } else if (msgType == ExportManager.QUERY_MEMBERSHIP) {
+                    } else if (msgType == ExportManager.GAP_QUERY) {
                         final long requestId = buf.getLong();
+                        long gapStart = buf.getLong();
                         if (exportLog.isDebugEnabled()) {
-                            exportLog.debug("Received QUERY_MEMBERSHIP message(" + requestId +
+                            exportLog.debug("Received GAP_QUERY message(" + requestId +
                                     ") for " + eds.toString() +
                                     " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                     " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                         }
-                        eds.handleQueryMessage(message.m_sourceHSId, requestId);
+                        eds.handleQueryMessage(message.m_sourceHSId, requestId, gapStart);
                     } else if (msgType == ExportManager.QUERY_RESPONSE) {
                         final long requestId = buf.getLong();
+                        final boolean canCover = buf.get() == 1 ? true : false;
+                        long lastSeq = Long.MIN_VALUE;
+                        if (canCover) {
+                            lastSeq = buf.getLong();
+                        }
                         if (exportLog.isDebugEnabled()) {
                             exportLog.debug("Received QUERY_RESPONSE message(" + requestId +
                                     ") for " + eds.toString() +
                                     " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
                                     " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
                         }
-                        eds.handleQueryResponse(message, requestId);
+                        eds.handleQueryResponse(message.m_sourceHSId, requestId, canCover, lastSeq);
+                    } else if (msgType == ExportManager.TASK_MASTERSHIP) {
+                        final long requestId = buf.getLong();
+                        if (exportLog.isDebugEnabled()) {
+                            exportLog.debug("Received TASK_MASTERSHIP message(" + requestId +
+                                    ") for " + eds.toString() +
+                                    " from " + CoreUtils.hsIdToString(message.m_sourceHSId) +
+                                    " to " + CoreUtils.hsIdToString(m_mbox.getHSId()));
+                        }
+                        eds.handleTakeMastershipMessage(message.m_sourceHSId, requestId);
+                    } else if (msgType == ExportManager.TASK_MASTERSHIP_RESPONSE) {
+
                     } else {
                         exportLog.error("Receive unsupported message type " + message + " in export subsystem");
                     }
@@ -791,11 +812,11 @@ public class ExportGeneration implements Generation {
     }
 
     /**
-     * Indicate to all associated {@link ExportDataSource}to QUERY
+     * Indicate to all associated {@link ExportDataSource} to QUERY
      * mastership role for the given partition id
      * @param partitionId
      */
-    void reassignExportStreamMaster(int partitionId) {
+    void takeMastership(int partitionId) {
         Map<String, ExportDataSource> partitionDataSourceMap = m_dataSourcesByPartition.get(partitionId);
 
         // this case happens when there are no export tables
@@ -804,7 +825,7 @@ public class ExportGeneration implements Generation {
         }
 
         for( ExportDataSource eds: partitionDataSourceMap.values()) {
-            eds.reassignExportStreamMaster();
+            eds.takeMastership();
         }
     }
 

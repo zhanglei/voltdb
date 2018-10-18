@@ -91,13 +91,41 @@ public class ExportManager
      */
     private final Set<Integer> m_masterOfPartitions = new HashSet<Integer>();
 
+    /**
+     * Master sends RELEASE_BUFFER to all its replicas to discard buffer.
+     */
     public static final byte RELEASE_BUFFER = 1;
 
-    public static final byte TAKE_MASTERSHIP = 2;
+    /**
+     * Master sends GIVE_MASTERSHIP to one replica to transfer leadership.
+     */
+    public static final byte GIVE_MASTERSHIP = 2;
 
-    public static final byte QUERY_MEMBERSHIP = 3;
+    /**
+     * Master sends GAP_QUERY to all nodes to know: can you cover the next sequence number?
+     *
+     * This is called when master hits gap in the stream.
+     */
+    public static final byte GAP_QUERY = 3;
 
+    /**
+     * Node that receives GAP_QUERY sends back QUERY_RESPONSE with the information that whether
+     * it has data for the next sequence number.
+     */
     public static final byte QUERY_RESPONSE = 4;
+
+    /**
+     * Data sources under new SPI or SPI who receives failed host notification
+     * sends TASK_MASTERSHIP to all nodes to ask master to transfer leadership back.
+     * If master doesn't exist promote itself to be master.
+     */
+    public static final byte TASK_MASTERSHIP = 5;
+
+    /**
+     * Node that receives TASK_MASTERSHIP sends back TASK_MASTERSHIP_RESPONSE to indicate
+     * it's not master.
+     */
+    public static final byte TASK_MASTERSHIP_RESPONSE = 6;
 
     /**
      * Thrown if the initial setup of the loader fails
@@ -251,22 +279,13 @@ public class ExportManager
      * masters for the given partition id
      * @param partitionId
      */
-    synchronized public void acceptMastership(int partitionId) {
+    synchronized public void takeMastership(int partitionId) {
         m_masterOfPartitions.add(partitionId);
-        reassignExportStreamMaster(partitionId);
-
-    }
-
-    /**
-     * Broadcast queries to see if there is a active master, if not try promote self.
-     * @param partitionId
-     */
-    synchronized public void reassignExportStreamMaster(int partitionId) {
         ExportGeneration generation = m_generation.get();
         if (generation == null) {
             return;
         }
-        generation.reassignExportStreamMaster(partitionId);
+        generation.takeMastership(partitionId);
     }
 
     /**

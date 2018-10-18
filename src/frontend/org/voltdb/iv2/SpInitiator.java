@@ -277,7 +277,7 @@ public class SpInitiator extends BaseInitiator implements Promotable
                     exportLog.debug("Export Manager has been notified that local partition " +
                             m_partitionId + " to accept export stream mastership.");
                 }
-                ExportManager.instance().acceptMastership(m_partitionId);
+                ExportManager.instance().takeMastership(m_partitionId);
             }
         } catch (Exception e) {
             VoltDB.crashLocalVoltDB("Terminally failed leader promotion.", true, e);
@@ -345,11 +345,6 @@ public class SpInitiator extends BaseInitiator implements Promotable
         long[] replicasAdded = new long[0];
         if (m_term != null) {
             replicasAdded = ((SpTerm)m_term).updateReplicas(snapshotSaveTxnId);
-            // In case the rejoining node is the only node contains export buffer
-            // for next sequence number, broadcast queries to find out
-            if (ExportManager.instance() != null) {
-                ExportManager.instance().reassignExportStreamMaster(m_partitionId);
-            }
         }
         ((SpScheduler)m_scheduler).forwardPendingTaskToRejoinNode(replicasAdded, snapshotSaveTxnId);
     }
