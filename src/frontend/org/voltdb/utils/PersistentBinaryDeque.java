@@ -936,9 +936,7 @@ public class PersistentBinaryDeque implements BinaryDeque {
         /*
          * Iterator all the objects in all the segments and pass them to the scanner
          */
-        Long lastSegmentIndex = null;
         for (PBDSegment segment : m_segments.values()) {
-            final long segmentIndex = segment.segmentId();
             ExportSequenceNumberTracker tracker = segment.scan(scaner);
             gapTracker.mergeTracker(tracker);
         }

@@ -338,6 +338,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         crc.update(m_signatureBytes);
         final String nonce = m_tableName + "_" + crc.getValue() + "_" + m_partitionId;
         m_committedBuffers = new StreamBlockQueue(overflowPath, nonce);
+        m_gapTracker = m_committedBuffers.detectPersistentLogGap();
         //EDS created from adfile is always from disk.
         m_isInCatalog = false;
         m_eos = false;
@@ -1383,8 +1384,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             exportLog.debug("Export table " + getTableName() + " mastership for partition " +
                     getPartitionId() + " needs to be reevaluated.");
         }
-        // Should be the master
-        if (!m_mastershipAccepted.get()) {
+        // Should be the master and the master was stuck on a gap
+        if (!m_mastershipAccepted.get() && m_seqNoToDrain != Long.MAX_VALUE) {
             return;
         }
         m_es.execute(new Runnable() {

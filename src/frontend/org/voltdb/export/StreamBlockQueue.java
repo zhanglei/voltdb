@@ -330,18 +330,13 @@ public class StreamBlockQueue {
         return m_persistentDeque.scanForGap(new BinaryDequeScanner() {
 
             public ExportSequenceNumberTracker scan(BBContainer bbc) {
-                //  Auto-generated method stub
                 ByteBuffer b = bbc.b();
                 b.order(ByteOrder.LITTLE_ENDIAN);
-                try {
-                    final long startSequenceNumber = b.getLong();
-                    final int tupleCount = b.getInt();
-                    ExportSequenceNumberTracker gapTracker = new ExportSequenceNumberTracker();
-                    gapTracker.append(startSequenceNumber, startSequenceNumber + tupleCount - 1);
-                    return gapTracker;
-                } finally {
-                    b.order(ByteOrder.BIG_ENDIAN);
-                }
+                final long startSequenceNumber = b.getLong();
+                final int tupleCount = b.getInt();
+                ExportSequenceNumberTracker gapTracker = new ExportSequenceNumberTracker();
+                gapTracker.append(startSequenceNumber, startSequenceNumber + tupleCount - 1);
+                return gapTracker;
             }
 
         });

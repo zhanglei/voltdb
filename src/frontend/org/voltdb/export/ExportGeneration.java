@@ -364,10 +364,13 @@ public class ExportGeneration implements Generation {
                 if (replicaHSIds != null) {
                     eds.updateAckMailboxes(Pair.of(m_mbox, replicaHSIds));
                 }
-                // In case of newly joined or rejoined streams miss any RELEASE_BUFFER event,
-                // master stream resend the event when the export mailbox is aware of new streams.
                 if (newHSIds != null) {
+                    // In case of newly joined or rejoined streams miss any RELEASE_BUFFER event,
+                    // master stream resends the event when the export mailbox is aware of new streams.
                     eds.forwardAckToNewJoinedReplicas(newHSIds);
+                    // New data source may contain the data which current master doesn't have,
+                    // do a gap detection only on master stream in case it is paused by the missing data
+                    eds.queryForBestCandidate();
                 }
             }
         }
