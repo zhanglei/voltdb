@@ -59,6 +59,7 @@ import org.voltdb.catalog.CatalogMap;
 import org.voltdb.catalog.Column;
 import org.voltdb.export.AdvertisedDataSource.ExportFormat;
 import org.voltdb.exportclient.ExportClientBase;
+import org.voltdb.iv2.MpInitiator;
 import org.voltdb.utils.CatalogUtil;
 import org.voltdb.utils.VoltFile;
 
@@ -102,11 +103,11 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
     private final ExportFormat m_format;
 
-    private long m_firstUnpolledSeqNo = 0L;
+    private long m_firstUnpolledSeqNo = 1L; // sequence number starts from 1
     private long m_lastReleasedSeqNo = 0L;
     // End uso of most recently pushed export buffer
     private long m_lastPushedSeqNo = 0L;
-    // Relinquishes export master after this uso
+    // Relinquish export master after this uso
     private long m_seqNoToDrain = Long.MAX_VALUE;
     //This is released when all mailboxes are set.
     private final Semaphore m_allowAcceptingMastership = new Semaphore(0);
@@ -297,7 +298,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             m_database = jsObj.getString("database");
             m_partitionId = jsObj.getInt("partitionId");
             // SiteId is outside the valid range if it is no longer local
-            int partitionsLocalSite = 16384;
+            int partitionsLocalSite = MpInitiator.MP_INIT_PID + 1;
             if (localPartitionsToSites != null) {
                 for (Pair<Integer, Integer> partition : localPartitionsToSites) {
                     if (partition.getFirst() == m_partitionId) {
@@ -710,8 +711,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                             m_committedBuffers.truncateToSequenceNumber(sequenceNumber);
                         }
                     }
-                    ExportSequenceNumberTracker tracker = m_committedBuffers.detectPersistentLogGap();
-                    m_gapTracker.mergeTracker(tracker);
+                    m_gapTracker.truncate(sequenceNumber);
                 } catch (Throwable t) {
                     VoltDB.crashLocalVoltDB("Error while trying to truncate export to seqNo " +
                             sequenceNumber, true, t);
@@ -848,11 +848,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return fut;
     }
 
-    //If replica we poll from lowest of ack rcvd or last poll point.
-    private long getFirstUnpolledSeqNo() {
-        return m_firstUnpolledSeqNo;
-    }
-
     private synchronized void pollImpl(SettableFuture<AckingContainer> fut) {
         if (fut == null) {
             return;
@@ -882,13 +877,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             //Copying and sending the data will take place outside the critical section
             try {
                 Iterator<StreamBlock> iter = m_committedBuffers.iterator();
-                long seqnum = getFirstUnpolledSeqNo();
+                long seqnum = m_firstUnpolledSeqNo;
                 // If previous master asks me to switch back after end of the gap, stop polling new buffer
-                if (m_endOfGap == Long.MAX_VALUE || seqnum <= m_endOfGap) {
+                if (seqnum <= m_endOfGap) {
                     while (iter.hasNext()) {
                         StreamBlock block = iter.next();
                         // find the first block that has unpolled data
-                        if (seqnum > block.startSequenceNumber() &&
+                        if (seqnum >= block.startSequenceNumber() &&
                                 seqnum < block.startSequenceNumber() + block.rowCount()) {
                             first_unpolled_block = block;
                             m_firstUnpolledSeqNo = block.startSequenceNumber() + block.rowCount();
@@ -1385,7 +1380,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     getPartitionId() + " needs to be reevaluated.");
         }
         // Should be the master and the master was stuck on a gap
-        if (!m_mastershipAccepted.get() && m_seqNoToDrain != Long.MAX_VALUE) {
+        if (!m_mastershipAccepted.get() || m_seqNoToDrain == Long.MAX_VALUE) {
             return;
         }
         m_es.execute(new Runnable() {
