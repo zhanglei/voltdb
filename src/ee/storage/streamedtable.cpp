@@ -230,6 +230,6 @@ void StreamedTable::setExportStreamPositions(int64_t seqNo, size_t streamBytesUs
     assert(m_sequenceNo == 0);
     m_sequenceNo = seqNo;
     if (m_wrapper) {
-        m_wrapper->setBytesUsed(streamBytesUsed);
+        m_wrapper->setBytesUsed(seqNo, streamBytesUsed);
     }
 }

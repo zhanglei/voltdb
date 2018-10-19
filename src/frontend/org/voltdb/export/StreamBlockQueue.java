@@ -325,7 +325,7 @@ public class StreamBlockQueue {
         exportLog.info("After truncate, PBD size is " + (m_reader.sizeInBytes() - (8 * m_reader.getNumObjects())));
     }
 
-    public ExportSequenceNumberTracker detectPersistentLogGap() throws IOException {
+    public ExportSequenceNumberTracker scanPersistentLog() throws IOException {
         assert(m_memoryDeque.isEmpty());
         return m_persistentDeque.scanForGap(new BinaryDequeScanner() {
 
