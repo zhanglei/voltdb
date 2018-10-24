@@ -298,6 +298,9 @@ public class SnapshotScanAgent extends OpsAgent
                                     "SUCCESS",
                                     ""
                                     ));
+                            hostLog.info("SnapshotScanAgent found " + f.getAbsolutePath() + " is " +
+                                    (savefile.getCompleted() ? "Complete and with size " : "Incomplete with size ") +
+                                    f.length());
                         } catch (IOException e) {
                             SNAP_LOG.warn(e);
                         } finally {
