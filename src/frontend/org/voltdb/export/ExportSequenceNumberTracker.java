@@ -207,4 +207,40 @@ public class ExportSequenceNumberTracker {
     public long getLastSeqNo() {
         return end(m_map.span());
     }
+
+    public String toShortString() {
+        if (m_map.isEmpty()) {
+            return "Empty Map";
+        }
+        StringBuilder sb = new StringBuilder();
+        toShortString(sb);
+        return sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        if (m_map.isEmpty()) {
+            return "Empty Map";
+        }
+        StringBuilder sb = new StringBuilder();
+        toString(sb);
+        return sb.toString();
+    }
+
+    protected void toShortString(StringBuilder sb) {
+        sb.append("span [").append(getFirstSeqNo()).append("-");
+        sb.append(getLastSeqNo());
+        sb.append(", size=").append(size()).append("]");
+    }
+
+    protected void toString(StringBuilder sb) {
+        for (Range<Long> entry : m_map.asRanges()) {
+            sb.append("[").append(start(entry)).append(", ")
+              .append(end(entry)).append("] ");
+        }
+    }
+
+    public boolean isEmpty() {
+        return m_map.isEmpty();
+    }
 }

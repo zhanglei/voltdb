@@ -118,9 +118,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     private Integer m_newLeaderHostId = null;
     // Sender HSId to query response map
     private Map<Long, QueryResponse> m_queryResponses = new HashMap<>();
-    // Usually master binds with SPI, when master has to switch because of gap, it asks the new master
-    // to switch back after bypassing the endOfGap sequence number;
-    private long m_endOfGap = Long.MAX_VALUE;
 
     private volatile boolean m_closed = false;
     private final StreamBlockQueue m_committedBuffers;
@@ -210,6 +207,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
 
         m_committedBuffers = new StreamBlockQueue(overflowPath, nonce);
         m_gapTracker = m_committedBuffers.scanPersistentLog();
+        m_firstUnpolledSeqNo = m_gapTracker.isEmpty() ? 1L : m_gapTracker.getFirstSeqNo();
+        if (exportLog.isDebugEnabled()) {
+            exportLog.debug(toString() + " reads gap tracker from PBD:" + m_gapTracker.toString());
+        }
 
         /*
          * This is not the catalog relativeIndex(). This ID incorporates
@@ -343,6 +344,10 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         final String nonce = m_tableName + "_" + crc.getValue() + "_" + m_partitionId;
         m_committedBuffers = new StreamBlockQueue(overflowPath, nonce);
         m_gapTracker = m_committedBuffers.scanPersistentLog();
+        m_firstUnpolledSeqNo = m_gapTracker.isEmpty() ? 1L : m_gapTracker.getFirstSeqNo();
+        if (exportLog.isDebugEnabled()) {
+            exportLog.debug(toString() + " reads gap tracker from PBD:" + m_gapTracker.toString());
+        }
         //EDS created from adfile is always from disk.
         m_isInCatalog = false;
         m_eos = false;
@@ -406,6 +411,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         // If persistent log contains gap, mostly due to node failures and rejoins, acks from leader might
         // fill the gap gradually.
         m_gapTracker.truncate(releaseSeqNo);
+        if (exportLog.isDebugEnabled()) {
+            exportLog.debug("Truncate tracker via ack to:" + releaseSeqNo + " now is " + m_gapTracker.toString());
+        }
         // If releaseSeqNo falls in between stream buffers,
         if (m_committedBuffers.isEmpty()) {
             lastSeqNo = releaseSeqNo;
@@ -582,7 +590,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             boolean poll) throws Exception {
         final java.util.concurrent.atomic.AtomicBoolean deleted = new java.util.concurrent.atomic.AtomicBoolean(false);
         if (exportLog.isTraceEnabled()) {
-            exportLog.trace("pushExportBufferImpl with seqNo=" + startSequenceNumber + ", sync=" + sync + ", poll=" + poll);
+            exportLog.trace("pushExportBufferImpl with seq=" + startSequenceNumber + ", sync=" + sync + ", poll=" + poll);
         }
         if (buffer != null) {
             // header space along is 8 bytes
@@ -595,7 +603,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 if (exportLog.isDebugEnabled()) {
                     exportLog.debug("Dropping already acked buffer. " +
                             " Buffer info: " + startSequenceNumber + " Size: " + tupleCount +
-                            " last released seqNo: " + m_lastReleasedSeqNo);
+                            " last released seq: " + m_lastReleasedSeqNo);
                 }
                 cont.discard();
                 return;
@@ -627,6 +635,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 m_tupleCount += tupleCount;
                 m_tuplesPending.addAndGet(tupleCount);
 
+                if (exportLog.isDebugEnabled()) {
+                    exportLog.debug("Offer buffer [" + sb.startSequenceNumber() + "," + sb.lastSequenceNumber() + "] to pbd.");
+                }
                 m_committedBuffers.offer(sb);
             } catch (IOException e) {
                 VoltDB.crashLocalVoltDB("Unable to write to export overflow.", true, e);
@@ -720,8 +731,15 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                         }
                     }
                     m_gapTracker.truncate(sequenceNumber);
+                    if (exportLog.isDebugEnabled()) {
+                        exportLog.debug("Truncate tracker via snapshot truncation to " + sequenceNumber + " now is " + m_gapTracker.toString());
+                    }
+                    // Truncation is called on every host.
+                    // After rejoin, new data source may contain the data which current master doesn't have,
+                    // do a gap detection only on master stream if it is paused by the missing data
+                    queryForBestCandidate();
                 } catch (Throwable t) {
-                    VoltDB.crashLocalVoltDB("Error while trying to truncate export to seqNo " +
+                    VoltDB.crashLocalVoltDB("Error while trying to truncate export to seq " +
                             sequenceNumber, true, t);
                 }
             }
@@ -885,27 +903,35 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             //Copying and sending the data will take place outside the critical section
             try {
                 Iterator<StreamBlock> iter = m_committedBuffers.iterator();
-                long seqnum = m_firstUnpolledSeqNo;
-                // If previous master asks me to switch back after end of the gap, stop polling new buffer
-                if (seqnum <= m_endOfGap) {
-                    while (iter.hasNext()) {
-                        StreamBlock block = iter.next();
-                        // find the first block that has unpolled data
-                        if (seqnum >= block.startSequenceNumber() &&
-                                seqnum < block.startSequenceNumber() + block.rowCount()) {
-                            first_unpolled_block = block;
-                            m_firstUnpolledSeqNo = block.startSequenceNumber() + block.rowCount();
-                            break;
-                        } else if (seqnum >= block.startSequenceNumber() + block.rowCount()) {
-                            blocksToDelete.add(block);
-                            iter.remove();
-                        } else {
-                            Pair<Long, Long> gap = m_gapTracker.getFirstGap();
-                            if (gap != null && seqnum >= gap.getFirst()) {
-                                // Hit a gap! Prepare to relinquish master role and broadcast queries for
-                                // capable candidate.
-                                m_seqNoToDrain = seqnum - 1;
-                                queryForBestCandidate();
+                long firstUnpolledSeq = m_firstUnpolledSeqNo;
+                while (iter.hasNext()) {
+                    StreamBlock block = iter.next();
+                    // find the first block that has unpolled data
+                    if (firstUnpolledSeq >= block.startSequenceNumber() &&
+                            firstUnpolledSeq < block.startSequenceNumber() + block.rowCount()) {
+                        first_unpolled_block = block;
+                        m_firstUnpolledSeqNo = block.startSequenceNumber() + block.rowCount();
+                        break;
+                    } else if (firstUnpolledSeq >= block.startSequenceNumber() + block.rowCount()) {
+                        blocksToDelete.add(block);
+                        iter.remove();
+                    } else {
+                        // Gap only exists in the middle of buffers, why is it never be in the head of
+                        // queue? Because only master checks the gap, mastership migration waits until
+                        // the last pushed buffer at the checkpoint time is acked, it won't leave gap
+                        // behind before migrates to another node.
+                        Pair<Long, Long> gap = m_gapTracker.getFirstGap();
+                        if (gap != null && firstUnpolledSeq >= gap.getFirst() && firstUnpolledSeq <= gap.getSecond()) {
+                            // Hit a gap! Prepare to relinquish master role and broadcast queries for
+                            // capable candidate.
+                            exportLog.info(toString() + " hit a gap [" +
+                                    gap.getFirst() + ", " + gap.getSecond() +
+                                    "], start looking for other nodes that has the data.");
+                            // If another mastership migration in progress and is before the gap,
+                            // don't bother to start another
+                            if (m_seqNoToDrain >= firstUnpolledSeq -1) {
+                                m_seqNoToDrain = Math.min(m_seqNoToDrain, firstUnpolledSeq - 1);
+                                mastershipCheckpoint(firstUnpolledSeq - 1);
                             }
                         }
                     }
@@ -949,9 +975,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         final BBContainer m_backingCont;
         long m_startTime = 0;
 
-        public AckingContainer(BBContainer cont, long seqNo, int tuplesSent) {
+        public AckingContainer(BBContainer cont, long seq, int tuplesSent) {
             super(cont.b());
-            m_seqNo = seqNo;
+            m_seqNo = seq;
             m_tuplesSent = tuplesSent;
             m_backingCont = cont;
         }
@@ -1003,7 +1029,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
     }
 
-    private void forwardAckToOtherReplicas(long seqNo, int tuplesSent) {
+    private void forwardAckToOtherReplicas(long seq, int tuplesSent) {
         // In RunEveryWhere mode, every data source is master, no need to send out acks.
         if (m_runEveryWhere) {
             return;
@@ -1020,7 +1046,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             buf.putInt(m_partitionId);
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
-            buf.putLong(seqNo);
+            buf.putLong(seq);
             buf.putInt(tuplesSent);
 
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
@@ -1029,7 +1055,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 mbx.send(siteId, bpm);
             }
             if (exportLog.isDebugEnabled()) {
-                exportLog.debug("Send RELEASE_BUFFER to " + toString() + " with sequence number " + seqNo
+                exportLog.debug("Send RELEASE_BUFFER to " + toString() + " with sequence number " + seq
                         + " tuples sent " + tuplesSent
                         + " from " + CoreUtils.hsIdToString(mbx.getHSId())
                         + " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
@@ -1078,7 +1104,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-    public void ack(final long seqNo, int tuplesSent) {
+    public void ack(final long seq, int tuplesSent) {
 
         //In replicated only master will be doing this.
         m_es.execute(new Runnable() {
@@ -1100,7 +1126,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     // are already promoted to be the master. If so, ignore the
                     // ack.
                     if (!m_es.isShutdown() && !m_mastershipAccepted.get()) {
-                        ackImpl(seqNo, tuplesSent);
+                        ackImpl(seq, tuplesSent);
                     }
                 } catch (Exception e) {
                     exportLog.error("Error acking export buffer", e);
@@ -1111,25 +1137,15 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
-     private void ackImpl(long seqNo, int tuplesSent) {
-
+     private void ackImpl(long seq, int tuplesSent) {
         //Process the ack if any and add blocks to the delete list or move the released sequence number
-        if (seqNo > 0) {
+        if (seq > 0) {
             try {
-                releaseExportBytes(seqNo, tuplesSent);
+                releaseExportBytes(seq, tuplesSent);
+                mastershipCheckpoint(seq);
             } catch (IOException e) {
                 VoltDB.crashLocalVoltDB("Error attempting to release export bytes", true, e);
                 return;
-            }
-            // time to give away leadership
-            if (seqNo >= Math.min(m_seqNoToDrain, m_endOfGap)) {
-                if (m_newLeaderHostId != null) {
-                    // If mastership is switched back to the original master at SPI, don't put new endOfGap
-                    sendGiveMastershipMessage(m_newLeaderHostId, seqNo,
-                            m_seqNoToDrain != Long.MAX_VALUE ? m_endOfGap : Long.MAX_VALUE);
-                } else {
-                    queryForBestCandidate();
-                }
             }
         }
     }
@@ -1146,27 +1162,24 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         m_es.submit(new Runnable() {
             @Override
             public void run() {
-                if (exportLog.isDebugEnabled()) {
-                    exportLog.debug("Export table " + getTableName() + " mastership prepare to be demoted for partition " + getPartitionId());
-                }
-                m_newLeaderHostId = newLeaderHostId;
                 // memorize end sequence number of the most recently pushed buffer from EE
-                m_seqNoToDrain = m_lastPushedSeqNo;
+                // but if we already wait to switch mastership, don't update the sequence to drain to
+                // a greater number
+                m_seqNoToDrain = Math.min(m_seqNoToDrain, m_lastPushedSeqNo);
+                m_newLeaderHostId = newLeaderHostId;
                 // if no new buffer to be drained, send the migrate event right away
-                if (m_lastReleasedSeqNo >= m_seqNoToDrain) {
-                    sendGiveMastershipMessage(newLeaderHostId, m_lastReleasedSeqNo, Long.MAX_VALUE);
-                }
+                mastershipCheckpoint(m_lastReleasedSeqNo);
             }
         });
     }
 
-    private void sendGiveMastershipMessage(int newLeaderHostId, long curSeq, long gapEnd) {
+    private void sendGiveMastershipMessage(int newLeaderHostId, long curSeq) {
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
         if (mbx != null && p.getSecond().size() > 0 ) {
             // msg type(1) + partition:int(4) + length:int(4) +
-            // signaturesBytes.length + curSeq:long(8) + gapEnd:long(8).
-            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8 + 8;
+            // signaturesBytes.length + curSeq:long(8).
+            final int msgLen = 1 + 4 + 4 + m_signatureBytes.length + 8;
 
             ByteBuffer buf = ByteBuffer.allocate(msgLen);
             buf.put(ExportManager.GIVE_MASTERSHIP);
@@ -1174,7 +1187,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             buf.putInt(m_signatureBytes.length);
             buf.put(m_signatureBytes);
             buf.putLong(curSeq);
-            buf.putLong(gapEnd);
 
             BinaryPayloadMessage bpm = new BinaryPayloadMessage(new byte[0], buf.array());
 
@@ -1194,6 +1206,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     }
 
     private void sendGapQuery() {
+        if (m_gapTracker.size() == 0) return;
         m_queryResponses.clear();
         Pair<Mailbox, ImmutableList<Long>> p = m_ackMailboxRefs.get();
         Mailbox mbx = p.getFirst();
@@ -1222,7 +1235,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         } else {
             setStatus(STREAM_STATUS.PAUSED);
             Pair<Long, Long> gap = m_gapTracker.getFirstGap();
-            exportLog.error(toString() + " hit a gap from sequence number " + gap.getFirst() +
+            exportLog.error(toString() + " is unable to proceed because of missing data cluster-wise from " + gap.getFirst() +
                     " to " + gap.getSecond());
         }
     }
@@ -1300,7 +1313,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         m_readyForPolling = false;
         m_seqNoToDrain = Long.MAX_VALUE;
         m_newLeaderHostId = null;
-        m_endOfGap = Long.MAX_VALUE;
     }
 
     /**
@@ -1376,33 +1388,29 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return m_es;
     }
 
-    void queryForBestCandidate() {
+    private void queryForBestCandidate() {
         // Should be the master and the master was stuck on a gap
-        if (!m_mastershipAccepted.get() || m_seqNoToDrain == Long.MAX_VALUE) {
-            return;
-        }
-        if (exportLog.isDebugEnabled()) {
-            exportLog.debug(toString() + " hits a gap so it queries for candidates who can cover the gap.");
-        }
-        m_es.execute(new Runnable() {
-            @Override
-            public void run() {
-                sendGapQuery();
+        if (m_mastershipAccepted.get() && m_gapTracker.getFirstGap() != null) {
+            if (exportLog.isDebugEnabled()) {
+                exportLog.debug(toString() + " hits a gap (" +
+                        m_gapTracker.getFirstGap().getFirst() + "," + m_gapTracker.getFirstGap().getSecond() +
+                        ") so it queries for candidates who can cover the gap.");
             }
-        });
+            sendGapQuery();
+        }
     }
 
     void takeMastership() {
-        // Skip current master
-        if (m_mastershipAccepted.get()) {
-            return;
-        }
-        if (exportLog.isDebugEnabled()) {
-            exportLog.debug(toString() + " decides to claw mastership back from other node.");
-        }
         m_es.execute(new Runnable() {
             @Override
             public void run() {
+                // Skip current master
+                if (m_mastershipAccepted.get()) {
+                    return;
+                }
+                if (exportLog.isDebugEnabled()) {
+                    exportLog.debug(toString() + " decides to claw mastership back from other node.");
+                }
                 // Query export membership if current stream is not the master
                 sendTaskMastershipMessage();
             }
@@ -1445,11 +1453,8 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                         // time to give up master and give it to the best candidate
                         if (bestCandidate != null) {
                             m_newLeaderHostId = CoreUtils.getHostIdFromHSId(bestCandidate.getKey());
-                            m_endOfGap = lastSeq;
-                            // Before sends out gap query we wait all the pushed buffer to drain
-                            if (m_lastReleasedSeqNo >= m_seqNoToDrain) {
-                                sendGiveMastershipMessage(m_newLeaderHostId, m_lastReleasedSeqNo, m_endOfGap);
-                            }
+                            // drainedTo sequence number should haven't been changed.
+                            mastershipCheckpoint(m_lastReleasedSeqNo);
                         }
                     }
                 }
@@ -1463,12 +1468,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             public void run() {
                 if (m_mastershipAccepted.get()) {
                     m_newLeaderHostId = CoreUtils.getHostIdFromHSId(senderHsId);
-                    // mark the last pushed sequence number as trigger
-                    m_seqNoToDrain = m_lastPushedSeqNo;
-                    // if no new buffer to be drained, send the migrate event right away
-                    if (m_lastReleasedSeqNo >= m_seqNoToDrain) {
-                        sendGiveMastershipMessage(m_newLeaderHostId, m_lastReleasedSeqNo, Long.MAX_VALUE);
-                    }
+                    // mark the trigger
+                    m_seqNoToDrain = Math.min(m_seqNoToDrain, m_lastPushedSeqNo);
+                    mastershipCheckpoint(m_lastReleasedSeqNo);
                 } else {
                     sendTakeMastershipResponse(senderHsId, requestId);
                 }
@@ -1531,15 +1533,26 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return "ExportDataSource for Table " + getTableName() + " at Partition " + getPartitionId();
     }
 
-    private boolean canCoverNextSequenceNumber(long nextSeqNo) {
+    private boolean canCoverNextSequenceNumber(long nextSeq) {
         if (m_gapTracker.size() == 0) {
             return true;
         }
-        return m_gapTracker.contains(nextSeqNo, nextSeqNo);
+        return m_gapTracker.contains(nextSeq, nextSeq);
     }
 
-    public void markEndOfGapPoint(long masterHsId, long endOfGap) {
-        m_newLeaderHostId = CoreUtils.getHostIdFromHSId(masterHsId);
-        m_endOfGap = endOfGap;
+    private void mastershipCheckpoint(long seq) {
+        if (exportLog.isDebugEnabled()) {
+            exportLog.debug("Export table " + getTableName() + " prepared to give away mastership to"  +
+                    " the new master on Host " + m_newLeaderHostId + " m_seqNoToDrain " + m_seqNoToDrain +
+                    " m_lastReleasedSeqNo " + m_lastReleasedSeqNo + " m_lastPushedSeqNo " + m_lastPushedSeqNo);
+        }
+        // time to give away leadership
+        if (seq >= m_seqNoToDrain) {
+            if (m_newLeaderHostId != null) {
+                sendGiveMastershipMessage(m_newLeaderHostId, seq);
+            } else {
+                queryForBestCandidate();
+            }
+        }
     }
 }

@@ -284,7 +284,6 @@ public class ExportGeneration implements Generation {
                         }
                     } else if (msgType == ExportManager.GIVE_MASTERSHIP) {
                         final long ackSeqNo = buf.getLong();
-                        final long endOfGap = buf.getLong();
                         int tuplesSent = 0;
 //                        if (tuplesSent < 0 ) {
 //                            exportLog.warn("Received an export ack for " + eds.toString());
@@ -303,9 +302,6 @@ public class ExportGeneration implements Generation {
                             eds.ack(ackSeqNo, tuplesSent);
                         } catch (RejectedExecutionException ignoreIt) {
                             // ignore it: as it is already shutdown
-                        }
-                        if (endOfGap != Long.MAX_VALUE) {
-                            eds.markEndOfGapPoint(message.m_sourceHSId, endOfGap);
                         }
                         eds.acceptMastership();
                     } else if (msgType == ExportManager.GAP_QUERY) {
@@ -368,9 +364,6 @@ public class ExportGeneration implements Generation {
                     // In case of newly joined or rejoined streams miss any RELEASE_BUFFER event,
                     // master stream resends the event when the export mailbox is aware of new streams.
                     eds.forwardAckToNewJoinedReplicas(newHSIds);
-                    // New data source may contain the data which current master doesn't have,
-                    // do a gap detection only on master stream if it is paused by the missing data
-                    eds.queryForBestCandidate();
                 }
             }
         }
