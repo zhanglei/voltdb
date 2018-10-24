@@ -54,6 +54,7 @@ import org.voltcore.utils.DBBPool.BBContainer;
 import org.voltcore.utils.Pair;
 import org.voltdb.ExportStatsBase.ExportRole;
 import org.voltdb.ExportStatsBase.ExportStatsRow;
+import org.voltdb.RealVoltDB;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltType;
 import org.voltdb.catalog.CatalogMap;
@@ -154,12 +155,12 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
     public final ArrayList<Integer> m_columnLengths = new ArrayList<>();
     private String m_partitionColumnName = "";
 
-    static enum STREAM_STATUS {
+    static enum StreamStatus {
         ACTIVE,
         DROPPED,
-        PAUSED
+        BLOCKED
     }
-    private STREAM_STATUS m_status = STREAM_STATUS.ACTIVE;
+    private StreamStatus m_status = StreamStatus.ACTIVE;
 
     static class QueryResponse implements Comparable<QueryResponse>{
         boolean canCover;
@@ -953,6 +954,9 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             if (first_unpolled_block == null) {
                 m_pollFuture = fut;
             } else {
+                if (m_status == StreamStatus.BLOCKED) {
+                    setStatus(StreamStatus.ACTIVE);
+                }
                 final AckingContainer ackingContainer =
                         new AckingContainer(first_unpolled_block.unreleasedContainer(),
                                 first_unpolled_block.startSequenceNumber() + first_unpolled_block.rowCount() - 1,
@@ -1196,7 +1200,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                     mbx.send(siteId, bpm);
                     if (exportLog.isDebugEnabled()) {
                         exportLog.debug(toString() + " send GIVE_MASTERSHIP message to " +
-                                CoreUtils.hsIdToString(siteId));
+                                CoreUtils.hsIdToString(siteId) + " curruent sequence number " + curSeq);
                     }
                     break;
                 }
@@ -1227,13 +1231,13 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                 mbx.send(siteId, bpm);
             }
             if (exportLog.isDebugEnabled()) {
-                exportLog.debug("Send GAP_QUERY message(" + m_currentRequestId +
+                exportLog.debug("Send GAP_QUERY message(" + m_currentRequestId + "," + (m_gapTracker.getSafePoint() + 1) +
                         ") for partition " + m_partitionId + "source signature " + m_tableName +
                         " from " + CoreUtils.hsIdToString(mbx.getHSId()) +
                         " to " + CoreUtils.hsIdCollectionToString(p.getSecond()));
             }
         } else {
-            setStatus(STREAM_STATUS.PAUSED);
+            setStatus(StreamStatus.BLOCKED);
             Pair<Long, Long> gap = m_gapTracker.getFirstGap();
             exportLog.error(toString() + " is unable to proceed because of missing data cluster-wise from " + gap.getFirst() +
                     " to " + gap.getSecond());
@@ -1337,9 +1341,6 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
             public void run() {
                 try {
                     if (!m_es.isShutdown() || !m_closed) {
-//                        if (m_gapTracker.size() > 0) {
-//
-//                        }
                         if (exportLog.isDebugEnabled()) {
                             exportLog.debug("Export table " + getTableName() + " accepting mastership for partition " + getPartitionId());
                         }
@@ -1445,14 +1446,19 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
                                            .findFirst()
                                            .get();
                         } catch (NoSuchElementException e) {
-                            setStatus(STREAM_STATUS.PAUSED);
-                            Pair<Long, Long> gap = m_gapTracker.getFirstGap();
-                            exportLog.error(toString() + " is paused because hits a gap from sequence number " +
-                                    gap.getFirst() + " to " + gap.getSecond());
+                            setStatus(StreamStatus.BLOCKED);
+                            // Show warning only in full cluster.
+                            RealVoltDB voltdb = (RealVoltDB)VoltDB.instance();
+                            if (voltdb.isClusterComplete()) {
+                                Pair<Long, Long> gap = m_gapTracker.getFirstGap();
+                                exportLog.warn(toString() + " is blocked because stream hits a gap from sequence number " +
+                                        gap.getFirst() + " to " + gap.getSecond());
+                            }
                         }
                         // time to give up master and give it to the best candidate
                         if (bestCandidate != null) {
                             m_newLeaderHostId = CoreUtils.getHostIdFromHSId(bestCandidate.getKey());
+                            exportLog.info("Stream master is going to switch to host " + m_newLeaderHostId + " to jump the gap.");
                             // drainedTo sequence number should haven't been changed.
                             mastershipCheckpoint(m_lastReleasedSeqNo);
                         }
@@ -1502,7 +1508,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         }
     }
 
-    public void handTakeMastershipResponse(long sendHsId, long requestId) {
+    public void handleTakeMastershipResponse(long sendHsId, long requestId) {
         if (m_currentRequestId == requestId && !m_mastershipAccepted.get()) {
             m_es.execute(new Runnable() {
                 @Override
@@ -1524,7 +1530,7 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         return m_lastReleasedSeqNo;
     }
 
-    public void setStatus(STREAM_STATUS status) {
+    public void setStatus(StreamStatus status) {
         this.m_status = status;
     }
 
