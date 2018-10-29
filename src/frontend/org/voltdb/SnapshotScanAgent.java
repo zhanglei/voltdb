@@ -254,6 +254,15 @@ public class SnapshotScanAgent extends OpsAgent
         } else {
             for (final File f : relevantFiles) {
                 if (f.getName().endsWith(".digest")) {
+                    try {
+                        JSONObject digestData = SnapshotUtil.CRCCheck(f, hostLog);
+                        hostLog.info("Digest for " + SnapshotPathType.SNAP_PATH.toString() + "\n" + digestData.toString(4));
+                    } catch (IOException e) {
+                        SNAP_LOG.warn(e);
+                    }
+                    catch (JSONException e) {
+                        SNAP_LOG.warn(e);
+                    }
                     continue;
                 }
                 if (f.canRead()) {
