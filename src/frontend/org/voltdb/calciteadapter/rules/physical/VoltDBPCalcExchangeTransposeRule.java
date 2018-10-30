@@ -75,7 +75,8 @@ public class VoltDBPCalcExchangeTransposeRule extends RelOptRule {
 
         // Update Calc's distribution trait
         // Do not change distribution trait if this is a top exchange.
-        // The trait will be updated when a limit relation will be transposed with a bottom(fragment) exchange
+        // SINGLE and HASH distributions are not compatible and require a conversion
+        // ANY distribution is compatible with all distribution types
         if (!exchange.isTopExchange()) {
             calcTraits = calcTraits.replace(exchange.getDistribution());
         }

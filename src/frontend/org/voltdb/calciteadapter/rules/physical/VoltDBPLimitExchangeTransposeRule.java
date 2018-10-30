@@ -136,7 +136,9 @@ public class VoltDBPLimitExchangeTransposeRule extends RelOptRule {
         RelTraitSet newLimitTraits = origLimitRel.getTraitSet()
                 .replace(collationTrait);
         // Do not change distribution trait if this is a top exchange.
-        // The trait will be updated when a limit relation will be transposed with a bottom(fragment) exchange
+        // Do not change distribution trait if this is a top exchange.
+        // SINGLE and HASH distributions are not compatible and require a conversion
+        // ANY distribution is compatible with all distribution types
         if (!origExchangeRel.isTopExchange()) {
             newLimitTraits = newLimitTraits.replace(distributionTrait);
         }

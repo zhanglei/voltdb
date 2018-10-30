@@ -134,7 +134,7 @@ public class VoltDBPAggregateExchangeTransposeRule extends RelOptRule {
         }
         if (!exchange.isTopExchange()) {
             // This is not a distributed query so we can can set a new aggregate's distribution
-            // right here. For a distributed query it will be done when aggregate will be trasposed
+            // right here. For a distributed query it will be done when aggregate will be transposed
             // with a union / merge exchange
             aggrTraits = aggrTraits.replace(exchange.getDistribution());
         }
