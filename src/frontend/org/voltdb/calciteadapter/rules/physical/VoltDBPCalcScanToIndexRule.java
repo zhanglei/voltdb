@@ -17,11 +17,15 @@
 
 package org.voltdb.calciteadapter.rules.physical;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexProgram;
@@ -77,6 +81,8 @@ public class VoltDBPCalcScanToIndexRule extends RelOptRule {
         List<Column> columns = CatalogUtil.getSortedCatalogItems(catTableable.getColumns(), "index");
 
         RexNode filterCondition = calc.getProgram().getCondition();
+        RelNode indexScan = null;
+        Map<RelNode, RelNode> equiv = new HashMap<>();
 
         for (Index index : catTableable.getIndexes()) {
             AccessPath accessPath = IndexUtil.getCalciteRelevantAccessPathForIndex(
@@ -90,10 +96,14 @@ public class VoltDBPCalcScanToIndexRule extends RelOptRule {
                         catTableable,
                         rexBuilder,
                         mergedProgram);
-                VoltDBPTableIndexScan indexScan = new VoltDBPTableIndexScan(
+                RelTraitSet scanTraits = scan.getTraitSet();
+                if (!indexCollation.getFieldCollations().isEmpty()) {
+                    scanTraits = scanTraits.plus(indexCollation).simplify();
+                }
+                VoltDBPTableIndexScan nextIndexScan = new VoltDBPTableIndexScan(
                         scan.getCluster(),
                         // Need to add an index collation trait
-                        scan.getTraitSet().plus(indexCollation),
+                        scanTraits,
                         scan.getTable(),
                         scan.getVoltDBTable(),
                         mergedProgram,
@@ -105,8 +115,15 @@ public class VoltDBPCalcScanToIndexRule extends RelOptRule {
                         scan.getPreAggregateRowType(),
                         scan.getPreAggregateProgram(),
                         scan.getSplitCount());
-                call.transformTo(indexScan);
+                if (indexScan == null) {
+                    indexScan = nextIndexScan;
+                } else {
+                    equiv.put(nextIndexScan, calc);
+                }
             }
+        }
+        if (indexScan != null) {
+            call.transformTo(indexScan, equiv);
         }
     }
 
