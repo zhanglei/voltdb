@@ -20,8 +20,11 @@ package org.voltdb.calciteadapter.rel.physical;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
+import org.voltdb.calciteadapter.converter.RexConverter;
 import org.voltdb.plannodes.AbstractPlanNode;
+import org.voltdb.plannodes.NodeSchema;
 import org.voltdb.plannodes.ReceivePlanNode;
+import org.voltdb.plannodes.SendPlanNode;
 
 public class VoltDBPUnionExchange extends AbstractVoltDBPExchange implements VoltDBPRel {
 
@@ -50,7 +53,17 @@ public class VoltDBPUnionExchange extends AbstractVoltDBPExchange implements Vol
     @Override
     public AbstractPlanNode toPlanNode() {
         AbstractPlanNode rpn = new ReceivePlanNode();
-        return super.toPlanNode(rpn);
+        SendPlanNode spn = new SendPlanNode();
+        rpn.addAndLinkChild(spn);
+
+        AbstractPlanNode child = inputRelNodeToPlanNode(this, 0);
+        spn.addAndLinkChild(child);
+
+        // Generate output schema
+        NodeSchema schema = RexConverter.convertToVoltDBNodeSchema(getInput().getRowType());
+        rpn.setOutputSchema(schema);
+        rpn.setHaveSignificantOutputSchema(true);
+        return rpn;
     }
 
 }

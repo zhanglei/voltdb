@@ -19,6 +19,7 @@ package org.voltdb.calciteadapter.rules;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.rel.rules.AggregateReduceFunctionsRule;
 import org.apache.calcite.rel.rules.CalcMergeRule;
 import org.apache.calcite.rel.rules.FilterCalcMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
@@ -33,7 +34,9 @@ import org.voltdb.calciteadapter.rules.inlining.VoltDBPCalcAggregateMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPCalcScanMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitMergeExchangeMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitScanMergeRule;
+import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitSerialAggregateMergeRule;
 import org.voltdb.calciteadapter.rules.inlining.VoltDBPLimitSortMergeRule;
+import org.voltdb.calciteadapter.rules.inlining.VoltDBPSerialAggregateMergeExchangeMergeRule;
 import org.voltdb.calciteadapter.rules.logical.VoltDBLAggregateRule;
 import org.voltdb.calciteadapter.rules.logical.VoltDBLCalcRule;
 import org.voltdb.calciteadapter.rules.logical.VoltDBLSortRule;
@@ -169,6 +172,7 @@ calc = proj & filter
             , ProjectToCalcRule.INSTANCE
             , ProjectMergeRule.INSTANCE
             , FilterProjectTransposeRule.INSTANCE
+            , AggregateReduceFunctionsRule.INSTANCE
 
             // VoltDBLogical Conversion Rules
             , VoltDBLSortRule.INSTANCE
@@ -202,9 +206,9 @@ calc = proj & filter
             , VoltDBPLimitRule.INSTANCE
             , VoltDBPAggregateRule.INSTANCE
 
-            // Exchage Rules
+            // Exchange Rules
             , VoltDBPCalcExchangeTransposeRule.INSTANCE
-            , VoltDBPLimitExchangeTransposeRule.INSTANCE
+            , VoltDBPLimitExchangeTransposeRule.INSTANCE_1
             , VoltDBPSortExchangeTransposeRule.INSTANCE
             , VoltDBPAggregateExchangeTransposeRule.INSTANCE_1
             , VoltDBPAggregateExchangeTransposeRule.INSTANCE_2
@@ -221,6 +225,8 @@ calc = proj & filter
             , VoltDBPLimitMergeExchangeMergeRule.INSTANCE_2
             , VoltDBPCalcAggregateMergeRule.INSTANCE
             , VoltDBPCalcScanMergeRule.INSTANCE
+            , VoltDBPLimitSerialAggregateMergeRule.INSTANCE
+            , VoltDBPSerialAggregateMergeExchangeMergeRule.INSTANCE
             , VoltDBPLimitSortMergeRule.INSTANCE_1
             , VoltDBPLimitSortMergeRule.INSTANCE_2
             , VoltDBPAggregateScanMergeRule.INSTANCE

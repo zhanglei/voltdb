@@ -143,7 +143,7 @@ public class VoltDBPLimit extends SingleRel implements VoltDBPRel {
     public RelOptCost computeSelfCost(RelOptPlanner planner,
             RelMetadataQuery mq) {
         double rowCount = estimateRowCount(mq);
-        // Hack. Discourage Calcite from picking a plan with a Limit that have a RelDistributions.ANY
+        // Hack. Discourage Calcite from picking a plan with a Limit that has a RelDistributions.ANY
         // distribution trait. This would make a "correct"
         // VoltDBPLimit (Single) / DistributedExchange / VoltDBPLimit (Hash) plan
         // less expensive than an "incorrect" VoltDBPLimit (Any) / DistributedExchange one.
@@ -160,4 +160,15 @@ public class VoltDBPLimit extends SingleRel implements VoltDBPRel {
         return m_splitCount;
     }
 
+    public static LimitPlanNode toPlanNode(RexNode limit, RexNode offset) {
+        LimitPlanNode lpn = new LimitPlanNode();
+        lpn = new LimitPlanNode();
+        if (limit != null) {
+            lpn.setLimit(RexLiteral.intValue(limit));
+        }
+        if (offset != null) {
+            lpn.setOffset(RexLiteral.intValue(offset));
+        }
+        return lpn;
+    }
 }

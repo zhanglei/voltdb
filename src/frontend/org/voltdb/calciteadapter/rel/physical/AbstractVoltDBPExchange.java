@@ -24,10 +24,6 @@ import org.apache.calcite.rel.RelDistributionTraitDef;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Exchange;
-import org.voltdb.calciteadapter.converter.RexConverter;
-import org.voltdb.plannodes.AbstractPlanNode;
-import org.voltdb.plannodes.NodeSchema;
-import org.voltdb.plannodes.SendPlanNode;
 
 public abstract class AbstractVoltDBPExchange extends Exchange implements VoltDBPRel {
 
@@ -50,20 +46,6 @@ public abstract class AbstractVoltDBPExchange extends Exchange implements VoltDB
         assert(!RelDistributions.ANY.getType().equals(traitSet.getTrait(RelDistributionTraitDef.INSTANCE).getType()));
         m_splitCount = splitCount;
         m_topExchange = topExchange;
-    }
-
-    protected AbstractPlanNode toPlanNode(AbstractPlanNode epn) {
-        SendPlanNode spn = new SendPlanNode();
-        epn.addAndLinkChild(spn);
-
-        AbstractPlanNode child = inputRelNodeToPlanNode(this, 0);
-        spn.addAndLinkChild(child);
-
-        // Generate output schema
-        NodeSchema schema = RexConverter.convertToVoltDBNodeSchema(getInput().getRowType());
-        epn.setOutputSchema(schema);
-        epn.setHaveSignificantOutputSchema(true);
-        return epn;
     }
 
     @Override

@@ -22,6 +22,7 @@ import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
@@ -33,6 +34,7 @@ import org.apache.calcite.rex.RexProgramBuilder;
 import org.voltdb.calciteadapter.converter.RexConverter;
 import org.voltdb.calciteadapter.rel.VoltDBTable;
 import org.voltdb.calciteadapter.util.IndexUtil;
+import org.voltdb.calciteadapter.util.VoltDBRexUtil;
 import org.voltdb.catalog.Index;
 import org.voltdb.expressions.AbstractExpression;
 import org.voltdb.planner.AccessPath;
@@ -48,6 +50,7 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
 
     private final Index m_index;
     private final AccessPath m_accessPath;
+    private final RelCollation m_indexCollation;
 
     /**
      *
@@ -77,7 +80,8 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
             RelNode aggregate,
             RelDataType preAggregateRowType,
             RexProgram preAggregateProgram,
-            int splitCount) {
+            int splitCount,
+            RelCollation indexCollation) {
         super(cluster,
               traitSet,
               table,
@@ -93,6 +97,8 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
         m_index = index;
         assert (accessPath != null);
         m_accessPath = accessPath;
+        assert (indexCollation != null);
+        m_indexCollation = indexCollation;
     }
 
     /**
@@ -337,7 +343,8 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
                 getAggregateRelNode(),
                 getPreAggregateRowType(),
                 getPreAggregateProgram(),
-                getSplitCount());
+                getSplitCount(),
+                m_indexCollation);
     }
 
     @Override
@@ -356,6 +363,9 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
             m_accessPath.getOtherExprs().add(expr);
         }
 
+        // Adjust the collation for a new program
+        RelCollation newIndexCollation = VoltDBRexUtil.adjustCollationForProgram(rexBuilder, mergedProgram, m_indexCollation);
+
         return new VoltDBPTableIndexScan(
                 getCluster(),
                 traitSet,
@@ -369,7 +379,8 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
                 getAggregateRelNode(),
                 getPreAggregateRowType(),
                 getPreAggregateProgram(),
-                getSplitCount());
+                getSplitCount(),
+                newIndexCollation);
     }
 
     @Override
@@ -393,7 +404,8 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
                 aggregate,
                 preAggRowType,
                 preAggProgram,
-                getSplitCount());
+                getSplitCount(),
+                m_indexCollation);
     }
 
     @Override
@@ -401,4 +413,7 @@ public class VoltDBPTableIndexScan extends AbstractVoltDBPTableScan {
         return m_splitCount;
     }
 
+    public RelCollation getIndexCollation() {
+        return m_indexCollation;
+    }
 }

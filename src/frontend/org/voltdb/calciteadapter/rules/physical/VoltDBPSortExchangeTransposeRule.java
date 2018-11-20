@@ -17,14 +17,11 @@
 
 package org.voltdb.calciteadapter.rules.physical;
 
-import java.util.Map;
-
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperandChildPolicy;
 import org.apache.calcite.plan.RelOptRuleOperandChildren;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelDistributions;
 import org.apache.calcite.rel.RelNode;
 import org.voltdb.calciteadapter.rel.physical.AbstractVoltDBPExchange;
@@ -33,7 +30,6 @@ import org.voltdb.calciteadapter.rel.physical.VoltDBPSingletonExchange;
 import org.voltdb.calciteadapter.rel.physical.VoltDBPSort;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 /**
  * Transform Sort / Exchange rels into
@@ -77,17 +73,7 @@ public class VoltDBPSortExchangeTransposeRule extends RelOptRule {
 
         RelNode result = transposeExchange(exchangeRel, newSortRel);
 
-        // Not only is newExchane equivalent to sort;
-        // newSort is equivalent to exchangeRel's input
-        Map<RelNode, RelNode> equiv;
-        if (newSortRel.getCluster().getPlanner().getRelTraitDefs()
-                .contains(RelCollationTraitDef.INSTANCE)) {
-            equiv = ImmutableMap.of((RelNode) newSortRel, exchangeRel.getInput());
-        } else {
-            equiv = ImmutableMap.of();
-        }
-
-        call.transformTo(result, equiv);
+        call.transformTo(result);
         // Ideally, this rule should work without the next line but...
         // If we don't set the impotence of the original Sort expression to 0
         // the compilation of the following simple SQL

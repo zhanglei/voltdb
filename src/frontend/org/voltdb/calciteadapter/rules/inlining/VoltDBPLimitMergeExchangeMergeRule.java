@@ -55,12 +55,9 @@ public class VoltDBPLimitMergeExchangeMergeRule extends RelOptRule {
         int exchangeIdx = call.rels.length - 1;
         VoltDBPMergeExchange mergeExchange = call.rel(exchangeIdx);
 
-        VoltDBPMergeExchange newExchange = (VoltDBPMergeExchange) mergeExchange.copy(
-                mergeExchange.getTraitSet(),
-                mergeExchange.getInput(),
-                mergeExchange.getDistribution());
-        newExchange.setOffset(limitOffset.getOffset());
-        newExchange.setLimit(limitOffset.getLimit());
+        VoltDBPMergeExchange newExchange = mergeExchange.copyWithLimit(
+                limitOffset.getOffset(),
+                limitOffset.getLimit());
 
         RelNode newRel;
         if (call.rels.length == 3) {
