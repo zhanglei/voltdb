@@ -153,7 +153,9 @@ public class VoltDBPSortScanToIndexRule extends RelOptRule {
                 }
             }
         }
-        call.transformTo(equivRel, equivMap);
+        if (equivRel != null) {
+            call.transformTo(equivRel, equivMap);
+        }
 
     }
 
