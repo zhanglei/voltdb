@@ -17,6 +17,9 @@
 
 package org.voltdb.calciteadapter.rules.physical;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
@@ -92,6 +95,8 @@ public class VoltDBPSortScanToIndexRule extends RelOptRule {
         RexBuilder builder = scan.getCluster().getRexBuilder();
         RexProgram program = scan.getProgram();
         assert(program != null);
+        RelNode equivRel = null;
+        Map<RelNode, RelNode> equivMap = new HashMap<>();
 
         for (Index index : catTable.getIndexes()) {
             if (!index.getPredicatejson().isEmpty()) {
@@ -114,7 +119,7 @@ public class VoltDBPSortScanToIndexRule extends RelOptRule {
                         true);
                 VoltDBPTableIndexScan indexScan = new VoltDBPTableIndexScan(
                         scan.getCluster(),
-                        // Need to add sort collation trait
+                        // Need to preserve sort collation trait
                         scan.getTraitSet().replace(scanSortCollation),
                         scan.getTable(),
                         scan.getVoltDBTable(),
@@ -126,7 +131,8 @@ public class VoltDBPSortScanToIndexRule extends RelOptRule {
                         scan.getAggregateRelNode(),
                         scan.getPreAggregateRowType(),
                         scan.getPreAggregateProgram(),
-                        scan.getSplitCount());
+                        scan.getSplitCount(),
+                        indexCollation);
 
                 RelNode result = null;
                 if (calc == null) {
@@ -139,9 +145,16 @@ public class VoltDBPSortScanToIndexRule extends RelOptRule {
                             calc.getProgram(),
                             calc.getSplitCount());
                 }
-                call.transformTo(result);
+
+                if (equivRel == null) {
+                    equivRel = result;
+                } else {
+                    equivMap.put(result, sort);
+                }
             }
         }
+        call.transformTo(equivRel, equivMap);
+
     }
 
 }

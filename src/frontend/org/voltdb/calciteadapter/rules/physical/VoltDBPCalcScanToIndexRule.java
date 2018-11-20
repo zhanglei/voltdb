@@ -97,12 +97,8 @@ public class VoltDBPCalcScanToIndexRule extends RelOptRule {
                         rexBuilder,
                         mergedProgram);
                 RelTraitSet scanTraits = scan.getTraitSet();
-                if (!indexCollation.getFieldCollations().isEmpty()) {
-                    scanTraits = scanTraits.plus(indexCollation).simplify();
-                }
                 VoltDBPTableIndexScan nextIndexScan = new VoltDBPTableIndexScan(
                         scan.getCluster(),
-                        // Need to add an index collation trait
                         scanTraits,
                         scan.getTable(),
                         scan.getVoltDBTable(),
@@ -114,7 +110,8 @@ public class VoltDBPCalcScanToIndexRule extends RelOptRule {
                         scan.getAggregateRelNode(),
                         scan.getPreAggregateRowType(),
                         scan.getPreAggregateProgram(),
-                        scan.getSplitCount());
+                        scan.getSplitCount(),
+                        indexCollation);
                 if (indexScan == null) {
                     indexScan = nextIndexScan;
                 } else {

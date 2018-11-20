@@ -75,7 +75,7 @@ public class VoltDBLAggregate extends Aggregate  implements VoltDBLRel {
                 aggCalls);
     }
 
-    @Override 
+    @Override
     public RelOptCost computeSelfCost(RelOptPlanner planner,
             RelMetadataQuery mq) {
         // REVIEW jvs 24-Aug-2008:  This is bogus, but no more bogus
