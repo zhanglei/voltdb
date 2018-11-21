@@ -360,7 +360,6 @@ public class TestCalciteOrderByLimitOffset extends TestCalciteBase {
     public void testIndexScanWithRedundantOrderBy40() throws Exception {
         String sql;
         sql = "select i from RI1 where I > 3 order by bi";
-        // ORDER BY is redundant because of the index on (I, BI) columns
         Map<String, String> ignores = new HashMap<>();
         ignores.put("\"SORT_DIRECTION\":\"ASC\",\"TARGET_INDEX_NAME\":\"VOLTDB_AUTOGEN_IDX_PK_RI1_I\"", "\"SORT_DIRECTION\":\"INVALID\",\"TARGET_INDEX_NAME\":\"VOLTDB_AUTOGEN_IDX_PK_RI1_I\"");
         comparePlans(sql, ignores);
