@@ -85,6 +85,7 @@ public class KafkaExportClient extends ExportClientBase {
     boolean m_pollFutures = false;
     int m_acksTimeout = 5_000;
 
+    @SuppressWarnings("deprecation")
     @Override
     public void configure(Properties config) throws Exception {
         m_producerConfig = new Properties();
@@ -272,7 +273,7 @@ public class KafkaExportClient extends ExportClientBase {
             m_producerConfig.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapVal);
         }
 
-        m_producerConfig.setProperty(ProducerConfig.BLOCK_ON_BUFFER_FULL_CONFIG, "true");
+        //m_producerConfig.setProperty(ProducerConfig.BLOCK_ON_BUFFER_FULL_CONFIG, "true");
 
         LOG.info("Configuring Kafka export client: %s", m_producerConfig);
     }

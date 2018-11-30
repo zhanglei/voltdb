@@ -72,7 +72,7 @@
             <zipfileset src="${base.dir}/lib/scala-parser-combinators_2.11-1.0.2.jar" />
             <zipfileset src="${base.dir}/lib/scala-xml_2.11-1.0.2.jar" />
             <zipfileset src="${base.dir}/lib/kafka_2.11-0.8.2.2.jar" />
-            <zipfileset src="${base.dir}/lib/kafka-clients-0.8.2.2.jar" />
+            <zipfileset src="${base.dir}/third_party/java/jars/kafka-clients-0.8.2.2.jar" />
             <zipfileset src="${base.dir}/lib/snappy-java-1.1.1.7.jar" />
             <zipfileset src="${base.dir}/lib/lz4-1.2.0.jar" />
             <manifest>
