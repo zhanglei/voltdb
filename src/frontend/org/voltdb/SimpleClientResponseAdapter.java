@@ -169,24 +169,39 @@ public class SimpleClientResponseAdapter implements Connection, WriteStream {
     }
 
     @Override
+    public void enqueue(ClientResponseImpl resp) {
+        // Go for a different behavior if we are using this adapter as a gussied up future for
+        // an internal request
+        if (m_retFuture != null) {
+            m_retFuture.set(resp);
+            return;
+        }
+
+        Callback callback = null;
+        if (m_leaveCallback) {
+            callback = m_callbacks.get(resp.getClientHandle());
+        } else {
+            callback = m_callbacks.remove(resp.getClientHandle());
+        }
+        if (callback != null) {
+            callback.handleResponse(resp);
+        }
+    }
+
+    @Override
     public void enqueue(DeferredSerialization ds) {
         try {
             // serialize() touches not-threadsafe state around Initiator
             // stats.  In the normal code path, this is protected by a lock
             // in NIOWriteStream.enqueue().
-            ByteBuffer buf = null;
-            synchronized(this) {
-                final int serializedSize = ds.getSerializedSize();
-                if (serializedSize <= 0) {
-                    return;
-                }
+            final int serializedSize = ds.getSerializedSize() + 4;
+            if (serializedSize <= 0) {
+                return;
+            }
 
-                buf = ByteBuffer.allocate(serializedSize);
-                ds.serialize(buf);
-            }
-            if (buf == null) {
-                throw new UnsupportedOperationException();
-            }
+            ByteBuffer buf = ByteBuffer.allocate(serializedSize);
+            buf.position(4);
+            ds.serialize(buf);
             enqueue(buf);
         } catch (IOException e) {
             VoltDB.crashLocalVoltDB("enqueue() in SimpleClientResponseAdapter throw an exception", true, e);
@@ -200,37 +215,12 @@ public class SimpleClientResponseAdapter implements Connection, WriteStream {
             b.position(4);
             resp.initFromBuffer(b);
 
-            //Go for a different behavior if we are using this adapter as a gussied up future for
-            //an internal request
-            if (m_retFuture != null) {
-                m_retFuture.set(resp);
-                return;
-            }
-
-            Callback callback = null;
-            if (m_leaveCallback) {
-                callback = m_callbacks.get(resp.getClientHandle());
-            } else {
-                callback = m_callbacks.remove(resp.getClientHandle());
-            }
-            if (callback != null) {
-                callback.handleResponse(resp);
-            }
+            enqueue(resp);
         }
         catch (IOException e)
         {
             throw new RuntimeException("Unable to deserialize ClientResponse in SimpleClientResponseAdapter", e);
         }
-    }
-
-    @Override
-    public void enqueue(ByteBuffer[] b)
-    {
-        if (b.length != 1)
-        {
-            throw new RuntimeException("Can't use chained ByteBuffers to enqueue");
-        }
-        enqueue(b[0]);
     }
 
     @Override

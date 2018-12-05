@@ -19,6 +19,8 @@ package org.voltdb.client;
 
 import java.nio.ByteBuffer;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Helper class for managing a defined set of extensions to ProcedureInvocation
  * and StoredProcedureInvocation.
@@ -54,6 +56,10 @@ public abstract class ProcedureInvocationExtensions {
         return buf.get();
     }
 
+    public static byte readNextType(ByteBuf buf) {
+        return buf.readByte();
+    }
+
     public static void writeBatchTimeoutWithTypeByte(ByteBuffer buf, int timeoutValue) {
         buf.put(BATCH_TIMEOUT);
         writeLength(buf, INTEGER_SIZE);
@@ -67,6 +73,18 @@ public abstract class ProcedureInvocationExtensions {
                     "Batch timeout extension serialization length expected to be 4");
         }
         int timeout = buf.getInt();
+        if ((timeout < 0) && (timeout != BatchTimeoutOverrideType.NO_TIMEOUT)) {
+            throw new IllegalStateException("Invalid timeout value deserialized: " + timeout);
+        }
+        return timeout;
+    }
+
+    public static int readBatchTimeout(ByteBuf buf) {
+        int len = readLength(buf);
+        if (len != INTEGER_SIZE) {
+            throw new IllegalStateException("Batch timeout extension serialization length expected to be 4");
+        }
+        int timeout = buf.readInt();
         if ((timeout < 0) && (timeout != BatchTimeoutOverrideType.NO_TIMEOUT)) {
             throw new IllegalStateException("Invalid timeout value deserialized: " + timeout);
         }
@@ -87,9 +105,22 @@ public abstract class ProcedureInvocationExtensions {
         return true;
     }
 
+    public static boolean readAllPartition(ByteBuf buf) {
+        int len = readLength(buf);
+        if (len != 0) {
+            throw new IllegalStateException("All-Partition extension serialization length expected to be 0");
+        }
+        return true;
+    }
+
     public static void skipUnknownExtension(ByteBuffer buf) {
         int len = readLength(buf);
         buf.position(buf.position() + len); // skip ahead
+    }
+
+    public static void skipUnknownExtension(ByteBuf buf) {
+        int len = readLength(buf);
+        buf.readerIndex(buf.readerIndex() + len); // skip ahead
     }
 
     /**
@@ -112,6 +143,15 @@ public abstract class ProcedureInvocationExtensions {
             return 0;
         }
         else {
+            return 1 << (log2size - 1);
+        }
+    }
+
+    private static int readLength(ByteBuf buf) {
+        byte log2size = buf.readByte();
+        if (log2size == 0) {
+            return 0;
+        } else {
             return 1 << (log2size - 1);
         }
     }

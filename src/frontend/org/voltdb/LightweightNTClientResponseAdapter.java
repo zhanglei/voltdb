@@ -50,7 +50,8 @@ import org.voltdb.utils.MiscUtils;
  * It doesn't need it's own exec service because NT procs already have lots of threads
  * that don't block EEs, so we're cool.
  */
-public class LightweightNTClientResponseAdapter implements Connection, WriteStream {
+public class LightweightNTClientResponseAdapter extends WriteStream.AbstractWriteStream
+        implements Connection, WriteStream {
 
     final static String DEFAULT_INTERNAL_ADAPTER_NAME = "+!_NTInternalAdapter_!+";
 
@@ -152,16 +153,6 @@ public class LightweightNTClientResponseAdapter implements Connection, WriteStre
         } catch (Exception ex) {
             assert(false);
             m_logger.error("Failed to process callback.", ex);
-        }
-    }
-
-    @Override
-    public void enqueue(ByteBuffer[] b)
-    {
-        if (b.length == 1) {
-            enqueue(b[0]);
-        } else {
-            throw new UnsupportedOperationException("Buffer chains not supported in internal invocation adapter");
         }
     }
 

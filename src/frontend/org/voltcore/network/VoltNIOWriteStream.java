@@ -25,6 +25,7 @@ import java.util.ArrayDeque;
 import org.voltcore.logging.VoltLogger;
 import org.voltcore.utils.DeferredSerialization;
 import org.voltcore.utils.EstTime;
+import org.voltdb.ClientResponseImpl;
 
 /**
 *
@@ -118,7 +119,9 @@ public class VoltNIOWriteStream extends NIOWriteStreamBase implements WriteStrea
     @Override
     protected synchronized ArrayDeque<DeferredSerialization> getQueuedWrites() {
         ArrayDeque<DeferredSerialization> oldlist;
-        if (m_queuedWrites.isEmpty()) return m_queuedWrites;
+        if (m_queuedWrites.isEmpty()) {
+            return m_queuedWrites;
+        }
         if (m_queuedWrites == m_queuedWrites1) {
             oldlist = m_queuedWrites1;
             m_queuedWrites = m_queuedWrites2;
@@ -211,27 +214,21 @@ public class VoltNIOWriteStream extends NIOWriteStreamBase implements WriteStrea
         });
     }
 
-    @Override
-    public void enqueue(final ByteBuffer b) {
-        enqueue(new ByteBuffer[] { b });
-    }
-
     /**
-     * Queue a ByteBuffer for writing to the network. If the ByteBuffer is not direct then it will
-     * be copied to a DirectByteBuffer if it is less then DBBPool.MAX_ALLOCATION_SIZE. This method
-     * is a backup for code that isn't able to defer its serialization to a network thread
-     * for whatever reason. It is reasonably efficient if a DirectByteBuffer is passed in,
-     * but it would be better to keep allocations of DirectByteBuffers inside the network pools.
-     * @param b
+     * Queue a ByteBuffer for writing to the network. If the ByteBuffer is not direct then it will be copied to a
+     * DirectByteBuffer if it is less then DBBPool.MAX_ALLOCATION_SIZE. This method is a backup for code that isn't able
+     * to defer its serialization to a network thread for whatever reason. It is reasonably efficient if a
+     * DirectByteBuffer is passed in, but it would be better to keep allocations of DirectByteBuffers inside the network
+     * pools.
+     *
+     * @param buf
      */
     @Override
-    public void enqueue(final ByteBuffer b[]) {
-        assert(b != null);
-        for (ByteBuffer buf : b) {
-            assert(!buf.isDirect());//Don't queue direct buffers, they leak memory without a container
-            if (buf.remaining() == 0) {
-                throw new IllegalArgumentException("Attempted to queue a zero length buffer");
-            }
+    public void enqueue(final ByteBuffer buf) {
+        assert (buf != null);
+        assert (!buf.isDirect());// Don't queue direct buffers, they leak memory without a container
+        if (buf.remaining() == 0) {
+            throw new IllegalArgumentException("Attempted to queue a zero length buffer");
         }
 
         synchronized (this) {
@@ -244,9 +241,7 @@ public class VoltNIOWriteStream extends NIOWriteStreamBase implements WriteStrea
             m_queuedWrites.offer(new DeferredSerialization() {
                 @Override
                 public void serialize(ByteBuffer outbuf) {
-                    for (ByteBuffer buf : b) {
                         outbuf.put(buf);
-                    }
                 }
 
                 @Override
@@ -254,12 +249,8 @@ public class VoltNIOWriteStream extends NIOWriteStreamBase implements WriteStrea
 
                 @Override
                 public int getSerializedSize() {
-                    int sum = 0;
-                    for (ByteBuffer buf : b) {
-                        buf.position(0);
-                        sum += buf.remaining();
-                    }
-                    return sum;
+                    buf.position(0);
+                    return buf.remaining();
                 }
             });
             m_connection.enableWriteSelection();
@@ -374,5 +365,25 @@ public class VoltNIOWriteStream extends NIOWriteStreamBase implements WriteStrea
             }
         }
         return bytesWritten;
+    }
+
+    @Override
+    public void enqueue(final ClientResponseImpl cri) {
+        enqueue(new DeferredSerialization() {
+            @Override
+            public void serialize(ByteBuffer buf) throws IOException {
+                buf.putInt(buf.capacity() - 4);
+                cri.flattenToBuffer(buf);
+            }
+
+            @Override
+            public void cancel() {
+            }
+
+            @Override
+            public int getSerializedSize() throws IOException {
+                return cri.getSerializedSize() + 4;
+            }
+        });
     }
 }

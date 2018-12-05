@@ -30,6 +30,8 @@ import org.voltdb.types.GeographyValue;
 import org.voltdb.types.TimestampType;
 import org.voltdb.types.VoltDecimalHelper;
 
+import io.netty.buffer.ByteBuf;
+
 public class SerializationHelper {
     byte[] memoizedStringBytes;
     String memoizedString;
@@ -96,6 +98,27 @@ public class SerializationHelper {
         // now assume not null
         final byte[] retval = new byte[len];
         buf.get(retval);
+        return retval;
+    }
+
+    public static byte[] getVarbinary(ByteBuf buf) throws IOException {
+        final int len = buf.readInt();
+
+        // check for null string
+        if (len == VoltType.NULL_STRING_LENGTH) {
+            return null;
+        }
+
+        if (len < VoltType.NULL_STRING_LENGTH) {
+            throw new IOException("Varbinary length is negative " + len);
+        }
+        if (len > buf.readableBytes()) {
+            throw new IOException("Varbinary length is bigger than total buffer " + len);
+        }
+
+        // now assume not null
+        final byte[] retval = new byte[len];
+        buf.readBytes(retval);
         return retval;
     }
 
@@ -285,8 +308,8 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putShort(values[i]);
+        for (short value : values) {
+            buf.putShort(value);
         }
     }
 
@@ -296,8 +319,8 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putInt(values[i]);
+        for (int value : values) {
+            buf.putInt(value);
         }
     }
 
@@ -307,8 +330,8 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putLong(values[i]);
+        for (long value : values) {
+            buf.putLong(value);
         }
     }
 
@@ -318,8 +341,8 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putDouble(values[i]);
+        for (double value : values) {
+            buf.putDouble(value);
         }
     }
 
@@ -329,9 +352,12 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) buf.putLong(Long.MIN_VALUE);
-            else buf.putLong(values[i].getTime());
+        for (TimestampType value : values) {
+            if (value == null) {
+                buf.putLong(Long.MIN_VALUE);
+            } else {
+                buf.putLong(value.getTime());
+            }
         }
     }
 
@@ -341,12 +367,12 @@ public class SerializationHelper {
                                   + Short.MAX_VALUE + " bytes");
         }
         buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        for (BigDecimal value : values) {
+            if (value == null) {
                 VoltDecimalHelper.serializeNull(buf);
             }
             else {
-                VoltDecimalHelper.serializeBigDecimal(values[i], buf);
+                VoltDecimalHelper.serializeBigDecimal(value, buf);
             }
         }
     }
@@ -358,8 +384,9 @@ public class SerializationHelper {
         }
         buf.putShort((short)values.length);
         for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null)
+            if (values[i] == null) {
                 throw new IOException("Array being fastserialized can't contain null values (position " + i + ")");
+            }
             values[i].flattenToBuffer(buf);
         }
     }
@@ -370,12 +397,12 @@ public class SerializationHelper {
                                   + VoltType.MAX_VALUE_LENGTH + " bytes");
         }
         buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        for (byte[] value : values) {
+            if (value == null) {
                 buf.putInt(VoltType.NULL_STRING_LENGTH);
             }
             else {
-                writeArray(values[i], buf);
+                writeArray(value, buf);
             }
         }
     }
@@ -386,12 +413,12 @@ public class SerializationHelper {
                                   + VoltType.MAX_VALUE_LENGTH + " bytes");
         }
         buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        for (GeographyPointValue value : values) {
+            if (value == null) {
                 GeographyPointValue.serializeNull(buf);
             }
             else {
-                values[i].flattenToBuffer(buf);
+                value.flattenToBuffer(buf);
             }
         }
     }
@@ -402,13 +429,13 @@ public class SerializationHelper {
                                   + VoltType.MAX_VALUE_LENGTH + " bytes");
         }
         buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        for (GeographyValue value : values) {
+            if (value == null) {
                 buf.putInt(VoltType.NULL_STRING_LENGTH);
             }
             else {
-                buf.putInt(values[i].getLengthInBytes());
-                values[i].flattenToBuffer(buf);
+                buf.putInt(value.getLengthInBytes());
+                value.flattenToBuffer(buf);
             }
         }
 

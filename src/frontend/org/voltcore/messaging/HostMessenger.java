@@ -67,7 +67,6 @@ import org.voltcore.logging.VoltLogger;
 import org.voltcore.network.CipherExecutor;
 import org.voltcore.network.PicoNetwork;
 import org.voltcore.network.TLSPicoNetwork;
-import org.voltcore.network.VoltNetworkPool;
 import org.voltcore.network.VoltNetworkPool.IOStatsIntf;
 import org.voltcore.utils.CoreUtils;
 import org.voltcore.utils.InstanceId;
@@ -82,8 +81,8 @@ import org.voltdb.probe.MeshProber;
 
 import com.google_voltpatches.common.base.Preconditions;
 import com.google_voltpatches.common.base.Predicate;
-import com.google_voltpatches.common.collect.ImmutableCollection;
 import com.google_voltpatches.common.collect.ImmutableList;
+import com.google_voltpatches.common.collect.ImmutableListMultimap;
 import com.google_voltpatches.common.collect.ImmutableMap;
 import com.google_voltpatches.common.collect.ImmutableMultimap;
 import com.google_voltpatches.common.collect.Maps;
@@ -312,7 +311,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
 
     private final Config m_config;
     private final SocketJoiner m_joiner;
-    private final VoltNetworkPool m_network;
     // memoized InstanceId
     private InstanceId m_instanceId = null;
     private boolean m_shuttingDown = false;
@@ -332,7 +330,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
      * connections.
      * Updates via COW
      */
-    volatile ImmutableMultimap<Integer, ForeignHost> m_foreignHosts = ImmutableMultimap.of();
+    volatile ImmutableListMultimap<Integer, ForeignHost> m_foreignHosts = ImmutableListMultimap.of();
 
     /*
      * Track dead ForeignHosts that are reported independently by zookeeper and PicoNetwork.
@@ -387,7 +385,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
             SslContext sslClientContext) {
         m_config = config;
         m_hostWatcher = hostWatcher;
-        m_network = new VoltNetworkPool(m_config.networkThreads, 0, m_config.coreBindIds, "Server");
         m_acceptor = config.acceptor;
         //This ref is updated after the mesh decision is made.
         m_paused.set(m_config.startPause);
@@ -637,7 +634,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
          * It needs to bootstrap its agreement site so that other nodes can join
          */
         if(m_joiner.start(zkInitBarrier)) {
-            m_network.start();
 
             /*
              * m_localHostId is 0 of course.
@@ -712,13 +708,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
             m_zk.create(CoreZK.hosts_host + selectedHostId, hostInfo.toBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
         }
         zkInitBarrier.countDown();
-    }
-
-    /*
-     * The network is only available after start() finishes
-     */
-    public VoltNetworkPool getNetwork() {
-        return m_network;
     }
 
     public VoltMessageFactory getMessageFactory()
@@ -804,7 +793,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
      */
     private void putForeignHost(int hostId, ForeignHost fh) {
         synchronized (m_mapLock) {
-            m_foreignHosts = ImmutableMultimap.<Integer, ForeignHost>builder()
+            m_foreignHosts = ImmutableListMultimap.<Integer, ForeignHost>builder()
                     .putAll(m_foreignHosts)
                     .put(hostId, fh)
                     .build();
@@ -825,9 +814,9 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
      * Convenience method for doing the verbose COW remove from the map
      */
     private void removeForeignHost(final int hostId) {
-        ImmutableCollection<ForeignHost> fhs = m_foreignHosts.get(hostId);
+        ImmutableList<ForeignHost> fhs = m_foreignHosts.get(hostId);
         synchronized (m_mapLock) {
-            m_foreignHosts = ImmutableMultimap.<Integer, ForeignHost>builder()
+            m_foreignHosts = ImmutableListMultimap.<Integer, ForeignHost>builder()
                     .putAll(Multimaps.filterKeys(m_foreignHosts, not(equalTo(hostId))))
                     .build();
 
@@ -1073,8 +1062,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
         HashSet<Long> agreementSites = new HashSet<Long>();
         agreementSites.add(agreementHSId);
 
-        m_network.start();//network must be running for register to work
-
         for (int ii = 0; ii < hosts.length; ii++) {
             networkLog.info(yourHostId + " notified of host " + hosts[ii]);
             agreementSites.add(CoreUtils.getHSIdFromHostAndSite(hosts[ii], AGREEMENT_SITE_ID));
@@ -1122,7 +1109,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
          * Do the usual thing of waiting for the agreement site
          * to join the cluster and creating the client
          */
-        VERBOTEN_THREADS.addAll(m_network.getThreadIds());
         VERBOTEN_THREADS.addAll(m_agreementSite.getThreadIds());
         m_agreementSite.waitForRecovery();
         m_zk = org.voltcore.zk.ZKUtil.getClient(
@@ -1357,7 +1343,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
         }
 
         // the foreign machine case
-        ImmutableCollection<ForeignHost> fhosts = m_foreignHosts.get(hostId);
+        ImmutableList<ForeignHost> fhosts = m_foreignHosts.get(hostId);
         if (fhosts.isEmpty()) {
             if (!m_knownFailedHosts.containsKey(hostId)) {
                 networkLog.warn(
@@ -1382,7 +1368,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
                 fhost = m_fhMapping.get(hsId);
                 if (fhost == null) {
                     int index = Math.abs(m_nextForeignHost.getAndIncrement() % fhosts.size());
-                    fhost = (ForeignHost) fhosts.toArray()[index];
+                    fhost = fhosts.get(index);
                     if (hostLog.isDebugEnabled()) {
                         hostLog.debug("bind " + CoreUtils.getHostIdFromHSId(hsId) + ":" + CoreUtils.getSiteIdFromHSId(hsId) +
                                 " to " + fhost.hostnameAndIPAndPort());
@@ -1434,19 +1420,13 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
         }
     }
 
-    private ForeignHost getPrimary(ImmutableCollection<ForeignHost> fhosts, int hostId) {
-        ForeignHost fhost = null;
-        for (ForeignHost f : fhosts) {
-            if (f.isPrimary()) {
-                fhost = f;
-                break;
-            }
-        }
-        if (fhost == null) { // unlikely
+    private ForeignHost getPrimary(ImmutableList<ForeignHost> fhosts, int hostId) {
+        if (fhosts.isEmpty()) {
             networkLog.warn("Attempted to deliver a message to host " +
-                        hostId + " but there is no primary connection to the host.");
+                    hostId + " but there is no primary connection to the host.");
+            return null;
         }
-        return fhost;
+        return fhosts.get(0);
     }
 
     /*
@@ -1668,7 +1648,6 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
             }
         }
         m_joiner.shutdown();
-        m_network.shutdown();
         VERBOTEN_THREADS.clear();
     }
 
@@ -1821,7 +1800,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
             picoNetworks.add(fh.m_network);
         }
 
-        return m_network.getIOStats(interval, picoNetworks);
+        return Collections.emptyMap();
     }
 
     /**

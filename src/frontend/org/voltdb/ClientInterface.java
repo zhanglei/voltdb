@@ -111,8 +111,30 @@ import com.google_voltpatches.common.collect.ImmutableSet;
 import com.google_voltpatches.common.collect.Sets;
 import com.google_voltpatches.common.util.concurrent.ListenableFuture;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.concurrent.SucceededFuture;
 
 /**
  * Represents VoltDB's connection to client libraries outside the cluster.
@@ -186,8 +208,8 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         NONE, EXPLAIN_ADHOC, EXPLAIN_DEFAULT_PROC, EXPLAIN_JSON;
     }
 
-    private final ClientAcceptor m_acceptor;
-    private ClientAcceptor m_adminAcceptor;
+    private final ClientAcceptorNetty m_acceptor;
+    private ClientAcceptorNetty m_adminAcceptor;
 
     private final SnapshotDaemon m_snapshotDaemon;
     private final SnapshotDaemonAdapter m_snapshotDaemonAdapter;
@@ -257,6 +279,427 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
     private ScheduledFuture<?> m_maxConnectionUpdater;
 
     private final AtomicBoolean m_isAcceptingConnections = new AtomicBoolean(false);
+
+
+    private final class ClientAcceptorNetty {
+        private final EventLoopGroup m_bossGroup = new NioEventLoopGroup();
+        private final EventLoopGroup m_workerGroup = new NioEventLoopGroup();
+        private final ServerBootstrap m_serverBootstrap;
+        private ChannelFuture m_channelFuture;
+
+        ClientAcceptorNetty(InetAddress address, int port, boolean isAdmin, SslContext sslContext) {
+            m_serverBootstrap = new ServerBootstrap().group(m_bossGroup, m_workerGroup)
+                    .channel(NioServerSocketChannel.class).childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
+                    .childOption(ChannelOption.SO_KEEPALIVE, Boolean.TRUE)
+                    .childHandler(new ChannelInitializer<io.netty.channel.socket.SocketChannel>() {
+                        @Override
+                        protected void initChannel(io.netty.channel.socket.SocketChannel ch) throws Exception {
+                            ChannelPipeline pipeline = ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                                        throws Exception {
+                                    log.warn("Exception encountered", cause);
+                                    ctx.close();
+                                    super.exceptionCaught(ctx, cause);
+                                }
+                            });
+                            if (sslContext != null) {
+                                SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+                                engine.setNeedClientAuth(false);
+                                pipeline.addLast(new SslHandler(engine));
+                            }
+                            pipeline.addLast(new LengthFieldBasedFrameDecoder(VoltPort.MAX_MESSAGE_LENGTH, 0, 4, 0, 4))
+                                    .addLast("authTimeoutHandler",
+                                            new ReadTimeoutHandler(AUTH_TIMEOUT_MS, TimeUnit.MILLISECONDS) {
+                                                @Override
+                                                protected void readTimedOut(ChannelHandlerContext ctx)
+                                                        throws Exception {
+                                                    super.readTimedOut(ctx);
+                                                    StringBuilder sb = new StringBuilder()
+                                                            .append("Timed out authenticating client from ")
+                                                            .append(ctx.channel().remoteAddress())
+                                                            .append(String.format(" (timeout target is %.2f seconds)",
+                                                                    AUTH_TIMEOUT_MS / 1000.0));
+                                                    hostLog.warn(sb);
+                                                }
+                                            })
+                                    .addLast(new ChannelOutboundHandlerAdapter() {
+                                        @Override
+                                        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+                                                throws Exception {
+                                            if (msg instanceof ByteBuffer) {
+                                                msg = Unpooled.wrappedBuffer((ByteBuffer) msg);
+                                            }
+                                            ctx.write(msg, promise);
+                                        }
+                                    })
+                                    .addLast("authHandler", new AuthenticationHandler(isAdmin))
+                                    .addLast(new MessageToByteEncoder<DeferredSerialization>() {
+                                        @Override
+                                        protected void encode(ChannelHandlerContext ctx, DeferredSerialization msg,
+                                                ByteBuf out) throws Exception {
+                                            msg.serialize(out.nioBuffer(out.writerIndex(), out.writableBytes()));
+                                            out.writerIndex(out.writableBytes());
+                                        }
+
+                                        @Override
+                                        protected ByteBuf allocateBuffer(ChannelHandlerContext ctx,
+                                                DeferredSerialization msg, boolean preferDirect) throws Exception {
+                                            return ctx.alloc().buffer(msg.getSerializedSize());
+                                        }
+                                    }).addLast(new LengthFieldPrepender(4));
+                        }
+                    }).localAddress(address, port);
+        }
+
+        void start() {
+            if (m_channelFuture != null) {
+                throw new IllegalStateException("This acceptor has already been started");
+            }
+            m_channelFuture = m_serverBootstrap.bind();
+            m_channelFuture.syncUninterruptibly();
+        }
+
+        io.netty.util.concurrent.Future<?> shutdown() {
+            io.netty.util.concurrent.Future<?> result;
+            if (m_channelFuture != null) {
+                result = m_channelFuture.channel().close();
+            } else {
+                result = new SucceededFuture<Void>(null, null);
+            }
+            m_bossGroup.shutdownGracefully();
+            m_workerGroup.shutdownGracefully();
+            return result;
+        }
+    }
+
+    private final class AuthenticationHandler extends ChannelInboundHandlerAdapter implements ChannelInboundHandler {
+        private final boolean m_isAdmin;
+
+        public AuthenticationHandler(boolean isAdmin) {
+            m_isAdmin = isAdmin;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            ByteBuf message = (ByteBuf) msg;
+            try {
+                doAuth(ctx, message);
+            } finally {
+                message.release();
+            }
+        }
+
+        private void doAuth(ChannelHandlerContext ctx, ByteBuf message) {
+            // Got the authentication message so remove timeout handler
+            ctx.channel().pipeline().remove("authTimeoutHandler");
+
+            /*
+             * Enforce a limit on the maximum number of connections
+             */
+            int currentConnections;
+            do {
+                currentConnections = m_numConnections.get();
+                if (currentConnections >= MAX_CONNECTIONS.get()) {
+                    networkLog.warn("Rejected connection from " + ctx.channel().remoteAddress()
+                            + " because the connection limit of " + MAX_CONNECTIONS + " has been reached");
+                    /*
+                     * Send rejection message with reason code
+                     */
+                    sendAuthErrorResponse(ctx, MAX_CONNECTIONS_LIMIT_ERROR);
+                    return;
+                }
+            } while (!m_numConnections.compareAndSet(currentConnections, currentConnections + 1));
+
+            int version = message.readByte();
+            ClientAuthScheme hashScheme = ClientAuthScheme.HASH_SHA1;
+
+            if (version > 0) {
+                try {
+                    hashScheme = ClientAuthScheme.get(message.readByte());
+                } catch (IllegalArgumentException ex) {
+                    authLog.warn("Failure to authenticate connection Invalid Hash Scheme presented.");
+                    // Send negative response
+                    sendAuthErrorResponse(ctx, WIRE_PROTOCOL_FORMAT_ERROR);
+                    return;
+                }
+            }
+
+            if (hashScheme == ClientAuthScheme.HASH_SHA1) {
+                m_rateLimitedLogger.log(EstTime.currentTimeMillis(), Level.WARN, null,
+                        "Client connected using deprecated SHA1 hashing. SHA2 is strongly recommended for all client connections. Client IP: %s",
+                        ctx.channel().remoteAddress());
+            }
+
+            final String service = readString(message);
+            final String username = readString(message);
+            final int digestLen = ClientAuthScheme.getDigestLength(hashScheme);
+            final byte password[] = new byte[digestLen];
+
+            if (message.readableBytes() != digestLen) {
+                authLog.warn("Failure to authenticate connection(" + ctx.channel().remoteAddress() + "): user "
+                        + username + " failed authentication.");
+                // Send negative response
+                sendAuthErrorResponse(ctx, AUTHENTICATION_FAILURE);
+                return;
+            }
+
+            message.readBytes(password);
+
+            CatalogContext context = m_catalogContext.get();
+
+            AuthProvider ap = null;
+            try {
+                ap = AuthProvider.fromService(service);
+            } catch (IllegalArgumentException unkownProvider) {
+                // handle it bellow
+            }
+
+            if (ap == null) {
+                // Send negative response
+                sendAuthErrorResponse(ctx, EXPORT_DISABLED_REJECTION);
+                authLog.warn("Rejected user " + username + " attempting to use disabled or unconfigured service "
+                        + service + ".");
+                authLog.warn("VoltDB Export services are no longer available through clients.");
+                return;
+            }
+
+            if (VoltDB.instance().rejoining()) {
+                authLog.warn("Failure to authenticate connection(" + ctx.channel().remoteAddress()
+                        + "): user " + username + " because this node is rejoining.");
+                sendAuthErrorResponse(ctx, AUTHENTICATION_FAILURE_DUE_TO_REJOIN);
+                return;
+            }
+
+            AuthenticationRequest arq;
+            if (ap == AuthProvider.KERBEROS) {
+                // arq = context.authSystem.new KerberosAuthenticationRequest(socket);
+                authLog.fatal("Currently kerberos is not supported");
+                sendAuthErrorResponse(ctx, AUTHENTICATION_FAILURE);
+                return;
+            } else {
+                arq = context.authSystem.new HashAuthenticationRequest(username, password);
+            }
+            /*
+             * Authenticate the user.
+             */
+            boolean authenticated = arq.authenticate(hashScheme, ctx.channel().remoteAddress().toString());
+
+            if (!authenticated) {
+                long timestamp = System.currentTimeMillis();
+                ScheduledExecutorService es = VoltDB.instance().getSES(false);
+                if (es != null && !es.isShutdown()) {
+                    es.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            ((RealVoltDB) VoltDB.instance()).logMessageToFLC(timestamp, username,
+                                    ctx.channel().remoteAddress().toString());
+                        }
+                    });
+                }
+
+                Exception faex = arq.getAuthenticationFailureException();
+                if (faex != null) {
+                    authLog.warn(
+                            "Failure to authenticate connection(" + ctx.channel().remoteAddress() + "):",
+                            faex);
+                } else {
+                    authLog.warn("Failure to authenticate connection(" + ctx.channel().remoteAddress()
+                            + "): user " + username + " failed authentication.");
+                }
+
+                boolean isItIo = false;
+                for (Throwable cause = faex; faex != null && !isItIo; cause = cause.getCause()) {
+                    isItIo = cause instanceof IOException;
+                }
+
+                // Send negative response
+                if (!isItIo) {
+                    sendAuthErrorResponse(ctx, AUTHENTICATION_FAILURE);
+                } else {
+                    ctx.channel().close();
+                }
+                return;
+            }
+
+            ClientInputHandler handler = new ClientInputHandler(username, m_isAdmin);
+
+            byte buildString[] = VoltDB.instance().getBuildString().getBytes(Charsets.UTF_8);
+            ByteBuf responseBuffer = ctx.alloc().buffer(30 + buildString.length);
+            responseBuffer.writeByte((byte) 0);// version
+
+            // Send positive response
+            responseBuffer.writeByte((byte) 0);
+            responseBuffer.writeInt(VoltDB.instance().getHostMessenger().getHostId());
+            responseBuffer.writeLong(handler.connectionId());
+            responseBuffer.writeLong(VoltDB.instance().getHostMessenger().getInstanceId().getTimestamp());
+            responseBuffer.writeInt(VoltDB.instance().getHostMessenger().getInstanceId().getCoord());
+            responseBuffer.writeInt(buildString.length);
+            responseBuffer.writeBytes(buildString);
+            ctx.channel().writeAndFlush(responseBuffer);
+
+            ctx.channel().pipeline().remove("authHandler");
+            ctx.channel().pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                Connection connection = new Connection() {
+                    private final Channel channel = ctx.channel();
+                    private final WriteStream writeStream = new WriteStream.AbstractWriteStream() {
+
+                        @Override
+                        public boolean isEmpty() {
+                            return false;
+                        }
+
+                        @Override
+                        public boolean hadBackPressure() {
+                            return false;
+                        }
+
+                        @Override
+                        public int getOutstandingMessageCount() {
+                            return 0;
+                        }
+
+                        @Override
+                        public void fastEnqueue(DeferredSerialization ds) {
+                            ctx.channel().writeAndFlush(ds);
+                        }
+
+                        @Override
+                        public void enqueue(ByteBuffer b) {
+                            log.warn("Raw byte buffer being enqueued", new Exception());
+                            ctx.channel().writeAndFlush(b);
+                        }
+
+                        @Override
+                        public void enqueue(DeferredSerialization ds) {
+                            channel.writeAndFlush(ds);
+                        }
+
+                        @Override
+                        public int calculatePendingWriteDelta(long now) {
+                            // TODO Auto-generated method stub
+                            return 0;
+                        }
+                    };
+
+                    @Override
+                    public WriteStream writeStream() {
+                        return writeStream;
+                    }
+
+                    @Override
+                    public Future<?> unregister() {
+                        return channel.close();
+                    }
+
+                    @Override
+                    public NIOReadStream readStream() {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public void queueTask(Runnable r) {
+                        // TODO Auto-generated method stub
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public InetSocketAddress getRemoteSocketAddress() {
+                        return (InetSocketAddress) channel.remoteAddress();
+                    }
+
+                    @Override
+                    public int getRemotePort() {
+                        return ((InetSocketAddress) channel.remoteAddress()).getPort();
+                    }
+
+                    @Override
+                    public String getHostnameOrIP(long clientHandle) {
+                        return getHostnameOrIP();
+                    }
+
+                    @Override
+                    public String getHostnameOrIP() {
+                        return ((InetSocketAddress) channel.localAddress()).getHostString();
+                    }
+
+                    @Override
+                    public String getHostnameAndIPAndPort() {
+                        return channel.localAddress().toString();
+                    }
+
+                    @Override
+                    public void enableWriteSelection() {
+                    }
+
+                    @Override
+                    public void enableReadSelection() {
+                    }
+
+                    @Override
+                    public void disableWriteSelection() {
+                    }
+
+                    @Override
+                    public void disableReadSelection() {
+                    }
+
+                    @Override
+                    public long connectionId(long clientHandle) {
+                        return connectionId();
+                    }
+
+                    @Override
+                    public long connectionId() {
+                        return handler.connectionId();
+                    }
+                };
+
+                {
+                    handler.started(connection);
+                }
+
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    if (msg instanceof ByteBuf) {
+                        try {
+                            handler.handleMessage(message, ctx.channel(), connection);
+                        } finally {
+                            ((ByteBuf) msg).release();
+                        }
+                    } else {
+                        ctx.fireChannelRead(msg);
+                    }
+                }
+
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    handler.stopping(connection);
+                    super.channelInactive(ctx);
+                }
+
+                @Override
+                public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+                    handler.stopped(connection);
+                    super.channelUnregistered(ctx);
+                }
+            });
+
+        }
+
+        private void sendAuthErrorResponse(ChannelHandlerContext ctx, byte error) {
+            ByteBuf buf = ctx.alloc().buffer(2);
+            buf.writeByte(0);
+            buf.writeByte(error);
+            ctx.channel().writeAndFlush(buf);
+            ctx.channel().close();
+        }
+
+        private String readString(ByteBuf message) {
+            int len = message.readInt();
+            return message.readCharSequence(len, Constants.UTF8ENCODING).toString();
+        }
+    }
 
     /** A port that accepts client connections */
     public class ClientAcceptor implements Runnable {
@@ -565,7 +1008,7 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         authenticate(final SocketChannel socket, MessagingChannel messagingChannel, final AtomicReference<String> timeoutRef, ByteBuffer remnant) throws IOException
         {
             ByteBuffer responseBuffer = ByteBuffer.allocate(6);
-            byte version = (byte)0;
+            byte version = (byte) 0;
             responseBuffer.putInt(2);//message length
             responseBuffer.put(version);//version
 
@@ -813,15 +1256,27 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
             return Math.max( MAX_READ, getNextMessageLength());
         }
 
+        void handleMessage(ByteBuf message, Channel channel, Connection connection) {
+            try {
+                final ClientResponseImpl error = handleRead(message, this, connection);
+                if (error != null) {
+                    int len = error.getSerializedSize();
+                    ByteBuf buf = channel.alloc().buffer(len);
+                    error.flattenToBuffer(buf.nioBuffer(buf.writerIndex(), len));
+                    buf.writerIndex(buf.writerIndex() + len);
+                    channel.writeAndFlush(buf);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         @Override
         public void handleMessage(ByteBuffer message, Connection c) {
             try {
                 final ClientResponseImpl error = handleRead(message, this, c);
                 if (error != null) {
-                    ByteBuffer buf = ByteBuffer.allocate(error.getSerializedSize() + 4);
-                    buf.putInt(buf.capacity() - 4);
-                    error.flattenToBuffer(buf).flip();
-                    c.writeStream().enqueue(buf);
+                    c.writeStream().enqueue(error);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -1169,9 +1624,9 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         m_cartographer = cartographer;
 
         // pre-allocate single partition array
-        m_acceptor = new ClientAcceptor(clientIntf, clientPort, messenger.getNetwork(), false, sslContext);
+        m_acceptor = new ClientAcceptorNetty(clientIntf, clientPort, false, sslContext);
         m_adminAcceptor = null;
-        m_adminAcceptor = new ClientAcceptor(adminIntf, adminPort, messenger.getNetwork(), true, sslContext);
+        m_adminAcceptor = new ClientAcceptorNetty(adminIntf, adminPort, true, sslContext);
 
         // Create the per-partition adapters before creating the mailbox. Once
         // the mailbox is created, the master promotion notification may race
@@ -1358,11 +1813,7 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
                             new VoltTable[0],
                             DROP_TXN_MASTERSHIP);
             response.setClientHandle(inFlight.m_clientHandle);
-            ByteBuffer buf = ByteBuffer.allocate(response.getSerializedSize() + 4);
-            buf.putInt(buf.capacity() - 4);
-            response.flattenToBuffer(buf);
-            buf.flip();
-            c.writeStream().enqueue(buf);
+            c.writeStream().enqueue(response);
         }
 
         if (cihm.repairCallback != null) {
@@ -1480,7 +1931,7 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         }
     }
 
-    private ClientResponseImpl errorResponse(Connection c, long handle, byte status, String reason, Exception e, boolean log) {
+    private ClientResponseImpl errorResponse(long handle, byte status, String reason, Exception e, boolean log) {
         String realReason = reason;
         if (e != null) {
             StringWriter sw = new StringWriter();
@@ -1493,6 +1944,35 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         }
         return new ClientResponseImpl(status,
                 new VoltTable[0], realReason, handle);
+    }
+
+    final ClientResponseImpl handleRead(ByteBuf buf, ClientInputHandler handler, Connection ccxn) {
+        StoredProcedureInvocation task = new StoredProcedureInvocation();
+        try {
+            task.initFromBuffer(buf);
+        } catch (Exception ex) {
+            return new ClientResponseImpl(ClientResponseImpl.UNEXPECTED_FAILURE, new VoltTable[0], ex.getMessage(),
+                    ccxn.connectionId());
+        }
+        AuthUser user = m_catalogContext.get().authSystem.getUser(handler.getUserName());
+        if (user == null) {
+            String errorMessage = "User " + handler.getUserName()
+                    + " has been removed from the system via a catalog update";
+            authLog.info(errorMessage);
+            return errorResponse(task.clientHandle, ClientResponse.UNEXPECTED_FAILURE, errorMessage, null, false);
+        }
+
+        final ClientResponseImpl errResp = m_dispatcher.dispatch(task, handler, ccxn, user, null, false);
+
+        if (errResp != null) {
+            final VoltTrace.TraceEventBatch traceLog = VoltTrace.log(VoltTrace.Category.CI);
+            if (traceLog != null) {
+                traceLog.add(() -> VoltTrace.endAsync("recvtxn", task.getClientHandle(), "status",
+                        Byte.toString(errResp.getStatus()), "statusString", errResp.getStatusString()));
+            }
+        }
+
+        return errResp;
     }
 
     /**
@@ -1512,7 +1992,7 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         if (user == null) {
             String errorMessage = "User " + handler.getUserName() + " has been removed from the system via a catalog update";
             authLog.info(errorMessage);
-            return errorResponse(ccxn, task.clientHandle, ClientResponse.UNEXPECTED_FAILURE, errorMessage, null, false);
+            return errorResponse(task.clientHandle, ClientResponse.UNEXPECTED_FAILURE, errorMessage, null, false);
         }
 
         final ClientResponseImpl errResp = m_dispatcher.dispatch(task, handler, ccxn, user, null, false);
@@ -1820,7 +2300,7 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
      * ClientResponses back to the daemon
      *
      */
-    private class SnapshotDaemonAdapter implements Connection, WriteStream {
+    private class SnapshotDaemonAdapter extends WriteStream.AbstractWriteStream implements Connection, WriteStream {
 
         @Override
         public void disableReadSelection() {
@@ -1948,21 +2428,6 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
                     return resp;
                 }
             });
-        }
-
-        @Override
-        public void enqueue(ByteBuffer[] b)
-        {
-            if (b.length == 1)
-            {
-                // Buffer chains are currently not used, just hand the first
-                // buffer to the single buffer handler
-                enqueue(b[0]);
-            }
-            else
-            {
-                log.error("Something is using buffer chains with enqueue");
-            }
         }
 
         @Override
@@ -2121,19 +2586,12 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
                 // This call seems to block until the shutdown is done
                 // which is good becasue we assume there will be no new
                 // connections afterward
-                m_acceptor.shutdown();
+                m_acceptor.shutdown().syncUninterruptibly();
             }
             if (m_adminAcceptor != null) {
-                m_adminAcceptor.shutdown();
+                m_adminAcceptor.shutdown().syncUninterruptibly();
             }
-        }
-        catch (InterruptedException e) {
-            // this whole method is really a best effort kind of thing...
-            log.error(e);
-            // if we didn't succeed, let the caller know and take action
-            return false;
-        }
-        finally {
+        } finally {
             m_isAcceptingConnections.set(false);
             // this feels like an unclean thing to do... but should work
             // for the purposes of cutting all responses right before we deliberately

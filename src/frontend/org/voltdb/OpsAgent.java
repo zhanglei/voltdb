@@ -232,7 +232,7 @@ public abstract class OpsAgent
             request.aggregateTables = tables.toArray(new VoltTable[tables.size()]);
         }
         else if (!dummy) {
-            for (int ii = 0; ii < request.aggregateTables.length; ii++) {
+            for (VoltTable aggregateTable : request.aggregateTables) {
                 if (buf.hasRemaining()) {
                     final int tableLength = buf.getInt();
                     int oldLimit = buf.limit();
@@ -241,14 +241,16 @@ public abstract class OpsAgent
                     buf.position(buf.limit()).limit(oldLimit);
                     VoltTable vt = PrivateVoltTableFactory.createVoltTableFromBuffer( tableBuf, true);
                     while (vt.advanceRow()) {
-                        request.aggregateTables[ii].add(vt);
+                        aggregateTable.add(vt);
                     }
                 }
             }
         }
 
         request.expectedOpsResponses--;
-        if (request.expectedOpsResponses > 0) return;
+        if (request.expectedOpsResponses > 0) {
+            return;
+        }
 
         m_pendingRequests.remove(requestId);
 
@@ -377,10 +379,7 @@ public abstract class OpsAgent
             new ClientResponseImpl(statusCode, ClientResponse.UNINITIALIZED_APP_STATUS_CODE, null,
                     responseTables, statusString);
         response.setClientHandle(request.clientData);
-        ByteBuffer buf = ByteBuffer.allocate(response.getSerializedSize() + 4);
-        buf.putInt(buf.capacity() - 4);
-        response.flattenToBuffer(buf).flip();
-        request.c.writeStream().enqueue(buf);
+        request.c.writeStream().enqueue(response);
     }
 
     protected void sendOpsResponse(VoltTable[] results, JSONObject obj) throws Exception {
@@ -418,9 +417,9 @@ public abstract class OpsAgent
                 4 * results.length + // length prefix for each stats table
                 + statbytes);
         responseBuffer.putLong(requestId);
-        for (int i = 0; i < bufs.length; i++) {
-            responseBuffer.putInt(bufs[i].remaining());
-            responseBuffer.put(bufs[i]);
+        for (ByteBuffer buf : bufs) {
+            responseBuffer.putInt(buf.remaining());
+            responseBuffer.put(buf);
         }
         byte responseBytes[] = CompressionService.compressBytes(responseBuffer.array());
 
@@ -436,10 +435,7 @@ public abstract class OpsAgent
     protected void sendErrorResponse(Connection c, byte status, String reason, long handle)
     {
         ClientResponseImpl errorResponse = new ClientResponseImpl(status, new VoltTable[0], reason, handle);
-        ByteBuffer buf = ByteBuffer.allocate(errorResponse.getSerializedSize() + 4);
-        buf.putInt(buf.capacity() - 4);
-        errorResponse.flattenToBuffer(buf).flip();
-        c.writeStream().enqueue(buf);
+        c.writeStream().enqueue(errorResponse);
         return;
     }
 

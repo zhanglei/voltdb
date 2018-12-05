@@ -70,7 +70,6 @@ import org.mockito.stubbing.Answer;
 import org.voltcore.messaging.HostMessenger;
 import org.voltcore.messaging.VoltMessage;
 import org.voltcore.network.Connection;
-import org.voltcore.network.VoltNetworkPool;
 import org.voltcore.utils.CoreUtils;
 import org.voltcore.utils.DeferredSerialization;
 import org.voltcore.utils.Pair;
@@ -149,8 +148,6 @@ public class TestClientInterface {
             @Override
             public void enqueue(ByteBuffer buf) {responses.offer(buf);}
             @Override
-            public void enqueue(ByteBuffer bufs[]) {responses.offer(bufs[0]);}
-            @Override
             public void enqueue(DeferredSerialization ds) {responsesDS.offer(ds);}
             @Override
             public void queueTask(Runnable r) {}
@@ -174,7 +171,6 @@ public class TestClientInterface {
         doReturn(m_sysinfoAgent).when(m_volt).getOpsAgent(OpsSelector.SYSTEMINFORMATION);
         doReturn(mock(SnapshotCompletionMonitor.class)).when(m_volt).getSnapshotCompletionMonitor();
         doReturn(m_messenger).when(m_volt).getHostMessenger();
-        doReturn(mock(VoltNetworkPool.class)).when(m_messenger).getNetwork();
         doReturn(m_zk).when(m_messenger).getZK();
         doReturn(mock(Configuration.class)).when(m_volt).getConfig();
         doReturn(32L).when(m_messenger).getHSIdForLocalSite(HostMessenger.ASYNC_COMPILER_SITE_ID);

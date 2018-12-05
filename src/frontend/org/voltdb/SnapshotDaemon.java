@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
 import org.apache.zookeeper_voltpatches.KeeperException;
@@ -67,6 +68,7 @@ import org.voltdb.client.ProcedureCallback;
 import org.voltdb.iv2.TxnEgo;
 import org.voltdb.messaging.SnapshotCheckRequestMessage;
 import org.voltdb.messaging.SnapshotCheckResponseMessage;
+import org.voltdb.sysprocs.saverestore.SnapshotPathType;
 import org.voltdb.sysprocs.saverestore.SnapshotUtil;
 import org.voltdb.utils.VoltTableUtil;
 
@@ -76,8 +78,6 @@ import com.google_voltpatches.common.util.concurrent.Callables;
 import com.google_voltpatches.common.util.concurrent.ListenableFuture;
 import com.google_voltpatches.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google_voltpatches.common.util.concurrent.MoreExecutors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.voltdb.sysprocs.saverestore.SnapshotPathType;
 
 /**
  * A scheduler of automated snapshots and manager of archived and retained snapshots.
@@ -858,7 +858,9 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
 
         @Override
         public void pProcess(final WatchedEvent event) {
-            if (event.getState() == KeeperState.Disconnected) return;
+            if (event.getState() == KeeperState.Disconnected) {
+                return;
+            }
             try {
                 // TRAIL [TruncSnap:4] watch event on zk node fires
                 processTruncationRequestEvent(event);
@@ -876,7 +878,9 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
 
         @Override
         public void process(final WatchedEvent event) {
-            if (event.getState() == KeeperState.Disconnected) return;
+            if (event.getState() == KeeperState.Disconnected) {
+                return;
+            }
 
             m_es.execute(new Runnable() {
                 @Override
@@ -1690,10 +1694,7 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
                                            tables,
                                            Throwables.getStackTraceAsString(e),
                                            invocation.clientHandle);
-            ByteBuffer buf = ByteBuffer.allocate(errorResponse.getSerializedSize() + 4);
-            buf.putInt(buf.capacity() - 4);
-            errorResponse.flattenToBuffer(buf).flip();
-            c.writeStream().enqueue(buf);
+            c.writeStream().enqueue(errorResponse);
             return;
         }
     }
@@ -1731,10 +1732,7 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
                             new VoltTable[] {result},
                             "User-requested truncation snapshot successfully queued for execution.",
                             clientHandle);
-                ByteBuffer buf = ByteBuffer.allocate(resp.getSerializedSize() + 4);
-                buf.putInt(buf.capacity() - 4);
-                resp.flattenToBuffer(buf).flip();
-                c.writeStream().enqueue(buf);
+                c.writeStream().enqueue(resp);
             }
         }
 
@@ -1791,7 +1789,9 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
         Stat exists = m_zk.exists(responseNode, new Watcher() {
             @Override
             public void process(final WatchedEvent event) {
-                if (event.getState() == KeeperState.Disconnected) return;
+                if (event.getState() == KeeperState.Disconnected) {
+                    return;
+                }
                 switch (event.getType()) {
                 case NodeCreated:
                     m_es.submit(new Runnable() {
@@ -1846,10 +1846,7 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
         response.setClientHandle(clientHandle);
 
         // Not sure if we need to preserve the original byte buffer here, playing it safe
-        ByteBuffer buf2 = ByteBuffer.allocate(response.getSerializedSize() + 4);
-        buf2.putInt(buf2.capacity() - 4);
-        response.flattenToBuffer(buf2).flip();
-        c.writeStream().enqueue(buf2);
+        c.writeStream().enqueue(response);
 
         /*
          * If the caller wants to be notified of final results for the snapshot
@@ -1860,7 +1857,9 @@ public class SnapshotDaemon implements SnapshotCompletionInterest {
             Watcher watcher = new Watcher() {
                 @Override
                 public void process(final WatchedEvent event) {
-                    if (event.getState() == KeeperState.Disconnected) return;
+                    if (event.getState() == KeeperState.Disconnected) {
+                        return;
+                    }
                     switch (event.getType()) {
                     case NodeCreated:
                         m_es.submit(new Runnable() {

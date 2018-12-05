@@ -262,35 +262,7 @@ public class InternalClientResponseAdapter implements Connection, WriteStream {
     }
 
     @Override
-    public void enqueue(DeferredSerialization ds) {
-        try {
-            ByteBuffer buf = null;
-            synchronized (this) {
-                final int serializedSize = ds.getSerializedSize();
-                if (serializedSize <= 0) {
-                    //Bad ignored transacton.
-                    return;
-                }
-                buf = ByteBuffer.allocate(serializedSize);
-                ds.serialize(buf);
-            }
-            enqueue(buf);
-        } catch (IOException e) {
-            VoltDB.crashLocalVoltDB("enqueue() in InternalClientResponseAdapter throw an exception", true, e);
-        }
-    }
-
-    @Override
-    public void enqueue(final ByteBuffer b) {
-
-        final ClientResponseImpl resp = new ClientResponseImpl();
-        b.position(4);
-        try {
-            resp.initFromBuffer(b);
-        } catch (IOException ex) {
-            VoltDB.crashLocalVoltDB("enqueue() in InternalClientResponseAdapter throw an exception", true, ex);
-        }
-
+    public void enqueue(ClientResponseImpl resp) {
         final Callback callback = m_callbacks.get(resp.getClientHandle());
         if (callback == null) {
             throw new IllegalStateException("Callback was null?");
@@ -324,13 +296,37 @@ public class InternalClientResponseAdapter implements Connection, WriteStream {
     }
 
     @Override
-    public void enqueue(ByteBuffer[] b)
-    {
-        if (b.length == 1) {
-            enqueue(b[0]);
-        } else {
-            throw new UnsupportedOperationException("Buffer chains not supported in internal invocation adapter");
+    public void enqueue(DeferredSerialization ds) {
+        try {
+            ByteBuffer buf = null;
+            synchronized (this) {
+                final int serializedSize = ds.getSerializedSize() + 4;
+                if (serializedSize <= 0) {
+                    // Bad ignored transacton.
+                    return;
+                }
+                buf = ByteBuffer.allocate(serializedSize);
+                buf.position(4);
+                ds.serialize(buf);
+            }
+            enqueue(buf);
+        } catch (IOException e) {
+            VoltDB.crashLocalVoltDB("enqueue() in InternalClientResponseAdapter throw an exception", true, e);
         }
+    }
+
+    @Override
+    public void enqueue(final ByteBuffer b) {
+
+        final ClientResponseImpl resp = new ClientResponseImpl();
+        b.position(4);
+        try {
+            resp.initFromBuffer(b);
+        } catch (IOException ex) {
+            VoltDB.crashLocalVoltDB("enqueue() in InternalClientResponseAdapter throw an exception", true, ex);
+        }
+
+        enqueue(resp);
     }
 
     //Do rate limited logging for messages.

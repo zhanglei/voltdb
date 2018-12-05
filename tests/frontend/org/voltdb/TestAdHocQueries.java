@@ -189,10 +189,6 @@ public class TestAdHocQueries extends AdHocQueryTester {
                 assertEquals( 5, results[ii].getLong(1));
             }
         }
-        catch (Exception e) {
-            e.printStackTrace();
-            fail();
-        }
         finally {
             if (m_client != null) m_client.close();
             m_client = null;

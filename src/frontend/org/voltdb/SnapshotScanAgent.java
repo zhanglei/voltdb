@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,8 +38,8 @@ import org.voltcore.network.Connection;
 import org.voltcore.utils.CoreUtils;
 import org.voltdb.VoltTable.ColumnInfo;
 import org.voltdb.client.ClientResponse;
-import org.voltdb.sysprocs.saverestore.SnapshotUtil;
 import org.voltdb.sysprocs.saverestore.SnapshotPathType;
+import org.voltdb.sysprocs.saverestore.SnapshotUtil;
 import org.voltdb.sysprocs.saverestore.TableSaveFile;
 import org.voltdb.utils.VoltFile;
 
@@ -82,10 +81,7 @@ public class SnapshotScanAgent extends OpsAgent
             ClientResponseImpl errorResponse = new ClientResponseImpl(ClientResponse.SUCCESS,
                     ClientResponse.UNINITIALIZED_APP_STATUS_CODE, null, results, err);
             errorResponse.setClientHandle(clientHandle);
-            ByteBuffer buf = ByteBuffer.allocate(errorResponse.getSerializedSize() + 4);
-            buf.putInt(buf.capacity() - 4);
-            errorResponse.flattenToBuffer(buf).flip();
-            c.writeStream().enqueue(buf);
+            c.writeStream().enqueue(errorResponse);
             return;
         }
         String subselector = obj.getString("subselector");
@@ -385,7 +381,9 @@ public class SnapshotScanAgent extends OpsAgent
                     try {
                         Set<String> tableNames = new HashSet<String>();
                         JSONObject digest = SnapshotUtil.CRCCheck(f, SNAP_LOG);
-                        if (digest == null) continue;
+                        if (digest == null) {
+                            continue;
+                        }
                         JSONArray tables = digest.getJSONArray("tables");
                         for (int ii = 0; ii < tables.length(); ii++) {
                             tableNames.add(tables.getString(ii));

@@ -18,7 +18,6 @@ package org.voltdb;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.nio.ByteBuffer;
 import java.util.List;
 
 import org.json_voltpatches.JSONException;
@@ -27,8 +26,8 @@ import org.voltcore.logging.VoltLogger;
 import org.voltcore.network.Connection;
 import org.voltdb.VoltTable.ColumnInfo;
 import org.voltdb.client.ClientResponse;
-import org.voltdb.sysprocs.saverestore.SnapshotUtil;
 import org.voltdb.sysprocs.saverestore.SnapshotPathType;
+import org.voltdb.sysprocs.saverestore.SnapshotUtil;
 import org.voltdb.utils.VoltFile;
 
 /**
@@ -65,10 +64,7 @@ public class SnapshotDeleteAgent extends OpsAgent
             ClientResponseImpl errorResponse = new ClientResponseImpl(ClientResponse.SUCCESS,
                     ClientResponse.UNINITIALIZED_APP_STATUS_CODE, null, results, err);
             errorResponse.setClientHandle(clientHandle);
-            ByteBuffer buf = ByteBuffer.allocate(errorResponse.getSerializedSize() + 4);
-            buf.putInt(buf.capacity() - 4);
-            errorResponse.flattenToBuffer(buf).flip();
-            c.writeStream().enqueue(buf);
+            c.writeStream().enqueue(errorResponse);
             return;
         }
         String subselector = obj.getString("subselector");

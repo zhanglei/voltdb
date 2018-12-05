@@ -27,10 +27,11 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
-import com.google_voltpatches.common.base.Throwables;
 import org.voltcore.utils.DeferredSerialization;
 
-public class MockWriteStream implements WriteStream {
+import com.google_voltpatches.common.base.Throwables;
+
+public class MockWriteStream extends WriteStream.AbstractWriteStream implements WriteStream {
     public BlockingQueue<ByteBuffer> m_messages = new LinkedTransferQueue<ByteBuffer>();
 
     @Override
@@ -73,12 +74,4 @@ public class MockWriteStream implements WriteStream {
     public int getOutstandingMessageCount() {
         throw new UnsupportedOperationException();
     }
-
-    @Override
-    public void enqueue(ByteBuffer[] b) {
-        for (ByteBuffer buf : b) {
-            m_messages.offer(buf);
-        }
-    }
-
 }

@@ -422,7 +422,7 @@ public final class InvocationDispatcher {
             }
             else if ("@LoadSinglepartitionTable".equals(procName)) {
                 // FUTURE: When we get rid of the legacy hashinator, this should go away
-                return dispatchLoadSinglepartitionTable(catProc, task, handler, ccxn);
+                return dispatchLoadSinglepartitionTable(catProc, task, handler);
             }
             else if ("@SnapshotSave".equals(procName)) {
                 m_snapshotDaemon.requestUserSnapshot(task, ccxn);
@@ -525,7 +525,9 @@ public final class InvocationDispatcher {
 
     private final boolean shouldLoadSchemaFromSnapshot() {
         CatalogMap<Table> tables = m_catalogContext.get().database.getTables();
-        if(tables.size() == 0) return true;
+        if(tables.size() == 0) {
+            return true;
+        }
         for(Table t : tables) {
             if(!t.getSignature().startsWith("VOLTDB_AUTOGEN_XDCR")) {
                 return false;
@@ -565,7 +567,9 @@ public final class InvocationDispatcher {
         }
 
         if (voltdb.isPreparingShuttingdown()) {
-            if (procedure.getAllowedinshutdown()) return null;
+            if (procedure.getAllowedinshutdown()) {
+                return null;
+            }
 
             return serverUnavailableResponse(
                     SHUTDOWN_MSG,
@@ -710,13 +714,13 @@ public final class InvocationDispatcher {
                 agent.performOpsAction(ccxn, task.clientHandle, selector, task.getParams());
             }
             else {
-                return errorResponse(ccxn, task.clientHandle, ClientResponse.GRACEFUL_FAILURE,
+                return errorResponse(task.clientHandle, ClientResponse.GRACEFUL_FAILURE,
                         "Unknown OPS selector", null, true);
             }
 
             return null;
         } catch (Exception e) {
-            return errorResponse( ccxn, task.clientHandle, ClientResponse.UNEXPECTED_FAILURE, null, e, true);
+            return errorResponse(task.clientHandle, ClientResponse.UNEXPECTED_FAILURE, null, e, true);
         }
     }
 
@@ -858,8 +862,7 @@ public final class InvocationDispatcher {
      */
     private final ClientResponseImpl dispatchLoadSinglepartitionTable(Procedure catProc,
                                                         StoredProcedureInvocation task,
-                                                        InvocationClientHandler handler,
-                                                        Connection ccxn)
+            InvocationClientHandler handler)
     {
         int partition = -1;
         try {
@@ -912,10 +915,7 @@ public final class InvocationDispatcher {
     private final static void transmitResponseMessage(ClientResponse r, Connection ccxn, long handle) {
         ClientResponseImpl response = ClientResponseImpl.class.cast(r);
         response.setClientHandle(handle);
-        ByteBuffer buf = ByteBuffer.allocate(response.getSerializedSize() + 4);
-        buf.putInt(buf.capacity() - 4);
-        response.flattenToBuffer(buf).flip();
-        ccxn.writeStream().enqueue(buf);
+        ccxn.writeStream().enqueue(response);
     }
 
     private final ClientResponseImpl takeShutdownSaveSnapshot(
@@ -1373,7 +1373,8 @@ public final class InvocationDispatcher {
         return clientResponse;
     }
 
-    private final static ClientResponseImpl errorResponse(Connection c, long handle, byte status, String reason, Exception e, boolean log) {
+    private final static ClientResponseImpl errorResponse(long handle, byte status, String reason, Exception e,
+            boolean log) {
         String realReason = reason;
         if (e != null) {
             realReason = Throwables.getStackTraceAsString(e);
