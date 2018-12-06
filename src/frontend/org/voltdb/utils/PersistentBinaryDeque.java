@@ -245,6 +245,7 @@ public class PersistentBinaryDeque implements BinaryDeque {
     private final File m_path;
     private final String m_nonce;
     private boolean m_initializedFromExistingFiles = false;
+    private Long m_writeSegmentIndex = 0L;
     private boolean m_awaitingTruncation = false;
 
     //Segments that are no longer being written to and can be polled
@@ -333,6 +334,8 @@ public class PersistentBinaryDeque implements BinaryDeque {
                                         m_usageSpecificLog.debug("Segment " + qs.file() + " has been closed and deleted during init");
                                     }
                                     qs.closeAndDelete();
+                                    // When the segment list is empty and we are recovering, don't reuse the deleted segment
+                                    m_writeSegmentIndex = index + 1;
                                     return false;
                                 }
                             }
@@ -378,16 +381,15 @@ public class PersistentBinaryDeque implements BinaryDeque {
         }
 
         //Find the first and last segment for polling and writing (after)
-        Long writeSegmentIndex = 0L;
         try {
-            writeSegmentIndex = segments.lastKey() + 1;
+            m_writeSegmentIndex = segments.lastKey() + 1;
         } catch (NoSuchElementException e) {}
 
         PBDSegment writeSegment =
             newSegment(
-                    writeSegmentIndex,
-                    new VoltFile(m_path, m_nonce + "." + writeSegmentIndex + ".pbd"));
-        m_segments.put(writeSegmentIndex, writeSegment);
+                    m_writeSegmentIndex,
+                    new VoltFile(m_path, m_nonce + "." + m_writeSegmentIndex + ".pbd"));
+        m_segments.put(m_writeSegmentIndex, writeSegment);
         writeSegment.openForWrite(true);
 
         m_numObjects = countNumObjects();
