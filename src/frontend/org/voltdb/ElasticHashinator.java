@@ -41,7 +41,7 @@ import org.voltcore.utils.Bits;
 import org.voltcore.utils.Pair;
 import org.voltdb.utils.CompressionService;
 
-import sun.misc.Cleaner;
+import java.lang.ref.Cleaner;
 
 import com.google_voltpatches.common.base.Preconditions;
 import com.google_voltpatches.common.base.Supplier;
@@ -127,7 +127,9 @@ public class ElasticHashinator extends TheHashinator {
                 : updateRaw(configBytes));
         m_tokens = p.getFirst();
         m_tokenCount = p.getSecond();
-        m_cleaner = Cleaner.create(this, new Deallocator(m_tokens, m_tokenCount * 8));
+        // m_cleaner = Cleaner.create(this, new Deallocator(m_tokens, m_tokenCount * 8));
+        m_cleaner = Cleaner.create();
+        m_cleaner.register(this, new Deallocator(m_tokens, m_tokenCount * 8));
         m_configBytes = !cooked ? Suppliers.ofInstance(configBytes) : m_configBytesSupplier;
         m_cookedBytes = cooked ? Suppliers.ofInstance(configBytes) : m_cookedBytesSupplier;
         m_tokensMap =  Suppliers.memoize(new Supplier<ImmutableSortedMap<Integer, Integer>>() {
@@ -157,7 +159,9 @@ public class ElasticHashinator extends TheHashinator {
         final int bytes = 8 * tokens.size();
         m_tokens = Bits.unsafe.allocateMemory(bytes);
         trackAllocatedHashinatorBytes(bytes);
-        m_cleaner = Cleaner.create(this, new Deallocator(m_tokens, bytes));
+        // m_cleaner = Cleaner.create(this, new Deallocator(m_tokens, bytes));
+        m_cleaner = Cleaner.create();
+        m_cleaner.register(this, new Deallocator(m_tokens, bytes));
         int ii = 0;
         for (Map.Entry<Integer, Integer> e : tokens.entrySet()) {
             final long ptr = m_tokens + (ii * 8);

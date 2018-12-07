@@ -192,7 +192,8 @@ public class JavaSystem {
     public static void runFinalizers() {
 
 //#ifdef JAVA2FULL
-        System.runFinalizersOnExit(true);
+        System.out.print("AAA runFinalizers");
+        //System.runFinalizersOnExit(true);
 
 //#endif
     }

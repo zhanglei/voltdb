@@ -1430,26 +1430,23 @@ NATIVE EE STUFF
     <delete file="${build.dir}/org_voltdb_jni_ExecutionEngine.h"/>
     <delete file="${build.dir}/org_voltcore_utils_DBBPool.h" />
     <delete file="${build.dir}/org_voltdb_utils_PosixAdvise.h" />
-    <javah
+    <javac
         classpathref="project.classpath"
-        force="yes"
-        verbose="yes"
-        class="org.voltdb.jni.ExecutionEngine"
-        destdir="${build.dir}"
+        srcdir="src/frontend/org/voltdb/jni/"
+        includes="org.voltdb.jni.ExecutionEngine.java"
+        nativeheaderdir="${build.dir}"
     />
-    <javah
+    <javac
         classpathref="project.classpath"
-        force="yes"
-        verbose="yes"
-        class="org.voltcore.utils.DBBPool"
-        destdir="${build.dir}"
+        srcdir="src/frontend/org/voltcore/utils"
+        includes="org.voltcore.utils.DBBPool.java"
+        nativeheaderdir="${build.dir}"
     />
-    <javah
+    <javac
         classpathref="project.classpath"
-        force="yes"
-        verbose="yes"
-        class="org.voltdb.utils.PosixAdvise"
-        destdir="${build.dir}"
+        srcdir="src/frontend/org/voltcore/utils"
+        includes="org.voltdb.utils.PosixAdvise.java"
+        nativeheaderdir="${build.dir}"
     />
 </target>
 

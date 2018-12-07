@@ -17,10 +17,7 @@
 package org.voltdb.utils;
 
 import java.io.FileDescriptor;
-
 import org.voltcore.logging.VoltLogger;
-
-import sun.misc.SharedSecrets;
 
 public class PosixAdvise {
     private static final VoltLogger hostLog = new VoltLogger("HOST");
@@ -64,27 +61,31 @@ public class PosixAdvise {
     public static final int SYNC_FILE_RANGE_SYNC =
             SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER;
 
-    public static native long fadvise(long fd, long offset, long size, int advice);
+    // public static native long fadvise(long fd, long offset, long size, int advice);
+    public static native long nativefadvise(FileDescriptor fd, long offset, long size, int advice);
     public static long fadvise(FileDescriptor fd, long offset, long size, int advice) {
         if (advice == POSIX_FADV_DONTNEED && !ENABLE_FADVISE_DONTNEED) return 0;
-        final long filedescriptor = SharedSecrets.getJavaIOFileDescriptorAccess().get(fd);
-        return fadvise(filedescriptor, offset, size, advice);
+        // final long filedescriptor = SharedSecrets.getJavaIOFileDescriptorAccess().get(fd);
+        return nativefadvise(fd, offset, size, advice);
     }
 
 
-    public static native long fallocate(long fd, long offset, long size);
-    public static long fallocate(FileDescriptor fd, long offset, long size) {
+    // public static native long fallocate(long fd, long offset, long size);
+    public static native long fallocate(FileDescriptor fd, long offset, long size);
+    /* {
         final long filedescriptor = SharedSecrets.getJavaIOFileDescriptorAccess().get(fd);
         return fallocate(filedescriptor, offset, size);
-    }
+    }*/
 
     /*
      * Be aware sync_file_range does not make data durable. It doesn't handle ordering with metadata
      * nor does it emit write barriers
      */
-    public static native long sync_file_range(long fd, long offset, long size, int flags);
+    // public static native long sync_file_range(long fd, long offset, long size, int flags);
+    public static native long sync_file_range(FileDescriptor fd, long offset, long size, int flags);
+    /*
     public static long sync_file_range(FileDescriptor fd, long offset, long size, int flags) {
         final long filedescriptor = SharedSecrets.getJavaIOFileDescriptorAccess().get(fd);
         return sync_file_range(filedescriptor, offset, size, flags);
-    }
+    }*/
 }
