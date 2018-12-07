@@ -45,8 +45,8 @@ public class DRConsumerStatsBase {
         public static final String LAST_REPL_TIMESTAMP = "LAST_REPLICATION_TIMESTAMP";
         public static final String LAST_REPL_DELAY = "LAST_REPLICATION_DELAY";
         public static final String LAST_REPL_TXNCOUNT = "LAST_REPLICATION_TXNCOUNT";
-        public static final String LAST10_REPL_DELAY = "LAST10_REPLICATION_DELAY";
-        public static final String LAST10_REPL_TXNCOUNT = "LAST10_REPLICATION_TXNCOUNT";
+        public static final String LAST10_REPL_DELAY = "LAST10_REPL_DELAY";
+        public static final String LAST10_REPL_TXNCOUNT = "LAST10_REPL_TXNCOUNT";
     }
 
     public static class DRConsumerNodeStatsBase extends StatsSource {
@@ -90,7 +90,7 @@ public class DRConsumerStatsBase {
             columns.add(new ColumnInfo(Columns.LAST_REPL_DELAY, VoltType.BIGINT));
             columns.add(new ColumnInfo(Columns.LAST_REPL_TXNCOUNT, VoltType.INTEGER));
             columns.add(new ColumnInfo(Columns.LAST10_REPL_DELAY, VoltType.BIGINT));
-            columns.add(new ColumnInfo(Columns.LAST_REPL_TXNCOUNT, VoltType.INTEGER));
+            columns.add(new ColumnInfo(Columns.LAST10_REPL_TXNCOUNT, VoltType.INTEGER));
         }
 
         @Override
