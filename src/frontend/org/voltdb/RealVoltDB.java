@@ -870,6 +870,8 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
                 }
             }
 
+            hostLog.info("AAA deleteInitializationMarkers: " + config.m_voltdbRoot.getPath());
+
             // If there's no deployment provide a default and put it under voltdbroot.
             if (config.m_pathToDeployment == null) {
                 try {
@@ -2794,6 +2796,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
              * When a settings exception is caught (e.g. reading a broken properties file),
              * we probably just want to crash the DB anyway
              */
+            e.printStackTrace();
             consoleLog.fatal(e.getMessage());
             VoltDB.crashLocalVoltDB(e.getMessage());
             return null;

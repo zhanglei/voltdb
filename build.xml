@@ -30,7 +30,8 @@
             includes="@{includes}"
             encoding='UTF-8'
             debug='true'
-            includeAntRuntime='false'>
+            includeAntRuntime='false'
+	    nativeheaderdir="${build.dir}">
             <compilerarg if:set="use_jacoco" value="-g:lines"/>
             <classpath refid="project.classpath" />
         </javac>
@@ -1386,13 +1387,10 @@ NATIVE EE STUFF
 
 <!-- Build the jni library. -->
 <target name='jnicompile'
-    depends='compile, jnicompile_temp, uptodate_jni_h.check'
+    depends='compile'
     description="Build C++ JNI library."
     unless='uptodate_jni_h'>
-    <delete file="${src.ee.dir}/org_voltdb_jni_ExecutionEngine.h" />
-    <delete file="${src.ee.dir}/org_voltcore_utils_DBBPool.h" />
-    <delete file="${src.ee.dir}/org_voltdb_utils_PosixAdvise.h" />
-    <move
+    <!--<move
         file='${build.dir}/org_voltdb_jni_ExecutionEngine.h'
         todir='${src.ee.dir}'
     />
@@ -1403,7 +1401,7 @@ NATIVE EE STUFF
     <move
         file='${build.dir}/org_voltdb_utils_PosixAdvise.h'
         todir='${src.ee.dir}'
-    />
+    />-->
 </target>
 
 
@@ -1432,20 +1430,20 @@ NATIVE EE STUFF
     <delete file="${build.dir}/org_voltdb_utils_PosixAdvise.h" />
     <javac
         classpathref="project.classpath"
-        srcdir="src/frontend/org/voltdb/jni/"
-        includes="org.voltdb.jni.ExecutionEngine.java"
+	srcdir="src/frontend/org/voltdb/jni"
+	includes="ExecutionEngine.java"
+        nativeheaderdir="${build.dir}"
+	/>
+    <javac
+        classpathref="project.classpath"
+        srcdir="src/frontend/org/voltcore/utils"
+        includes="DBBPool.java"
         nativeheaderdir="${build.dir}"
     />
     <javac
         classpathref="project.classpath"
         srcdir="src/frontend/org/voltcore/utils"
-        includes="org.voltcore.utils.DBBPool.java"
-        nativeheaderdir="${build.dir}"
-    />
-    <javac
-        classpathref="project.classpath"
-        srcdir="src/frontend/org/voltcore/utils"
-        includes="org.voltdb.utils.PosixAdvise.java"
+        includes="P sixAdvise.java"
         nativeheaderdir="${build.dir}"
     />
 </target>
