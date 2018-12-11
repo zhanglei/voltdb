@@ -18,6 +18,7 @@ package org.voltdb.utils;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -245,7 +246,6 @@ public class PersistentBinaryDeque implements BinaryDeque {
     private final File m_path;
     private final String m_nonce;
     private boolean m_initializedFromExistingFiles = false;
-    private Long m_writeSegmentIndex = 0L;
     private boolean m_awaitingTruncation = false;
 
     //Segments that are no longer being written to and can be polled
@@ -334,8 +334,6 @@ public class PersistentBinaryDeque implements BinaryDeque {
                                         m_usageSpecificLog.debug("Segment " + qs.file() + " has been closed and deleted during init");
                                     }
                                     qs.closeAndDelete();
-                                    // When the segment list is empty and we are recovering, don't reuse the deleted segment
-                                    m_writeSegmentIndex = index + 1;
                                     return false;
                                 }
                             }
@@ -381,16 +379,45 @@ public class PersistentBinaryDeque implements BinaryDeque {
         }
 
         //Find the first and last segment for polling and writing (after)
+        Long writeSegmentIndex = 0L;
         try {
-            m_writeSegmentIndex = segments.lastKey() + 1;
+            writeSegmentIndex = segments.lastKey() + 1;
         } catch (NoSuchElementException e) {}
 
         PBDSegment writeSegment =
             newSegment(
-                    m_writeSegmentIndex,
-                    new VoltFile(m_path, m_nonce + "." + m_writeSegmentIndex + ".pbd"));
-        m_segments.put(m_writeSegmentIndex, writeSegment);
-        writeSegment.openForWrite(true);
+                    writeSegmentIndex,
+                    new VoltFile(m_path, m_nonce + "." + writeSegmentIndex + ".pbd"));
+        m_segments.put(writeSegmentIndex, writeSegment);
+        boolean fileOpened = false;
+        int retryDelay = 50;
+        while (!fileOpened) {
+            try {
+                writeSegment.openForWrite(true);
+                fileOpened = true;
+                if (retryDelay > 50) {
+                    logger.warn("Open file for " + writeSegment.file().getCanonicalPath() +
+                            " succeeded after retrying for " + (retryDelay-50) + "ms");
+                }
+            }
+            catch (FileNotFoundException openFailed) {
+                // Even though a file create should succeed after a file delete, there are some file
+                // systems where the create fails so we will retry the create 4 times with a backoff
+                // before we give up.
+                if (retryDelay < 500) {
+                    try {
+                        Thread.sleep(retryDelay);
+                    }
+                    catch (InterruptedException e1) {
+                        throw openFailed;
+                    }
+                    retryDelay += retryDelay;
+                }
+                else {
+                    throw openFailed;
+                }
+            }
+        }
 
         m_numObjects = countNumObjects();
         assertions();
