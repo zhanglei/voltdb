@@ -400,7 +400,7 @@ public class PersistentBinaryDeque implements BinaryDeque {
                             " succeeded after retrying for " + (retryDelay-50) + "ms");
                 }
             }
-            catch (FileNotFoundException openFailed) {
+            catch (IOException openOrWriteFailed) {
                 // Even though a file create should succeed after a file delete, there are some file
                 // systems where the create fails so we will retry the create 4 times with a backoff
                 // before we give up.
@@ -409,12 +409,12 @@ public class PersistentBinaryDeque implements BinaryDeque {
                         Thread.sleep(retryDelay);
                     }
                     catch (InterruptedException e1) {
-                        throw openFailed;
+                        throw openOrWriteFailed;
                     }
                     retryDelay += retryDelay;
                 }
                 else {
-                    throw openFailed;
+                    throw openOrWriteFailed;
                 }
             }
         }
