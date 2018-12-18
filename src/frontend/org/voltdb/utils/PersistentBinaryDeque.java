@@ -412,8 +412,11 @@ public class PersistentBinaryDeque implements BinaryDeque {
                         throw openOrWriteFailed;
                     }
                     retryDelay += retryDelay;
+                    writeSegment.close();
                 }
                 else {
+                    logger.warn("Open file for " + writeSegment.file().getCanonicalPath() +
+                            " FAILED after retrying for " + (retryDelay-50) + "ms");
                     throw openOrWriteFailed;
                 }
             }
