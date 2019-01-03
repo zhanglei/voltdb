@@ -330,6 +330,28 @@ public class ExportManager
     }
 
     /**
+     * Indicate to associated {@link ExportGeneration}s to
+     * prepare draining backlog and give up mastership for all partitions this instance is master of
+     * called during STATE_DRAIN of {@link ElasticRemoveOperator}
+     */
+    //
+    // normal path, blocking until drained
+    // fail-over only need if haven't retired.
+    synchronized public void prepareForRetirement(Set<Integer> hostForRemoval, Set<Integer> partitionForRemoval) {
+        if (hostForRemoval.contains(m_hostId))
+        for (int partitionId :m_masterOfPartitions) {
+            if (exportLog.isDebugEnabled()) {
+                exportLog.debug("Export stream masters on " + partitionId + " will be removed.");
+            }
+            ExportGeneration generation = m_generation.get();
+            if (generation == null) {
+                return;
+            }
+            generation.prepareForRetirement(partitionId);
+        }
+    }
+
+    /**
      * Get the global instance of the ExportManager.
      * @return The global single instance of the ExportManager.
      */

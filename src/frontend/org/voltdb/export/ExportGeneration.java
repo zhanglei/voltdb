@@ -804,6 +804,23 @@ public class ExportGeneration implements Generation {
     }
 
     /**
+     * Indicate to all associated {@link ExportDataSource}to PREPARE retirement
+     * i.e. permanently give up mastership role for the given partition id
+     * @param partitionId
+     */
+    public void prepareForRetirement(int partitionId) {
+        Map<String, ExportDataSource> partitionDataSourceMap = m_dataSourcesByPartition.get(partitionId);
+
+        // this case happens when there are no export tables
+        if (partitionDataSourceMap == null) {
+            return;
+        }
+        for (ExportDataSource eds : partitionDataSourceMap.values()) {
+            eds.retirement();
+        }
+    }
+
+    /**
      * Indicate to all associated {@link ExportDataSource} to assume
      * mastership role for the given partition id
      * @param partitionId

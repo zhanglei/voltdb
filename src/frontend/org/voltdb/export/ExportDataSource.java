@@ -1213,6 +1213,30 @@ public class ExportDataSource implements Comparable<ExportDataSource> {
         });
     }
 
+    /**
+     * indicate the partition leader has been retired
+     * has to drain existing PBD
+     */
+    void retirement() {
+        if (!m_mastershipAccepted.get()) {
+            return;
+        }
+        m_es.submit(new Runnable() {
+            @Override
+            public void run() {
+                // memorize end sequence number of the most recently pushed buffer from EE
+                // but if we already wait to switch mastership, don't update the drain-to
+                // sequence number to a greater number
+                m_seqNoToDrain = Math.min(m_seqNoToDrain, m_lastPushedSeqNo);
+                // if no new buffer to be drained
+                if (m_lastReleasedSeqNo >= m_seqNoToDrain) {
+
+                }
+                // send back message to leader once
+            }
+        });
+    }
+
     private void sendGiveMastershipMessage(int newLeaderHostId, long curSeq) {
         if (m_runEveryWhere) {
             return;
