@@ -33,7 +33,7 @@
        <fileset dir="/home/opt/rabbitmq">
            <include name="*.jar"/>
        </fileset>
-       <fileset dir="/home/opt/kafka/libs">
+       <fileset dir="/home/opt/kafka_2.12-1.0.0/libs">
            <include name="*.jar"/>
        </fileset>
     </path>
