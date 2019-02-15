@@ -36,21 +36,13 @@ from optparse import OptionParser
 random.seed()
 
 # verbs contains verb to version (denote old cli version 1)
-volt_support_version = [1, 2]
+volt_support_version = [2]
 
-volt_verbs = {'create': 1,
-              'recover': 1,
-              'rejoin': 1,
-              'add': 1,
-              'init': 2,
+volt_verbs = {'init': 2,
               'start': 2,
              }
 
-volt_verbs_mapping = {'create': 'create',
-                      'recover': 'recover',
-                      'rejoin': 'live rejoin',
-                      'add': 'add',
-                      'init': 'initialize',
+volt_verbs_mapping = {'init': 'initialize',
                       'start': 'probe',
                       'get': 'get',
                       }
@@ -85,9 +77,6 @@ pause = Opt('pause', 'paused', None, 1)
 missing = Opt('missing', 'missing', str, 1)
 # 'replica' should be immediately after verb
 replica = Opt('replica', 'replica', None, 1)
-# 'blocking' is only for rejoin, does not have corresponding java optional
-# name, change verb 'live rejoin' to 'rejoin'
-blocking = Opt('blocking', '', None, 1)
 
 # for newcli only
 mesh = Opt('host', 'mesh', str, 2)
@@ -105,70 +94,7 @@ classes = Opt('classes', 'classes', str, 2)
 # negative opt
 unknown = Opt('unknown', None, None, 0)
 
-volt_opts = {'create': [admin,
-                        client,
-                        drpublic,
-                        externalinterface,
-                        http,
-                        internal,
-                        internalinterface,
-                        publicinterface,
-                        replication,
-                        zookeeper,
-                        deployment,
-                        force,
-                        placementgroup,
-                        host,
-                        licensefile,
-                        pause,
-                        replica],
-
-             'recover': [admin,
-                         client,
-                         drpublic,
-                         externalinterface,
-                         http,
-                         internal,
-                         internalinterface,
-                         publicinterface,
-                         replication,
-                         zookeeper,
-                         deployment,
-                         placementgroup,
-                         host,
-                         licensefile,
-                         pause,
-                         replica],
-
-             'rejoin': [admin,
-                        client,
-                        drpublic,
-                        externalinterface,
-                        http,
-                        internal,
-                        internalinterface,
-                        publicinterface,
-                        replication,
-                        zookeeper,
-                        deployment,
-                        placementgroup,
-                        licensefile],
-
-             'add': [admin,
-                     client,
-                     drpublic,
-                     externalinterface,
-                     http,
-                     internal,
-                     internalinterface,
-                     publicinterface,
-                     replication,
-                     zookeeper,
-                     deployment,
-                     placementgroup,
-                     licensefile],
-
-             'init': [config,
+volt_opts = {'init': [config,
                       voltdbroot,
                       force,
                       schema,
@@ -195,30 +121,18 @@ volt_opts = {'create': [admin,
                        add],
              }
 
-volt_opts_mandatory = {'create': [],
-                       'recover': [],
-                       'rejoin': [host],
-                       'add': [host],
-                       'init': [],
+volt_opts_mandatory = {'init': [],
                        'start': [],
                        }
 
 volt_opts_negative = [unknown]
 # additional output cli
-volt_verbs_output = {'create': ' [ CATALOG ]',
-                     'recover': '',
-                     'rejoin': '',
-                     'add': '',
-                     'init': '',
+volt_verbs_output = {'init': '',
                      'start': ''
                      }
 
 # some verbs will generate default opts to java command line
 volt_opts_default = {
-    'create': {placementgroup.javaname: '0', host.javaname: 'localhost:3021'},
-    'recover': {placementgroup.javaname: '0', host.javaname: 'localhost:3021'},
-    'rejoin': {placementgroup.javaname: '0'},
-    'add': {placementgroup.javaname: '0'},
     'init': {},
     'start': {placementgroup.javaname: '0', mesh.javaname: "\"\""}
 }
@@ -236,8 +150,7 @@ volt_override = {'VOLTDB_HEAPMAX': '3072',
 option_name = "--([\-a-z]+)"
 option_name_re = re.compile(option_name)
 # ignore python only option
-# also skip 'blocking'
-option_ignore = ['version', 'help', 'verbose', 'background', 'ignore', 'blocking']
+option_ignore = ['version', 'help', 'verbose', 'background', 'ignore']
 
 # voltdb get and others use positional arguments so their
 # tests can't use the same pattern as "voltdb start|init|..."

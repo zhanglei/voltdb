@@ -31,8 +31,7 @@ server_list_help = ('{hostname-or-ip[,...]}, '
                                 supports_multiple_daemons=True,
                                 check_environment_config=True,
                                 force_voltdb_create=False,
-                                supports_paused=True,
-                                is_legacy_verb=False),
+                                supports_paused=True),
     options = (
         VOLT.StringListOption('-H', '--host', 'server_list', server_list_help, default = ''),
         VOLT.IntegerOption('-c', '--count', 'hostcount', 'number of hosts in the cluster'),
