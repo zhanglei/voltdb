@@ -363,6 +363,14 @@ public class CommandLine extends VoltDB.Configuration
         return this;
     }
 
+
+    boolean useG1GC = false;
+    // TODO: enable localcluster with g1 gc
+    public CommandLine setUseG1GC(boolean enableG1) {
+        useG1GC = enableG1;
+        return this;
+    }
+
     String classPath = "";
     public CommandLine classPath(String classPath) {
         this.classPath = classPath;
@@ -431,8 +439,7 @@ public class CommandLine extends VoltDB.Configuration
     }
 
     String javaExecutable = "java";
-    public CommandLine javaExecutable(String javaExecutable)
-    {
+    public CommandLine javaExecutable(String javaExecutable) {
         this.javaExecutable = javaExecutable;
         return this;
     }
@@ -555,27 +562,34 @@ public class CommandLine extends VoltDB.Configuration
             cmdline.add("-Xloggc:"+ volt_root + "/" + VEM_GC_ROLLOVER_FILE_NAME+" -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles="+VEM_GC_ROLLOVER_FILE_COUNT+" -XX:GCLogFileSize="+VEM_GC_ROLLOVER_FILE_SIZE);
         }
         cmdline.add(maxHeap);
-        cmdline.add("-XX:+UseConcMarkSweepGC");
-        cmdline.add("-XX:+CMSParallelRemarkEnabled");
-        cmdline.add("-XX:+UseTLAB");
-        cmdline.add("-XX:CMSInitiatingOccupancyFraction=75");
-        cmdline.add("-XX:+UseCMSInitiatingOccupancyOnly");
-        cmdline.add("-XX:+CMSClassUnloadingEnabled");
+        if (useG1GC) {
+            cmdline.add("-XX:+UseG1GC");
+            cmdline.add("-XX:MaxGCPauseMillis=200");
+        } else {
+            cmdline.add("-XX:+UseConcMarkSweepGC");
+            cmdline.add("-XX:+CMSParallelRemarkEnabled");
+            cmdline.add("-XX:+UseTLAB");
+            cmdline.add("-XX:CMSInitiatingOccupancyFraction=75");
+            cmdline.add("-XX:+UseCMSInitiatingOccupancyOnly");
+            cmdline.add("-XX:+CMSClassUnloadingEnabled");
+
+            /*
+             * To ensure that CMS is low pause on a consistent basis, have it wait a looong time
+             * for young gen GCs to occur when load is low. Scavenge before remark
+             * so when remarks occur they are a consistent duration.
+             */
+            cmdline.add("-XX:CMSWaitDuration=120000");
+            cmdline.add("-XX:CMSMaxAbortablePrecleanTime=120000");
+            cmdline.add("-XX:+ExplicitGCInvokesConcurrent");
+            cmdline.add("-XX:+CMSScavengeBeforeRemark");
+        }
 
         /*
          * Have RMI not invoke System.gc constantly
          */
         cmdline.add("-Dsun.rmi.dgc.server.gcInterval=" + Long.MAX_VALUE);
         cmdline.add("-Dsun.rmi.dgc.client.gcInterval=" + Long.MAX_VALUE);
-        /*
-         * To ensure that CMS is low pause on a consistent basis, have it wait a looong time
-         * for young gen GCs to occur when load is low. Scavenge before remark
-         * so when remarks occur they are a consistent duration.
-         */
-        cmdline.add("-XX:CMSWaitDuration=120000");
-        cmdline.add("-XX:CMSMaxAbortablePrecleanTime=120000");
-        cmdline.add("-XX:+ExplicitGCInvokesConcurrent");
-        cmdline.add("-XX:+CMSScavengeBeforeRemark");
+
         //If a Volt root is provided such as local cluster or VEM, put the error file in it
         if ( !volt_root.isEmpty() ) {
             cmdline.add("-XX:ErrorFile=" + volt_root + "/hs_err_pid%p.log");
