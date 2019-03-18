@@ -109,10 +109,10 @@ useG1GC = True
 if useG1GC:
     java_opts.append('-XX:+UseG1GC')
     java_opts.append('-XX:MaxGCPauseMillis=200')
-    java.opts.append('-XX:InitiatingHeapOccupancyPercent=45')
+    java_opts.append('-XX:InitiatingHeapOccupancyPercent=45')
     # The default value of this parameter is set to the number of logical processors (up to a value of 8).
     # For more than eight logical processors, the default value is set to 5/8th the number of logical processors.
-    java.opts.append("-XX:ParallelGCThreads=8")
+    java_opts.append("-XX:ParallelGCThreads=8")
 else:
     java_opts.append('-XX:+UseConcMarkSweepGC')
     java_opts.append('-XX:+CMSParallelRemarkEnabled')
