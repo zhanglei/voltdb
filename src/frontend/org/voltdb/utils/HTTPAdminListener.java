@@ -374,9 +374,9 @@ public class HTTPAdminListener {
 
         //remove all sessions in cache
         public void cleanSessions() throws Exception {
-            synchronized (this) {
-                doStop();
-            }
+           // synchronized (this) {
+           //     doStop();
+            // }
         }
     }
 
