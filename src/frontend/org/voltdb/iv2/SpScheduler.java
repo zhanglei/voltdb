@@ -1667,6 +1667,11 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
 
     private void setRepairLogTruncationHandle(long newHandle, boolean isExecutedOnOldLeader)
     {
+        if (tmLog.isDebugEnabled()) {
+            tmLog.debug("[SpScheduler.setRepairLogTruncationHandle on" + CoreUtils.hsIdToString(m_mailbox.getHSId())
+                    + " isExecutedOnOldLeader :" + isExecutedOnOldLeader
+                    +  " newHandle: " + newHandle + " m_repairLogTruncationHandle:" + m_repairLogTruncationHandle);
+        }
         if (newHandle > m_repairLogTruncationHandle) {
             m_repairLogTruncationHandle = newHandle;
             // ENG-14553: release buffered reads regardless of leadership status
@@ -1716,6 +1721,11 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
             void run()
             {
                 synchronized (m_lock) {
+                    if (tmLog.isDebugEnabled()) {
+                        tmLog.debug("[SpScheduler.updateReplicasupdateReplicas on" + CoreUtils.hsIdToString(m_mailbox.getHSId())
+                                + " to " + Arrays.toString(m_sendToHSIds) + "  m_lastSentTruncationHandle: " + m_lastSentTruncationHandle
+                                +  " newHandle: " + newHandle + " m_repairLogTruncationHandle:" + m_repairLogTruncationHandle);
+                    }
                     if (m_lastSentTruncationHandle < newHandle) {
                         m_lastSentTruncationHandle = newHandle;
                         m_repairLog.notifyTxnCommitInterests(m_lastSentTruncationHandle);
