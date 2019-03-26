@@ -1722,8 +1722,8 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
             {
                 synchronized (m_lock) {
                     if (tmLog.isDebugEnabled()) {
-                        tmLog.debug("[SpScheduler.updateReplicasupdateReplicas on" + CoreUtils.hsIdToString(m_mailbox.getHSId())
-                                + " to " + Arrays.toString(m_sendToHSIds) + "  m_lastSentTruncationHandle: " + m_lastSentTruncationHandle
+                        tmLog.debug("[SpScheduler.scheduleRepairLogTruncateMsg on " + CoreUtils.hsIdToString(m_mailbox.getHSId())
+                                + " to " + CoreUtils.hsIdCollectionToString(m_replicaHSIds) + "  m_lastSentTruncationHandle: " + m_lastSentTruncationHandle
                                 +  " newHandle: " + newHandle + " m_repairLogTruncationHandle:" + m_repairLogTruncationHandle);
                     }
                     if (m_lastSentTruncationHandle < newHandle) {
