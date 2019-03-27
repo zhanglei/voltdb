@@ -666,6 +666,9 @@ static void migrateViews(const catalog::CatalogMap<catalog::MaterializedViewInfo
 static void migrateExportViews(catalog::CatalogMap<catalog::MaterializedViewInfo> const& views,
                                StreamedTable* existingTable, StreamedTable* newTable,
                   std::map<std::string, TableCatalogDelegate*> const& delegatesByName) {
+    if (!existingTable || !newTable) {
+        return;
+    }
     std::vector<catalog::MaterializedViewInfo*> survivingInfos;
     std::vector<MaterializedViewTriggerForStreamInsert*> survivingViews;
     std::vector<MaterializedViewTriggerForStreamInsert*> obsoleteViews;
@@ -708,6 +711,24 @@ static void migrateExportViews(catalog::CatalogMap<catalog::MaterializedViewInfo
     }
 }
 
+static void migrateExportWrapper(StreamedTable* existingTable, StreamedTable* newTable) {
+    if (!newTable || !existingTable) {
+        return;
+    }
+    int64_t seqNo;
+    size_t streamBytesUsed;
+    existingTable->getExportStreamPositions(seqNo, streamBytesUsed);
+    assert(newTable->getWrapper() == NULL);
+    newTable->setExportStreamPositions(seqNo, streamBytesUsed);
+    ExportTupleStream* wrapper = existingTable->getWrapper();
+    // There should be no pending buffer at the time of UAC
+    assert(wrapper == NULL ||
+            wrapper->getCurrBlock() == NULL ||
+            wrapper->getCurrBlock()->getRowCount() == 0);
+    existingTable->setWrapper(NULL);
+    newTable->setWrapper(wrapper);
+}
+
 void
 TableCatalogDelegate::processSchemaChanges(catalog::Database const& catalogDatabase,
                                            catalog::Table const& catalogTable,
@@ -735,24 +756,15 @@ TableCatalogDelegate::processSchemaChanges(catalog::Database const& catalogDatab
     if (existingPersistentTable && newPersistentTable) {
         migrateChangedTuples(catalogTable, existingPersistentTable, newPersistentTable);
         migrateViews(catalogTable.views(), existingPersistentTable, newPersistentTable, delegatesByName);
+        // Migrate shadow stream if exists
+        migrateExportWrapper(existingPersistentTable->getStreamedTable(), newPersistentTable->getStreamedTable());
+        // Shadow stream can't have views on it
     }
     else {
         StreamedTable* newStreamedTable = dynamic_cast<StreamedTable*>(m_table);
         StreamedTable* existingStreamedTable = dynamic_cast<StreamedTable*>(existingTable);
-        if (existingStreamedTable && newStreamedTable) {
-            int64_t seqNo;
-            size_t streamBytesUsed;
-            existingStreamedTable->getExportStreamPositions(seqNo, streamBytesUsed);
-            ExportTupleStream* wrapper = existingStreamedTable->getWrapper();
-            // There should be no pending buffer at the time of UAC
-            assert(wrapper == NULL ||
-                    wrapper->getCurrBlock() == NULL ||
-                    wrapper->getCurrBlock()->getRowCount() == 0);
-            existingStreamedTable->setWrapper(NULL);
-            newStreamedTable->setWrapper(wrapper);
-            newStreamedTable->setExportStreamPositions(seqNo, streamBytesUsed);
-            migrateExportViews(catalogTable.views(), existingStreamedTable, newStreamedTable, delegatesByName);
-        }
+        migrateExportWrapper(existingStreamedTable, newStreamedTable);
+        migrateExportViews(catalogTable.views(), existingStreamedTable, newStreamedTable, delegatesByName);
     }
 
     ///////////////////////////////////////////////

@@ -1021,14 +1021,14 @@ VoltDBEngine::processCatalogDeletes(int64_t timestamp, bool updateReplicated,
     }
 }
 
-static bool haveDifferentSchema(catalog::Table* srcTable, voltdb::Table* targetTable, bool targetIsPersistentTable) {
+static bool haveDifferentSchema(catalog::Table* srcTable, voltdb::Table* targetTable) {
     // covers column count
     if (srcTable->columns().size() != targetTable->columnCount()) {
         return true;
     }
 
-    if (targetIsPersistentTable) {
-        PersistentTable* persistentTable = dynamic_cast<PersistentTable *>(targetTable);
+    PersistentTable* persistentTable = dynamic_cast<PersistentTable *>(targetTable);
+    if (persistentTable) {
         if (srcTable->isDRed() != persistentTable->isDREnabled()) {
             return true;
         }
@@ -1217,7 +1217,7 @@ VoltDBEngine::processCatalogAdditions(int64_t timestamp, bool updateReplicated,
                 if (streamedTable) {
                     VOLT_TRACE("UPDATING companion stream for %s", persistentTable->name().c_str());
                 }
-                tableSchemaChanged = haveDifferentSchema(catalogTable, persistentTable, true);
+                tableSchemaChanged = haveDifferentSchema(catalogTable, persistentTable);
             }
             if (streamedTable) {
                 //Dont update and roll generation if this is just a non stream table update.
@@ -1225,7 +1225,9 @@ VoltDBEngine::processCatalogAdditions(int64_t timestamp, bool updateReplicated,
                     const std::string& name = streamedTable->name();
                     if (tableTypeNeedsTupleStream(tcd->getTableType())) {
                         attachTupleStream(streamedTable, name, purgedStreams, timestamp);
-                        tableSchemaChanged = haveDifferentSchema(catalogTable, streamedTable, false);
+                        if (!tableSchemaChanged) {
+                            tableSchemaChanged = haveDifferentSchema(catalogTable, streamedTable);
+                        }
                     }
                 }
 
@@ -1287,6 +1289,14 @@ VoltDBEngine::processCatalogAdditions(int64_t timestamp, bool updateReplicated,
                 StreamedTable* stream = tcd->getStreamedTable();
                 if (stream) {
                     m_exportingTables[stream->name()] = stream;
+                }
+                // update shadow export stream
+                PersistentTable* persistentTable = tcd->getPersistentTable();
+                if (persistentTable) {
+                    StreamedTable* shadowStream = persistentTable->getStreamedTable();
+                    if (shadowStream) {
+                        m_exportingTables[shadowStream->name()] = shadowStream;
+                    }
                 }
 
                 snprintf(msg, sizeof(msg), "Table %s was successfully rebuilt with new schema.",
@@ -1489,10 +1499,18 @@ void VoltDBEngine::attachTupleStream(StreamedTable* streamedTable,
     m_exportingTables[streamName] = streamedTable;
     ExportTupleStream* wrapper = streamedTable->getWrapper();
     if (wrapper == NULL) {
-        wrapper = new ExportTupleStream(m_executorContext->m_partitionId,
-                                        m_executorContext->m_siteId,
-                                        timestamp,
-                                        streamName);
+        // If the shadow stream's persistent table was dropped for having zero tuple in processCatalogDeletes(),
+        // and was recreated in processCatalogAdditions(), the wrapper in the dropped stream needs to be preserved
+        // to track current export sequence number.
+        wrapper = purgedStreams[streamName];
+        if (wrapper) {
+            purgedStreams[streamName] = NULL;
+        } else {
+            wrapper = new ExportTupleStream(m_executorContext->m_partitionId,
+                                            m_executorContext->m_siteId,
+                                            timestamp,
+                                            streamName);
+        }
         streamedTable->setWrapper(wrapper);
         VOLT_TRACE("created stream export wrapper stream %s", streamName.c_str());
     } else {
