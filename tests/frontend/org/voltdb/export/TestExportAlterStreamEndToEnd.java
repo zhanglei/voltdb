@@ -50,12 +50,27 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
 
     private static int KFACTOR = 1;
     private static final String SCHEMA =
-            "CREATE STREAM t "
-            + "PARTITION ON COLUMN a "
-            + "EXPORT TO TARGET t ("
-            + "     a integer not null, "
-            + "     b integer not null"
-            + ");";
+            "CREATE STREAM t " +
+            "PARTITION ON COLUMN a " +
+            "EXPORT TO TARGET t (" +
+            "     a integer not null, " +
+            "     b integer not null" +
+            ");" +
+            "\n" +
+            "CREATE TABLE replicated (" +
+            "    a int not null," +
+            "    last_update int default 0 not null" +
+            ") USING TTL 10 SECONDS ON COLUMN last_update" +
+            "    MIGRATE TO TARGET t;" +
+            "CREATE INDEX idx_replicated ON replicated (last_update);" +
+            "\n" +
+            "CREATE TABLE partitioned (" +
+            "    a int not null," +
+            "    last_update int default 0 not null" +
+            ") USING TTL 10 SECONDS ON COLUMN last_update" +
+            "    MIGRATE TO TARGET t;" +
+            "    PARTITION TABLE partitioned ON COLUMN a;" +
+            "CREATE INDEX idx_partitioned ON partitioned (last_update);";
 
     static void resetDir() throws IOException {
         File f = new File("/tmp/" + System.getProperty("user.name"));
@@ -115,20 +130,20 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
         m_cluster.shutDown();
     }
 
-    private void insertToStream(int startPkey, int numberOfRows, Client client, Object[] params) throws Exception {
+    private void insertToStream(String tableName, int startPkey, int numberOfRows, Client client, Object[] params) throws Exception {
         for (int i = startPkey; i < startPkey + numberOfRows; i++) {
             params[1] = i; // Pkey column
-            m_verifier.addRow(client, "t", i, params);
-            client.callProcedure("@AdHoc", "insert into t values(" + i + ", 1)");
+            m_verifier.addRow(client, tableName, i, params);
+            client.callProcedure("@AdHoc", "insert into " + tableName + " values(" + i + ", 1)");
         }
     }
 
-    private void insertToStreamWithNewColumn(int startPkey, int numberOfRows, Client client, Object[] params) throws Exception {
+    private void insertToStreamWithNewColumn(String tableName, int startPkey, int numberOfRows, Client client, Object[] params) throws Exception {
         for (int i = startPkey; i < startPkey + numberOfRows; i++) {
             params[1] = i; // Pkey column
             params[2] = i; // new column
-            m_verifier.addRow(client, "t", i, params);
-            client.callProcedure("@AdHoc", "insert into t values(" + i + "," + i + ",1)");
+            m_verifier.addRow(client, tableName, i, params);
+            client.callProcedure("@AdHoc", "insert into " + tableName + " values(" + i + "," + i + ",1)");
         }
     }
 
@@ -139,7 +154,7 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
         //add data to stream table
         Object[] data = new Object[3];
         Arrays.fill(data, 1);
-        insertToStream(0, 100, client, data);
+        insertToStream("t", 0, 100, client, data);
 
         // alter stream to add column
         ClientResponse response = client.callProcedure("@AdHoc", "ALTER STREAM t ADD COLUMN new_column int BEFORE b");
@@ -147,12 +162,12 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
 
         Object[] data2 = new Object[4];
         Arrays.fill(data2, 1);
-        insertToStreamWithNewColumn(100, 100, client, data2);
+        insertToStreamWithNewColumn("t", 100, 100, client, data2);
 
         // drop column
         response = client.callProcedure("@AdHoc", "ALTER STREAM t DROP COLUMN new_column");
         assertEquals(ClientResponse.SUCCESS, response.getStatus());
-        insertToStream(200, 100, client, data);
+        insertToStream("t", 200, 100, client, data);
 
         client.drain();
         TestExportBaseSocketExport.waitForStreamedTargetAllocatedMemoryZero(client);
@@ -166,7 +181,7 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
         //add data to stream table
         Object[] data = new Object[3];
         Arrays.fill(data, 1);
-        insertToStream(0, 100, client, data);
+        insertToStream("t", 0, 100, client, data);
 
         // alter stream to alter column
         ClientResponse response = client.callProcedure("@AdHoc", "ALTER STREAM t ALTER COLUMN b varchar(32)");
@@ -190,7 +205,7 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
         //add data to stream table
         Object[] data = new Object[3];
         Arrays.fill(data, 1);
-        insertToStream(0, 100, client, data);
+        insertToStream("t", 0, 100, client, data);
 
         // alter stream to make column b nullable
         ClientResponse response = client.callProcedure("@AdHoc", "ALTER STREAM t ALTER COLUMN b SET NULL");
@@ -211,6 +226,38 @@ public class TestExportAlterStreamEndToEnd extends ExportLocalClusterBase
             m_verifier.addRow(client, "t", i, data);
             client.callProcedure("@AdHoc", "insert into t (a) values(" + i + ")");
         }
+
+        client.drain();
+        TestExportBaseSocketExport.waitForStreamedTargetAllocatedMemoryZero(client);
+        m_verifier.verifyRows();
+    }
+
+    @Test
+    public void testAlterShadownStreamAddDropColumnOnPartitionTable() throws Exception {
+        Client client = getClient(m_cluster);
+
+        //add data to stream table
+        Object[] data = new Object[3];
+        Arrays.fill(data, 1);
+        insertToStream("partitioned", 0, 100, client, data);
+
+        // alter stream to add column
+        ClientResponse response = client.callProcedure("@AdHoc", "ALTER TABLE partitioned ADD COLUMN new_column int");
+        assertEquals(ClientResponse.SUCCESS, response.getStatus());
+
+        Object[] data2 = new Object[4];
+        Arrays.fill(data2, 1);
+        insertToStreamWithNewColumn("partitioned", 100, 100, client, data2);
+
+
+        // drop column
+        response = client.callProcedure("@AdHoc", "ALTER TABLE partitioned DROP COLUMN new_column");
+        assertEquals(ClientResponse.SUCCESS, response.getStatus());
+        insertToStream("partitioned", 200, 100, client, data);
+
+        // manually trigger migration
+        response = client.callProcedure("@AdHoc", "MIGRATE FROM partitioned WHERE last_update = 0");
+        assertEquals(ClientResponse.SUCCESS, response.getStatus());
 
         client.drain();
         TestExportBaseSocketExport.waitForStreamedTargetAllocatedMemoryZero(client);
