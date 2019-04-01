@@ -852,7 +852,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
                 }
 
                 if (m_licenseApi == null) {
-                    hostLog.fatal("Please contact sales@voltdb.com to request a license.");
+                    hostLog.fatal("Please contact info@voltdb.com to request a license.");
                     VoltDB.crashLocalVoltDB(
                             "Failed to initialize license verifier. " + "See previous log message for details.", false,
                             null);
