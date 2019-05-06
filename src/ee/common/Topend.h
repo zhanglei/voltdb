@@ -83,7 +83,8 @@ class Topend {
             DRConflictType deleteConflict, Table *existingMetaTableForDelete, Table *existingTupleTableForDelete,
             Table *expectedMetaTableForDelete, Table *expectedTupleTableForDelete,
             DRConflictType insertConflict, Table *existingMetaTableForInsert, Table *existingTupleTableForInsert,
-            Table *newMetaTableForInsert, Table *newTupleTableForInsert) = 0;
+            Table *newMetaTableForInsert, Table *newTupleTableForInsert,
+            Table *customRowsForResolution) = 0;
 
     virtual void fallbackToEEAllocatedBuffer(char *buffer, size_t length) = 0;
 
@@ -147,7 +148,8 @@ public:
             DRConflictType deleteConflict, Table *existingMetaTableForDelete, Table *existingTupleTableForDelete,
             Table *expectedMetaTableForDelete, Table *expectedTupleTableForDelete,
             DRConflictType insertConflict, Table *existingMetaTableForInsert, Table *existingTupleTableForInsert,
-            Table *newMetaTableForInsert, Table *newTupleTableForInsert);
+            Table *newMetaTableForInsert, Table *newTupleTableForInsert,
+            Table *customRowsForResolution);
 
     void fallbackToEEAllocatedBuffer(char *buffer, size_t length);
 

@@ -209,7 +209,7 @@ JNITopend::JNITopend(JNIEnv *env, jobject caller) : m_jniEnv(env), m_javaExecuti
     m_reportDRConflictMID = m_jniEnv->GetStaticMethodID(
             m_partitionDRGatewayClass,
             "reportDRConflict",
-            "(IIJLjava/lang/String;IILjava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;ILjava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)I");
+            "(IIJLjava/lang/String;IILjava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;ILjava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;Ljava/nio/ByteBuffer;)I");
     if (m_reportDRConflictMID == NULL) {
         m_jniEnv->ExceptionDescribe();
         assert(m_reportDRConflictMID != NULL);
@@ -660,11 +660,33 @@ static boost::shared_array<char> serializeToDirectByteBuffer(JNIEnv *jniEngine, 
     return boost::shared_array<char>();
 }
 
+static boost::shared_array<char> preallocateDirectByteBufferForOneRow(JNIEnv *jniEngine, Table *table, jobject &byteBuffer) {
+    if (table) {
+        size_t serializeSize = table->getAccurateSizeToSerialize();
+        VOLT_ERROR("accurateSize: %zu", serializeSize);
+        serializeSize += sizeof(int32_t);
+        serializeSize += table->schema()->getMaxSerializedTupleSize(true);
+        VOLT_ERROR("with maxSize: %zu", serializeSize);
+        boost::shared_array<char> backingArray(new char[serializeSize]());
+        ReferenceSerializeOutput conflictSerializeOutput(backingArray.get(), serializeSize);
+        table->serializeColumnHeaderTo(conflictSerializeOutput);
+        byteBuffer = jniEngine->NewDirectByteBuffer(static_cast<void*>(backingArray.get()),
+                                                            static_cast<int32_t>(serializeSize));
+        if (byteBuffer == NULL) {
+            jniEngine->ExceptionDescribe();
+            throw std::exception();
+        }
+        return backingArray;
+    }
+    return boost::shared_array<char>();
+}
+
 int JNITopend::reportDRConflict(int32_t partitionId, int32_t remoteClusterId, int64_t remoteTimestamp, std::string tableName, DRRecordType action,
         DRConflictType deleteConflict, Table *existingMetaTableForDelete, Table *existingTupleTableForDelete,
         Table *expectedMetaTableForDelete, Table *expectedTupleTableForDelete,
         DRConflictType insertConflict, Table *existingMetaTableForInsert, Table *existingTupleTableForInsert,
-        Table *newMetaTableForInsert, Table *newTupleTableForInsert) {
+        Table *newMetaTableForInsert, Table *newTupleTableForInsert,
+        Table *customRowsForResolution) {
     // prepare tablename
     jstring tableNameString = m_jniEnv->NewStringUTF(tableName.c_str());
 
@@ -709,6 +731,11 @@ int JNITopend::reportDRConflict(int32_t partitionId, int32_t remoteClusterId, in
                                                                                    newTupleTableForInsert,
                                                                                    newTupleRowsBufferForInsert);
 
+    jobject customRowsBuffer = NULL;
+    boost::shared_array<char> customRowsArray = preallocateDirectByteBufferForOneRow(m_jniEnv,
+                                                                                     customRowsForResolution,
+                                                                                     customRowsBuffer);
+
     int32_t retval = m_jniEnv->CallStaticIntMethod(m_partitionDRGatewayClass,
                                             m_reportDRConflictMID,
                                             partitionId,
@@ -725,7 +752,8 @@ int JNITopend::reportDRConflict(int32_t partitionId, int32_t remoteClusterId, in
                                             existingMetaRowsBufferForInsert,
                                             existingTupleRowsBufferForInsert,
                                             newMetaRowsBufferForInsert,
-                                            newTupleRowsBufferForInsert);
+                                            newTupleRowsBufferForInsert,
+                                            customRowsBuffer);
 
     m_jniEnv->DeleteLocalRef(tableNameString);
     m_jniEnv->DeleteLocalRef(existingMetaRowsBufferForDelete);

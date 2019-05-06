@@ -51,6 +51,7 @@ const static std::string EXISTING_TABLE = "existing_table";
 const static std::string EXPECTED_TABLE = "expected_table";
 const static std::string NEW_TABLE = "new_table";
 const static std::string DELETED_TABLE = "deleted_table";
+const static std::string CUSTOM_TABLE = "custom_table";
 
 // column indices of DR conflict export table
 const static int DR_ROW_TYPE_COLUMN_INDEX = 0;
@@ -68,6 +69,7 @@ const static int DR_TUPLE_COLUMN_INDEX = 11;
 
 const static int DECISION_BIT = 1;
 const static int RESOLVED_BIT = 1 << 1;
+const static int CUSTOM_ROW_BIT = 1 << 2;
 
 // a c++ style way to limit access from outside this file
 namespace {
@@ -156,6 +158,10 @@ bool isApplyNewRow(int32_t retval) {
 
 bool isResolved(int32_t retval) {
     return (retval & RESOLVED_BIT) == RESOLVED_BIT;
+}
+
+bool isResolvedWithCustomRow(int32_t retval) {
+    return (retval & CUSTOM_ROW_BIT) == CUSTOM_ROW_BIT;
 }
 
 void setConflictOutcome(boost::shared_ptr<TempTable> metadataTable, bool acceptRemoteChange, bool convergent) {
@@ -401,6 +407,8 @@ bool handleConflict(VoltDBEngine *engine, PersistentTable *drTable, Pool *pool, 
                                   insertConflict, NEW_ROW, uniqueId, remoteClusterId);
     }
 
+    boost::shared_ptr<TempTable> customRowForResolution;
+    customRowForResolution.reset(TableFactory::buildCopiedTempTable(CUSTOM_TABLE, drTable));
     int retval = ExecutorContext::getPhysicalTopend()->reportDRConflict(engine->getPartitionId(),
                                                                         remoteClusterId,
                                                                         UniqueId::timestampSinceUnixEpoch(uniqueId),
@@ -415,9 +423,12 @@ bool handleConflict(VoltDBEngine *engine, PersistentTable *drTable, Pool *pool, 
                                                                         existingMetaTableForInsert.get(),
                                                                         existingTupleTableForInsert.get(),
                                                                         newMetaTableForInsert.get(),
-                                                                        newTupleTableForInsert.get());
+                                                                        newTupleTableForInsert.get(),
+                                                                        customRowForResolution.get());
+    VOLT_ERROR("Back from reportDRConflict");
     bool applyRemoteChange = isApplyNewRow(retval);
     bool resolved = isResolved(retval);
+    bool useCustomRow = isResolvedWithCustomRow(retval);
     // if conflict is not resolved, don't delete any existing rows.
     assert(resolved || !applyRemoteChange);
 
@@ -437,7 +448,7 @@ bool handleConflict(VoltDBEngine *engine, PersistentTable *drTable, Pool *pool, 
         setConflictOutcome(newMetaTableForInsert, applyRemoteChange, resolved);
     }
 
-    if (applyRemoteChange) {
+    if (applyRemoteChange || useCustomRow) {
         if (deleteConflict != NO_CONFLICT) {
             if (existingTuple) {
                 drTable->deleteTuple(*existingTuple, true);
@@ -448,8 +459,38 @@ bool handleConflict(VoltDBEngine *engine, PersistentTable *drTable, Pool *pool, 
                 drTable->deleteTuple(*tupleToDelete.first.get(), true);
             }
         }
+        if (useCustomRow) {
+            VOLT_ERROR("In useCustomRow");
+            TableTuple customTuple = drTable->tempTuple();
+            VOLT_ERROR("Got tempTuple");
+            TableIterator itr = customRowForResolution->iterator();
+            VOLT_ERROR("Got iterator");
+            itr.next(customTuple);
+            std::cout << "custom tuple from java: " << customTuple.debug(drTable->name(), false) << std::endl;
+            VOLT_ERROR("Got next");
+            int tsColIndex = drTable->getDRTimestampColumnIndex();
+            VOLT_ERROR("Got tsColIndex %d", tsColIndex);
+            NValue localTs;
+            if (existingTuple) {
+                localTs = existingTuple->getHiddenNValue(tsColIndex);
+                VOLT_ERROR("Got localTs from existingTuple");
+            } else {
+                BOOST_FOREACH(LabeledTableTuple labeledTuple, existingRows) {
+                    VOLT_ERROR("Getting localTs from labeledTuple");
+                    localTs = labeledTuple.first.get()->getHiddenNValue(tsColIndex);
+                    VOLT_ERROR("Got localTs from labeledTuple");
+                }
+            }
+            newTuple = &customTuple;
+            VOLT_ERROR("Assigned custom tuple to new tuple");
+            newTuple->setHiddenNValue(tsColIndex,localTs);
+            VOLT_ERROR("Set hiddenNValue");
+            std::cout << "custom tuple after assigning: " << newTuple->debug(drTable->name(), false) << std::endl;
+        }
         if (newTuple) {
+            VOLT_ERROR("Inserting newTuple");
             drTable->insertPersistentTuple(*newTuple, true, true);
+            VOLT_ERROR("Inserted newTuple");
         }
     }
 
@@ -899,6 +940,7 @@ int64_t BinaryLogSink::applyRecord(BinaryLog *log,
 
     switch (type) {
     case DR_RECORD_INSERT: {
+        VOLT_ERROR("DR_RECORD_INSERT");
         int64_t tableHandle = taskInfo->readLong();
         int32_t rowLength = taskInfo->readInt();
         const char *rowData = reinterpret_cast<const char *>(taskInfo->getRawPointer(rowLength));

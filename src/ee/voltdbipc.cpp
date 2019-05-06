@@ -151,7 +151,8 @@ public:
             voltdb::DRConflictType deleteConflict, voltdb::Table *existingMetaTableForDelete, voltdb::Table *existingTupleTableForDelete,
             voltdb::Table *expectedMetaTableForDelete, voltdb::Table *expectedTupleTableForDelete,
             voltdb::DRConflictType insertConflict, voltdb::Table *existingMetaTableForInsert, voltdb::Table *existingTupleTableForInsert,
-            voltdb::Table *newMetaTableForInsert, voltdb::Table *newTupleTableForInsert);
+            voltdb::Table *newMetaTableForInsert, voltdb::Table *newTupleTableForInsert,
+            voltdb::Table *customRowsForResolution);
 
     bool storeLargeTempTableBlock(voltdb::LargeTempTableBlock* block);
 
@@ -1746,7 +1747,8 @@ int VoltDBIPC::reportDRConflict(int32_t partitionId, int32_t remoteClusterId, in
             voltdb::DRConflictType deleteConflict, voltdb::Table *existingMetaTableForDelete, voltdb::Table *existingTupleTableForDelete,
             voltdb::Table *expectedMetaTableForDelete, voltdb::Table *expectedTupleTableForDelete,
             voltdb::DRConflictType insertConflict, voltdb::Table *existingMetaTableForInsert, voltdb::Table *existingTupleTableForInsert,
-            voltdb::Table *newMetaTableForInsert, voltdb::Table *newTupleTableForInsert) {
+            voltdb::Table *newMetaTableForInsert, voltdb::Table *newTupleTableForInsert,
+            voltdb::Table *customRowsForResolution) {
     return 0;
 }
 

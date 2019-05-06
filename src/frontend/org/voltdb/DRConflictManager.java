@@ -34,5 +34,6 @@ public interface DRConflictManager {
                                ByteBuffer existingMetaTableForInsert,
                                ByteBuffer existingTupleTableForInsert,
                                ByteBuffer newMetaTableForInsert,
-                               ByteBuffer newTupleTableForInsert);
+                               ByteBuffer newTupleTableForInsert,
+                               ByteBuffer customRow);
 }

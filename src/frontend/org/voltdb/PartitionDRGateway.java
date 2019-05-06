@@ -22,6 +22,7 @@ import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 
+import org.voltcore.logging.VoltLogger;
 import org.voltcore.utils.DBBPool;
 import org.voltcore.utils.DBBPool.BBContainer;
 import org.voltdb.iv2.SpScheduler.DurableUniqueIdListener;
@@ -37,6 +38,7 @@ import com.google_voltpatches.common.collect.ImmutableMap;
  *
  */
 public class PartitionDRGateway implements DurableUniqueIdListener, TransactionCommitInterest {
+    private static final VoltLogger log = new VoltLogger("DR");
 
     public enum DRRecordType {
         INSERT, DELETE, UPDATE, BEGIN_TXN, END_TXN, TRUNCATE_TABLE, DELETE_BY_INDEX, UPDATE_BY_INDEX, HASH_DELIMITER;
@@ -58,8 +60,9 @@ public class PartitionDRGateway implements DurableUniqueIdListener, TransactionC
     }
 
     public static enum DRConflictResolutionFlag {
-        ACCEPT_CHANGE,
-        CONVERGENT
+        ACCEPT_REMOTE,
+        CONVERGENT,
+        CUSTOM_ROW
     }
 
     // Keep sync with EE DRConflictType at types.h
@@ -224,7 +227,9 @@ public class PartitionDRGateway implements DurableUniqueIdListener, TransactionC
                                        int deleteConflict, ByteBuffer existingMetaTableForDelete, ByteBuffer existingTupleTableForDelete,
                                        ByteBuffer expectedMetaTableForDelete, ByteBuffer expectedTupleTableForDelete,
                                        int insertConflict, ByteBuffer existingMetaTableForInsert, ByteBuffer existingTupleTableForInsert,
-                                       ByteBuffer newMetaTableForInsert, ByteBuffer newTupleTableForInsert) {
+                                       ByteBuffer newMetaTableForInsert, ByteBuffer newTupleTableForInsert,
+                                       ByteBuffer customRowTable) {
+        log.info("reportDRConflict for action=" + action);
         assert m_conflictManager != null : "Community edition should not have any conflicts";
         return m_conflictManager.resolveConflict(partitionId,
                                                  remoteClusterId,
@@ -236,7 +241,7 @@ public class PartitionDRGateway implements DurableUniqueIdListener, TransactionC
                                                  expectedMetaTableForDelete, expectedTupleTableForDelete,
                                                  DRConflictType.values()[insertConflict],
                                                  existingMetaTableForInsert, existingTupleTableForInsert,
-                                                 newMetaTableForInsert, newTupleTableForInsert);
+                                                 newMetaTableForInsert, newTupleTableForInsert, customRowTable);
     }
 
     @Override

@@ -109,7 +109,8 @@ namespace voltdb {
             DRConflictType deleteConflict, Table *existingMetaTableForDelete, Table *existingTupleTableForDelete,
             Table *expectedMetaTableForDelete, Table *expectedTupleTableForDelete,
             DRConflictType insertConflict, Table *existingMetaTableForInsert, Table *existingTupleTableForInsert,
-            Table *newMetaTableForInsert, Table *newTupleTableForInsert) {
+            Table *newMetaTableForInsert, Table *newTupleTableForInsert,
+            Table *customRowsForResolution) {
         this->actionType = action;
         this->deleteConflictType = deleteConflict;
         this->insertConflictType = insertConflict;
