@@ -373,6 +373,14 @@ public:
     }
 
     inline void writeBytes(const void *value, size_t length) {
+        if (length > 20000) {
+            char * foo = new char[128]();
+            memcpy(foo, value, 64);
+            printf("!!!large write1%c:2:%c3:%c4:%c\n", foo[0], foo[1], foo[2], foo[3]);
+            printf("!!!large write: %s\n", foo);
+            printf("!!!large wirte size: %zu\n", length);
+            StackTrace::printStackTrace();
+        }
         assureExpand(length);
         memcpy(buffer_ + position_, value, length);
         position_ += length;
@@ -436,9 +444,17 @@ private:
     }
 
     inline void assureExpand(size_t next_write) {
+        if (position_ > 20000 || next_write > 20000) {
+            printf("position before expand: %zu\n", position_);
+            printf("next_write: %zu\n", next_write);
+        }
         size_t minimum_desired = position_ + next_write;
         if (minimum_desired > capacity_) {
+            printf("desired larger: %zu\n", minimum_desired);
             expand(minimum_desired);
+        }
+        if (capacity_ <= minimum_desired) {
+            printf("capacity_ : %zu , minimum_desired: %zu\n", capacity_, minimum_desired);
         }
         assert(capacity_ >= minimum_desired);
     }

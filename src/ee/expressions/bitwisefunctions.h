@@ -381,6 +381,8 @@ template<> inline NValue NValue::callUnary<FUNC_INET6_ATON>() const {
            << cbuff
            << ">";
         throw SQLException(SQLException::dynamic_sql_error, sb.str().c_str());
+//        throw SQLException(SQLException::data_exception_numeric_value_out_of_range,
+//                           "the second parameter should be <= 38 and > 0");
     }
     return NValue::getAllocatedValue(VALUE_TYPE_VARBINARY,
                                      (const char*) &addr, sizeof(addr), getTempStringPool());

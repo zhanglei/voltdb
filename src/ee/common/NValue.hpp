@@ -3205,6 +3205,7 @@ inline void NValue::serializeTo(SerializeOutput &output) const {
         int32_t length;
         const char* buf = getObject_withoutNull(&length);
         if (length <= OBJECTLENGTH_NULL) {
+            StackTrace::printStackTrace();
             throwDynamicSQLException("Attempted to serialize an NValue with a negative length");
         }
         output.writeInt(length);
