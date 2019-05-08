@@ -44,6 +44,11 @@ const char* StringRef::getObject(int32_t* lengthOut) const
                              asSizedObject(m_stringPtr)->m_size)
               << std::endl;
     // */
+
+//    std::cout << this << " DEBUG: getting [" << asSizedObject(m_stringPtr)->m_size << "]"
+//              << std::string(asSizedObject(m_stringPtr)->m_data,
+//                             63)
+//              << std::endl;
     *lengthOut = asSizedObject(m_stringPtr)->m_size;
     return asSizedObject(m_stringPtr)->m_data;
 }

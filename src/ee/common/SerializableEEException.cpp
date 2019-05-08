@@ -66,7 +66,7 @@ void SerializableEEException::serialize(ReferenceSerializeOutput *output) const 
     output->writeInt(static_cast<int32_t>(messageLength));
     output->writeBytes(messageBytes, messageLength);
     p_serialize(output);
-    printf("after--------%s\n", messageBytes);
+//    printf("after--------%s\n", messageBytes);
     if (m_exceptionType == VOLT_EE_EXCEPTION_TYPE_EEEXCEPTION)
         output->writeInt(ENGINE_ERRORCODE_ERROR);
     const int32_t length = static_cast<int32_t>(output->position() - (lengthPosition + sizeof(int32_t)));

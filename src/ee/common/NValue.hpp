@@ -3206,12 +3206,16 @@ inline void NValue::serializeTo(SerializeOutput &output) const {
         const char* buf = getObject_withoutNull(&length);
         if (length <= OBJECTLENGTH_NULL) {
             StackTrace::printStackTrace();
+            printf("wf2222: %s, length: %i inlined?: %s\n", buf, length, getSourceInlined()?"true":"false");
             throwDynamicSQLException("Attempted to serialize an NValue with a negative length");
         }
         output.writeInt(length);
 
         // Not a null string: write it out
         if (type != VALUE_TYPE_GEOGRAPHY) {
+            if (length > 20000) {
+                printf("wf111111: %s, inlined?: %s\n", buf, getSourceInlined()?"true":"false");
+            }
             output.writeBytes(buf, length);
         }
         else {
