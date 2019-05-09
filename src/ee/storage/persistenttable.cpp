@@ -1423,6 +1423,9 @@ void PersistentTable::deleteTupleForUndo(char* tupleData, bool skipLookup) {
     //* enable for debug */           << " copied to " << (void*)tupleData << std::endl;
 
     // Make sure that they are not trying to delete the same tuple twice
+    if(target.isActive()) {
+        StackTrace::printStackTrace();
+    }
     assert(target.isActive());
     deleteFromAllIndexes(&target);
 

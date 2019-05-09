@@ -1177,9 +1177,11 @@ inline void TableTuple::serializeTo(voltdb::SerializeOutput &output, bool includ
     for (int j = 0; j < m_schema->columnCount(); ++j) {
         //int fieldStart = output.position();
         NValue value = getNValue(j);
-        if (value.serializedSize()>20000){
+        if (value.serializedSize()>10000){
             std::cout << "found very large" << std::endl;
-            std::cout << value.debug() << std::endl;
+            std::cout << "large index: " <<j<< std::endl;
+            std::cout << m_schema->debug() <<j<< std::endl;
+//            std::cout << value.debug() << std::endl;
         }
         value.serializeTo(output);
     }

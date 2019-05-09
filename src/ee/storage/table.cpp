@@ -327,6 +327,7 @@ void Table::serializeColumnHeaderTo(SerializeOutput &serialOutput) {
     for (int i = 0; i < m_columnCount; ++i) {
         // column name: write (offset, length) for column definition, and string to string table
         const string& name = columnName(i);
+        std::cout << "index: " << i << "colname: " << name <<std::endl;
         // column names can't be null, so length must be >= 0
         int32_t length = static_cast<int32_t>(name.size());
         assert(length >= 0);
@@ -414,6 +415,12 @@ void Table::serializeTupleTo(SerializeOutput &serialOutput, voltdb::TableTuple *
 
     serialOutput.writeInt(static_cast<int32_t>(numTuples));
     for (int ii = 0; ii < numTuples; ii++) {
+        printf("tuple count: %d\n", ii);
+        for (int i = 0; i < m_columnCount; ++i) {
+            // column name: write (offset, length) for column definition, and string to string table
+            const string& name = columnName(i);
+            std::cout << "index: " << i << "colname: " << name <<std::endl;
+        }
         tuples[ii].serializeTo(serialOutput);
     }
 
