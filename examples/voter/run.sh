@@ -94,6 +94,7 @@ function async-benchmark() {
         --duration=120 \
         --servers=$SERVERS \
         --contestants=6 \
+        --usemigrate=true \
         --maxvotes=2
 }
 

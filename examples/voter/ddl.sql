@@ -3,6 +3,7 @@ file -inlinebatch END_OF_DROP_BATCH
 DROP PROCEDURE Initialize                      IF EXISTS;
 DROP PROCEDURE Results                         IF EXISTS;
 DROP PROCEDURE Vote                            IF EXISTS;
+DROP PROCEDURE Count                           IF EXISTS;
 DROP PROCEDURE ContestantWinningStates         IF EXISTS;
 DROP PROCEDURE GetStateHeatmap                 IF EXISTS;
 DROP VIEW  v_votes_by_phone_number             IF EXISTS;
@@ -36,7 +37,9 @@ CREATE TABLE votes
   phone_number       bigint     NOT NULL
 , state              varchar(2) NOT NULL
 , contestant_number  integer    NOT NULL
-);
+, type_not_null_timestamp timestamp default now not null
+) USING TTL 5 SECONDS ON COLUMN type_not_null_timestamp MIGRATE TO TARGET abc ;
+CREATE INDEX votes_idx  ON  votes(type_not_null_timestamp)  where not migrating;
 
 PARTITION TABLE votes ON COLUMN phone_number;
 
@@ -93,6 +96,7 @@ file -inlinebatch END_OF_2ND_BATCH
 -- stored procedures
 CREATE PROCEDURE FROM CLASS voter.Initialize;
 CREATE PROCEDURE FROM CLASS voter.Results;
+CREATE PROCEDURE FROM CLASS voter.Count;
 CREATE PROCEDURE PARTITION ON TABLE votes COLUMN phone_number FROM CLASS voter.Vote;
 CREATE PROCEDURE FROM CLASS voter.ContestantWinningStates;
 CREATE PROCEDURE FROM CLASS voter.GetStateHeatmap;

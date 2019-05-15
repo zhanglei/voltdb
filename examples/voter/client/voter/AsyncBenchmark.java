@@ -142,6 +142,9 @@ public class AsyncBenchmark {
 
         @Option(desc = "Enable topology awareness")
         boolean topologyaware = false;
+        
+        @Option(desc = "Use TTL Migration from the Votes mirror table")
+        boolean usemigrate = false;
 
         @Override
         public void validate() {
@@ -289,6 +292,18 @@ public class AsyncBenchmark {
         if(this.config.latencyreport) {
             System.out.printf(", Avg/95%% Latency %.2f/%.2fms", stats.getAverageLatency(),
                 stats.kPercentileLatencyAsDouble(0.95));
+        }
+        if (this.config.usemigrate) {
+            VoltTable rowcount = null;
+            try { 
+                rowcount = client.callProcedure("Count").getResults()[0];
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            System.out.printf("\nMigration progress rows remaining");
+            while (rowcount.advanceRow()) {
+                System.out.printf(" %d\n", rowcount.getLong(0));
+            }
         }
         System.out.printf("\n");
     }
