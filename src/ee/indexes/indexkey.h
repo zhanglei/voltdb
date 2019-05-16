@@ -491,9 +491,7 @@ struct GenericPersistentKey : public GenericKey<keySize>
                          const std::vector<AbstractExpression*> &indexed_expressions, const TupleSchema *keySchema)
         // Not bothering to delegate to the full-blown GenericKey constructor,
         // since in some ways the special case processing here is simpler.
-        : GenericKey<keySize>()
-        , m_keySchema(keySchema)
-    {
+        : GenericKey<keySize>() , m_keySchema(keySchema) {
         assert(tuple);
         // Assume that there are indexed expressions.
         // Columns-only indexes don't use GenericPersistentKey
@@ -510,6 +508,8 @@ struct GenericPersistentKey : public GenericKey<keySize>
                 // For the sake of keeping non-unique index upkeep as a non-failable operation,
                 // all exception-throwing expression evaluations get treated as NULL for index
                 // purposes.
+                // Watch out!! This is not right to silence any
+                // exception by evaluating the functions on index.
                 indexedValue = NValue::getNullValue(ae->getValueType());
             }
             // The NULL argument means use the persistent memory pool for the varchar
