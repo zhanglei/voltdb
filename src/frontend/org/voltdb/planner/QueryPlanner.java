@@ -33,12 +33,9 @@ import org.hsqldb_voltpatches.lib.StringUtil;
 import org.voltcore.utils.Pair;
 import org.voltdb.ParameterSet;
 import org.voltdb.VoltType;
-import org.voltdb.catalog.CatalogMap;
-import org.voltdb.catalog.Column;
 import org.voltdb.catalog.Constraint;
 import org.voltdb.catalog.Database;
 import org.voltdb.catalog.Table;
-import org.voltdb.catalog.TimeToLive;
 import org.voltdb.compiler.DatabaseEstimates;
 import org.voltdb.compiler.DeterminismMode;
 import org.voltdb.compiler.ScalarValueHints;
@@ -119,19 +116,10 @@ public class QueryPlanner implements AutoCloseable {
      * @param paramHints
      * @param joinOrder
      */
-    public QueryPlanner(String sql,
-                        String stmtName,
-                        String procName,
-                        Database catalogDb,
-                        StatementPartitioning partitioning,
-                        HSQLInterface HSQL,
-                        DatabaseEstimates estimates,
-                        boolean suppressDebugOutput,
-                        AbstractCostModel costModel,
-                        ScalarValueHints[] paramHints,
-                        String joinOrder,
-                        DeterminismMode detMode,
-                        boolean isLargeQuery) {
+    public QueryPlanner(
+            String sql, String stmtName, String procName, Database catalogDb, StatementPartitioning partitioning,
+            HSQLInterface HSQL, DatabaseEstimates estimates, boolean suppressDebugOutput, AbstractCostModel costModel,
+            ScalarValueHints[] paramHints, String joinOrder, DeterminismMode detMode, boolean isLargeQuery) {
         PLANNER_LOCK.lock();
         assert(sql != null);
         assert(stmtName != null);
@@ -153,8 +141,7 @@ public class QueryPlanner implements AutoCloseable {
         m_joinOrder = joinOrder;
         m_detMode = detMode;
         m_isLargeQuery = isLargeQuery;
-        m_planSelector = new PlanSelector(m_estimates, m_stmtName,
-                m_procName, m_sql, m_costModel, m_paramHints, m_detMode,
+        m_planSelector = new PlanSelector(m_estimates, m_stmtName, m_procName, m_sql, m_costModel, m_paramHints, m_detMode,
                 suppressDebugOutput);
         m_isUpsert = false;
     }
@@ -196,8 +183,7 @@ public class QueryPlanner implements AutoCloseable {
 
             m_xmlSQL = m_HSQL.getXMLCompiledStatement(m_sql);
             //* enable to debug */ System.out.println("DEBUG: HSQL parsed:" + m_xmlSQL);
-        }
-        catch (HSQLParseException e) {
+        } catch (HSQLParseException e) {
             // XXXLOG probably want a real log message here
             throw new PlanningErrorException(e.getMessage());
         }
@@ -236,19 +222,13 @@ public class QueryPlanner implements AutoCloseable {
             throw new PlanningErrorException(String.format(
                     "%s: Cannot migrate from table %s because the table definition does not specify a migration target",
                     sql, targetTable.getTypeName()));
+        } else if (! ExpressionUtil.containsTerminalParentPairs(ExpressionUtil.from(db, // check if "not migrating" exists in the where condition
+                VoltXMLElementHelper.getFirstChild(VoltXMLElementHelper.getFirstChild(xmlSQL, "condition"),
+                        "operation")), isNotMigrating())) { // does not hit "NOT MIGRATING": invalid statement
+            throw new PlanningErrorException(String.format(
+                    "%s: Cannot migrate from table %s because the WHERE clause does not contain NOT MIGRATING()",
+                    sql, targetTable.getTypeName()));
         }
-        // check if "not migrating" exists in the where condition
-        if (ExpressionUtil.containsTerminalParentPairs(ExpressionUtil.from(db,
-                VoltXMLElementHelper.getFirstChild(
-                        VoltXMLElementHelper.getFirstChild(xmlSQL, "condition"),
-                        "operation")), isNotMigrating())) {
-            // hit "NOT MIGRATING", valid statement
-            return;
-        }
-        // not hit "NOT MIGRATING", invalid statement
-        throw new PlanningErrorException(String.format(
-                "%s: Cannot migrate from table %s because the WHERE clause does not contain NOT MIGRATING()",
-                sql, targetTable.getTypeName()));
     }
 
     // Generate a Volt XML tree for a hypothetical SWAP TABLE statement.
@@ -302,24 +282,25 @@ public class QueryPlanner implements AutoCloseable {
             // if requested output the second version of the parsed plan
             m_planSelector.outputParameterizedCompiledStatement(m_paramzInfo.getParameterizedXmlSQL());
             return m_paramzInfo.getParameterizedXmlSQL().toMinString();
+        } else { // fallback when parameterization is
+            return m_xmlSQL.toMinString();
         }
-
-        // fallback when parameterization is
-        return m_xmlSQL.toMinString();
     }
 
     public String[] extractedParamLiteralValues() {
         if (m_paramzInfo == null) {
             return null;
+        } else {
+            return m_paramzInfo.getParamLiteralValues();
         }
-        return m_paramzInfo.getParamLiteralValues();
     }
 
     public ParameterSet extractedParamValues(VoltType[] parameterTypes) {
         if (m_paramzInfo == null) {
             return null;
+        } else {
+            return m_paramzInfo.extractedParamValues(parameterTypes);
         }
-        return m_paramzInfo.extractedParamValues(parameterTypes);
     }
 
     /**
@@ -346,14 +327,12 @@ public class QueryPlanner implements AutoCloseable {
                     if (plan.extractParamValues(m_paramzInfo)) {
                         return plan;
                     }
-                }
-                else if (DEBUGGING_STATIC_MODE_TO_RETRY_ON_ERROR) {
+                } else if (DEBUGGING_STATIC_MODE_TO_RETRY_ON_ERROR) {
                     compileFromXML(m_paramzInfo.getParameterizedXmlSQL(),
                                    m_paramzInfo.getParamLiteralValues());
                 }
                 // fall through to try replan without parameterization.
-            }
-            catch (Exception | StackOverflowError e) {
+            } catch (Exception | StackOverflowError e) {
                 // ignore any errors planning with parameters
                 // fall through to re-planning without them
                 m_hasExceptionWhenParameterized = true;
@@ -368,12 +347,12 @@ public class QueryPlanner implements AutoCloseable {
         CompiledPlan plan = compileFromXML(m_xmlSQL, null);
         if (plan == null) {
             if (DEBUGGING_STATIC_MODE_TO_RETRY_ON_ERROR) {
-                plan = compileFromXML(m_xmlSQL, null);
+                compileFromXML(m_xmlSQL, null);
             }
             throw new PlanningErrorException(m_recentErrorMsg);
+        } else {
+            return plan;
         }
-
-        return plan;
     }
 
     /**
@@ -477,12 +456,10 @@ public class QueryPlanner implements AutoCloseable {
         }
         m_planSelector.outputParsedStatement(parsedStmt);
 
-        if (m_isLargeQuery) {
-            if (parsedStmt.isDML()
-                    || (parsedStmt instanceof ParsedSelectStmt
-                            && ((ParsedSelectStmt)parsedStmt).hasWindowFunctionExpression())) {
-                m_isLargeQuery = false;
-            }
+        if (m_isLargeQuery && (parsedStmt.isDML() ||
+                (parsedStmt instanceof ParsedSelectStmt &&
+                        ((ParsedSelectStmt)parsedStmt).hasWindowFunctionExpression()))) {
+            m_isLargeQuery = false;
         }
 
         // Init Assembler. Each plan assembler requires a new instance of the PlanSelector
@@ -530,9 +507,8 @@ public class QueryPlanner implements AutoCloseable {
         bestPlan.rootPlanGraph.resolveColumnIndexes();
         // Now that the plan is all together we
         // can compute the best selection microoptimizations.
-        MicroOptimizationRunner.applyAll(bestPlan,
-                                         parsedStmt,
-                                         MicroOptimizationRunner.Phases.AFTER_COMPLETE_PLAN_ASSEMBLY);
+        MicroOptimizationRunner.applyAll(bestPlan, parsedStmt,
+                MicroOptimizationRunner.Phases.AFTER_COMPLETE_PLAN_ASSEMBLY);
         if (parsedStmt instanceof ParsedSelectStmt) {
             ((ParsedSelectStmt)parsedStmt).checkPlanColumnMatch(bestPlan.rootPlanGraph.getOutputSchema());
         }
@@ -616,15 +592,14 @@ public class QueryPlanner implements AutoCloseable {
         recvNode.clearChildren();
 
         plan.subPlanGraph = sendNode;
-        return;
     }
 
     private String getOriginalSql() {
         if (! m_isUpsert) {
             return m_sql;
+        } else {
+            return "UPSERT" + m_sql.substring(6);
         }
-
-        return "UPSERT" + m_sql.substring(6);
     }
 
     /**

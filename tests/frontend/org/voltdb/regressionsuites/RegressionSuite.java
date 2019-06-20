@@ -224,7 +224,7 @@ public class RegressionSuite extends TestCase {
     /**
      * @return a reference to the associated VoltServerConfig
      */
-    final VoltServerConfig getServerConfig() {
+    public VoltServerConfig getServerConfig() {
         return m_config;
     }
 
@@ -240,11 +240,11 @@ public class RegressionSuite extends TestCase {
         return getClient(1000 * 60 * 10, scheme); // 10 minute default
     }
 
-    Client getClientToHostId(int hostId) throws IOException {
+    public Client getClientToHostId(int hostId) throws IOException {
         return getClientToHostId(hostId, 1000 * 60 * 10); // 10 minute default
     }
 
-    Client getClientToSubsetHosts(int[] hostIds) throws IOException {
+    public Client getClientToSubsetHosts(int[] hostIds) throws IOException {
         return getClientToSubsetHosts(hostIds, 1000 * 60 * 10); // 10 minute default
     }
 
