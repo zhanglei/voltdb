@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -77,7 +76,6 @@ import org.voltdb.compiler.statements.ReplicateTable;
 import org.voltdb.compiler.statements.SetGlobalParam;
 import org.voltdb.compiler.statements.VoltDBStatementProcessor;
 import org.voltdb.compilereport.TableAnnotation;
-import org.voltdb.exceptions.PlanningErrorException;
 import org.voltdb.expressions.*;
 import org.voltdb.expressions.AbstractExpression.UnsafeOperatorsForDDL;
 import org.voltdb.expressions.ExpressionUtil;
@@ -100,8 +98,6 @@ import org.voltdb.utils.CompressionService;
 import org.voltdb.utils.Encoder;
 import org.voltdb.utils.LineReaderAdapter;
 import org.voltdb.utils.SQLCommand;
-
-
 
 /**
  * Compiles schema (SQL DDL) text files and stores the results in a given catalog.
@@ -1411,15 +1407,9 @@ public class DDLCompiler {
         HashMap<String, Index> indexMap = new HashMap<>();
 
         final String name = node.attributes.get("name");
-        final AtomicBoolean hasCreated = new AtomicBoolean(false);
         // Skip "CREATE TABLE" in here, since we have already added it using Calcite parser.
-        db.getTables().forEach(tbl -> {
-            if (tbl.getTypeName().equals(name)) {
-                System.err.println("Table " + name + " has already been created!");
-                hasCreated.set(true);
-            }
-        });
-        if (hasCreated.get()) {
+        if (StreamSupport.stream(((Iterable<Table>) () -> db.getTables().iterator()).spliterator(), false)
+                .anyMatch(tbl -> tbl.getTypeName().equals(name))) {
             return;
         }       // Code below this point is not executed any more.
         // create a table node in the catalog

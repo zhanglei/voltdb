@@ -164,9 +164,9 @@ bool IndexScanExecutor::p_execute(const NValueArray &params) {
     TableTuple searchKey(tableIndex->getKeySchema());
     searchKey.moveNoHeader(m_searchKeyBackingStore);
 
-    // TODO
-    //vassert(m_lookupType != INDEX_LOOKUP_TYPE_EQ ||
-    //        searchKey.getSchema()->columnCount() == m_numOfSearchkeys);
+    // TODO: we may need to comment out this assertion for merge join.
+    vassert(m_lookupType != INDEX_LOOKUP_TYPE_EQ ||
+            searchKey.getSchema()->columnCount() == m_numOfSearchkeys);
 
     int activeNumOfSearchKeys = m_numOfSearchkeys;
     IndexLookupType localLookupType = m_lookupType;

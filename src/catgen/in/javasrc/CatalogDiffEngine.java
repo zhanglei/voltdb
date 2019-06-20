@@ -921,8 +921,6 @@ public class CatalogDiffEngine {
         // Support any modification of these
         // I added Statement and PlanFragment for the need of materialized view recalculation plan updates.
         // ENG-8641, yzhang.
-        // I added Index because HSQL process "CREATE INDEX" stmt by recreating the target table from scratch,
-        // while the only change should be additional index.
         if (suspect instanceof User ||
             suspect instanceof Group ||
             suspect instanceof Procedure ||
@@ -1078,11 +1076,6 @@ public class CatalogDiffEngine {
                 if (nullable) return null;
                 restrictionQualifier = " from nullable to non-nullable";
             }
-            // ENG-14840 - CREATE INDEX copies a table to new database, which involves updating matview and partition columns
-            /** Disabled before we could get it right.
-            else if (field.equals("aggregatetype") || field.equals("matviewsource")) {
-                return null;
-            }*/
             else if (field.equals("type") || field.equals("size") || field.equals("inbytes")) {
                 int oldTypeInt = (Integer) prevType.getField("type");
                 int newTypeInt = (Integer) suspect.getField("type");
