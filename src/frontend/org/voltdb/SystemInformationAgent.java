@@ -16,16 +16,11 @@
  */
 package org.voltdb;
 
-import java.util.Set;
-
 import org.json_voltpatches.JSONException;
 import org.json_voltpatches.JSONObject;
 import org.voltcore.network.Connection;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.sysprocs.SystemInformation;
-
-import com.google_voltpatches.common.collect.ImmutableSortedSet;
-
 
 /**
  * Agent responsible for collecting SystemInformation on this host.
@@ -33,8 +28,6 @@ import com.google_voltpatches.common.collect.ImmutableSortedSet;
  */
 public class SystemInformationAgent extends OpsAgent
 {
-    private static final Set<String> VALID_SUBSELECTORS = ImmutableSortedSet.orderedBy(String.CASE_INSENSITIVE_ORDER).add("OVERVIEW", "DEPLOYMENT", "LICENSE").build();
-
     public SystemInformationAgent() {
         super("SystemInformationAgent");
     }
@@ -68,11 +61,10 @@ public class SystemInformationAgent extends OpsAgent
 
         // Some selectors can provide a single answer based on global data.
         // Intercept them and respond before doing the distributed stuff.
-        if ("DEPLOYMENT".equalsIgnoreCase(subselector) || "LICENSE".equalsIgnoreCase(subselector)) {
-            collectSystemInformation(psr, subselector);
+        if (subselector.equalsIgnoreCase("DEPLOYMENT")) {
+            collectSystemInformationDeployment(psr);
             return;
         }
-
         distributeOpsWork(psr, obj);
     }
 
@@ -94,7 +86,7 @@ public class SystemInformationAgent extends OpsAgent
                     first;
             }
             subselector = (String)first;
-            if (!VALID_SUBSELECTORS.contains(subselector)) {
+            if (!(subselector.equalsIgnoreCase("OVERVIEW") || subselector.equalsIgnoreCase("DEPLOYMENT"))) {
                 return "Invalid @SystemInformation selector " + subselector;
             }
         }
@@ -124,7 +116,7 @@ public class SystemInformationAgent extends OpsAgent
         String subselector = obj.getString("subselector");
         VoltTable[] tables = null;
         VoltTable result = null;
-        if ("OVERVIEW".equalsIgnoreCase(subselector))
+        if (subselector.toUpperCase().equals("OVERVIEW"))
         {
             result = SystemInformation.populateOverviewTable();
         }
@@ -137,28 +129,28 @@ public class SystemInformationAgent extends OpsAgent
         return tables;
     }
 
-    private void collectSystemInformation(PendingOpsRequest psr, String subselector)
+    private CatalogContext getCatalogContext()
     {
-        VoltTable result = null;
+        return VoltDB.instance().getCatalogContext();
+    }
 
-        if ("DEPLOYMENT".equalsIgnoreCase(subselector))
-        {
-            CatalogContext catalogContext = VoltDB.instance().getCatalogContext();
-            result = SystemInformation.populateDeploymentProperties(catalogContext.cluster,
-                            catalogContext.database, catalogContext.getClusterSettings(), catalogContext.getNodeSettings());
+    private void collectSystemInformationDeployment(PendingOpsRequest psr)
+    {
+        CatalogContext catalogContext = getCatalogContext();
+        VoltTable result =
+                SystemInformation.populateDeploymentProperties(catalogContext.cluster,
+                        catalogContext.database, catalogContext.getClusterSettings(), catalogContext.getNodeSettings());
+        if (result == null) {
+            sendErrorResponse(psr.c, ClientResponse.GRACEFUL_FAILURE,
+                    "Unable to collect DEPLOYMENT information for @SystemInformation", psr.clientData);
+            return;
         }
-        else if ("LICENSE".equalsIgnoreCase(subselector))
-        {
-            result = SystemInformation.populateLicenseProperties();
-        }
-
-        psr.aggregateTables = new VoltTable[] {result};
-
+        psr.aggregateTables = new VoltTable[1];
+        psr.aggregateTables[0] = result;
         try {
             sendClientResponse(psr);
         } catch (Exception e) {
-                sendErrorResponse(psr.c, ClientResponse.GRACEFUL_FAILURE,
-                        "Unable to return " + subselector.toUpperCase() +  " information to client", psr.clientData);
+            VoltDB.crashLocalVoltDB("Unable to return PARTITIONCOUNT to client", true, e);
         }
     }
 }
