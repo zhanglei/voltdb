@@ -225,25 +225,6 @@ class CompactingTreeUniqueIndex : public TableIndex
         }
     }
 
-    // only be called after moveToGreaterThanKey() for LTE case
-    void moveToBeforePriorEntry(IndexCursor& cursor) const
-    {
-        vassert(cursor.m_forward);
-        cursor.m_forward = false;
-        MapIterator &mapIter = castToIter(cursor);
-
-        if (mapIter.isEnd()) {
-            mapIter = m_entries.rbegin();
-        } else {
-            // go back 2 entries
-            // entries: [..., A, B, C, ...], currently mapIter = C (not NULL if reach here)
-            // B is the entry we just evaluated and didn't pass initial_expression test (can not be NULL)
-            // so A is the correct starting point (can be NULL)
-            mapIter.movePrev();
-        }
-        mapIter.movePrev();
-    }
-
     void moveToPriorEntry(IndexCursor& cursor) const
     {
         vassert(cursor.m_forward);

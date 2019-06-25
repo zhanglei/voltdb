@@ -498,7 +498,6 @@ public class SelectSubPlanAssembler extends SubPlanAssembler {
                 if ((innerAccessPath.index != null) &&
                     hasInnerOuterIndexExpression(innerChildNode.getTableAlias(),
                                                  innerAccessPath.indexExprs,
-                                                 innerAccessPath.initialExpr,
                                                  innerAccessPath.endExprs)) {
                     innerOuterAccessPaths.add(innerAccessPath);
                 }
@@ -712,7 +711,6 @@ public class SelectSubPlanAssembler extends SubPlanAssembler {
         if (innerPlan instanceof IndexScanPlanNode) {
             if (hasInnerOuterIndexExpression(joinNode.getRightNode().getTableAlias(),
                                              innerAccessPath.indexExprs,
-                                             innerAccessPath.initialExpr,
                                              innerAccessPath.endExprs)) {
                 canHaveNLJ = false;
             }
@@ -855,18 +853,15 @@ public class SelectSubPlanAssembler extends SubPlanAssembler {
      *
      * @param innerTable - the Table of all inner TVEs that are exempt from the check.
      * @param indexExprs - a list of expressions used in the indexing
-     * @param initialExpr - a list of expressions used in the indexing
      * @param endExprs - a list of expressions used in the indexing
      * @return true if at least one of the expression lists references a TVE.
      */
     private static boolean hasInnerOuterIndexExpression(String innerTableAlias,
                                                  Collection<AbstractExpression> indexExprs,
-                                                 Collection<AbstractExpression> initialExpr,
                                                  Collection<AbstractExpression> endExprs)
     {
         HashSet<AbstractExpression> indexedExprs = new HashSet<>();
         indexedExprs.addAll(indexExprs);
-        indexedExprs.addAll(initialExpr);
         indexedExprs.addAll(endExprs);
         // Find an outer TVE by ignoring any TVEs based on the inner table.
         for (AbstractExpression indexed : indexedExprs) {

@@ -496,7 +496,6 @@ public class TestIndexReverseScan extends PlannerTestCase {
         assertEquals(endKeys, ExpressionUtil.uncombinePredicate(ispn.getEndExpression()).size());
         assertEquals(predicates, ExpressionUtil.uncombinePredicate(ispn.getPredicate()).size());
 
-        assertEquals(initials, ExpressionUtil.uncombinePredicate(ispn.getInitialExpression()).size());
 
         // Test artificial post predicate
         if (predicates == 1 && artificial) {
@@ -539,7 +538,6 @@ public class TestIndexReverseScan extends PlannerTestCase {
         assertEquals(endKeys, ExpressionUtil.uncombinePredicate(ispn.getEndExpression()).size());
         assertEquals(predicates, ExpressionUtil.uncombinePredicate(ispn.getPredicate()).size());
 
-        assertEquals(0, ExpressionUtil.uncombinePredicate(ispn.getInitialExpression()).size());
 
         assertEquals(sortType, ispn.getSortDirection());
     }

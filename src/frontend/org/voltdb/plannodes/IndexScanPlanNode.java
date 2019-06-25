@@ -557,7 +557,6 @@ public class IndexScanPlanNode extends AbstractScanPlanNode implements IndexSort
         List<TupleValueExpression> index_tves =
             new ArrayList<>();
         index_tves.addAll(ExpressionUtil.getTupleValueExpressions(m_endExpression));
-        index_tves.addAll(ExpressionUtil.getTupleValueExpressions(m_initialExpression));
         index_tves.addAll(ExpressionUtil.getTupleValueExpressions(m_skip_null_predicate));
         // and update their indexes against the table schema
         for (TupleValueExpression tve : index_tves) {
@@ -761,9 +760,6 @@ public class IndexScanPlanNode extends AbstractScanPlanNode implements IndexSort
         if (m_endExpression != null) {
             stringer.key(Members.END_EXPRESSION.name());
             stringer.value(m_endExpression);
-        }
-        if (m_initialExpression != null) {
-            stringer.key(Members.INITIAL_EXPRESSION.name()).value(m_initialExpression);
         }
 
         if (m_skip_null_predicate != null) {
@@ -1046,9 +1042,6 @@ public class IndexScanPlanNode extends AbstractScanPlanNode implements IndexSort
         super.findAllExpressionsOfClass(aeClass, collected);
         if (m_endExpression != null) {
             collected.addAll(m_endExpression.findAllSubexpressionsOfClass(aeClass));
-        }
-        if (m_initialExpression != null) {
-            collected.addAll(m_initialExpression.findAllSubexpressionsOfClass(aeClass));
         }
         if (m_skip_null_predicate != null) {
             collected.addAll(m_skip_null_predicate.findAllSubexpressionsOfClass(aeClass));

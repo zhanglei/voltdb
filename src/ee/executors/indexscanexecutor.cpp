@@ -421,12 +421,6 @@ bool IndexScanExecutor::p_execute(const NValueArray &params)
         VOLT_DEBUG("End Expression:\n%s", end_expression->debug(true).c_str());
     }
 
-    // INITIAL EXPRESSION
-    AbstractExpression* initial_expression = m_node->getInitialExpression();
-    if (initial_expression != NULL) {
-        VOLT_DEBUG("Initial Expression:\n%s", initial_expression->debug(true).c_str());
-    }
-
     //
     // SKIP NULL EXPRESSION
     //

@@ -697,12 +697,6 @@ public abstract class SubPlanAssembler {
 
                     // add to indexExprs because it will be used as part of searchKey
                     retval.indexExprs.add(upperBoundComparator);
-                    // initialExpr is set for both cases
-                    // but will be used for LTE and only when overflow case of LT.
-                    // The initial expression is needed to control a (short?) forward scan to
-                    // adjust the start of a reverse iteration after it had to initially settle
-                    // for starting at "greater than a prefix key".
-                    retval.initialExpr.addAll(retval.indexExprs);
                 }
             }
         }
@@ -715,10 +709,6 @@ public abstract class SubPlanAssembler {
                         retval.indexExprs.clear();
                         AbstractExpression comparator = startingBoundExpr.getFilter();
                         retval.endExprs.add(comparator);
-                        // The initial expression is needed to control a (short?) forward scan to
-                        // adjust the start of a reverse iteration after it had to initially settle
-                        // for starting at "greater than a prefix key".
-                        retval.initialExpr.addAll(retval.indexExprs);
                         // Look up type here does not matter in EE, because the # of active search keys is 0.
                         // EE use m_index->moveToEnd(false) to get END, setting scan to reverse scan.
                         // retval.lookupType = IndexLookupType.LTE;
@@ -821,10 +811,6 @@ public abstract class SubPlanAssembler {
         // tell the EE to do reverse scan.
         if (retval.sortDirection == SortDirectionType.DESC && retval.indexExprs.size() > 0) {
             retval.lookupType = IndexLookupType.LTE;
-            // The initial expression is needed to control a (short?) forward scan to
-            // adjust the start of a reverse iteration after it had to initially settle
-            // for starting at "greater than a prefix key".
-            retval.initialExpr.addAll(retval.indexExprs);
         }
         else {
             retval.lookupType = IndexLookupType.GTE;
@@ -2247,9 +2233,6 @@ public abstract class SubPlanAssembler {
         scanNode.setPredicate(path.otherExprs);
         // Propagate the sorting information
         // into the scan node from the access path.
-        // The initial expression is needed to control a (short?) forward scan to adjust the start of a reverse
-        // iteration after it had to initially settle for starting at "greater than a prefix key".
-        scanNode.setInitialExpression(ExpressionUtil.combinePredicates(path.initialExpr));
         scanNode.setSkipNullPredicate();
         scanNode.setEliminatedPostFilters(path.eliminatedPostExprs);
         final IndexUseForOrderBy indexUse = scanNode.indexUse();

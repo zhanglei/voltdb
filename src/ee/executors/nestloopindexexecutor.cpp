@@ -178,12 +178,6 @@ bool NestLoopIndexExecutor::p_execute(const NValueArray &params)
         VOLT_TRACE("Post Expression:\n%s", post_expression->debug(true).c_str());
     }
 
-    // initial expression
-    AbstractExpression* initial_expression = m_indexNode->getInitialExpression();
-    if (initial_expression != NULL) {
-        VOLT_TRACE("Initial Expression:\n%s", initial_expression->debug(true).c_str());
-    }
-
     // SKIP NULL EXPRESSION
     AbstractExpression* skipNullExpr = m_indexNode->getSkipNullPredicate();
     // For reverse scan edge case NULL values and forward scan underflow case.

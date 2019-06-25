@@ -62,8 +62,7 @@ public class OffsetQueryUsingCountingIndex extends MicroOptimization {
 
         if (indexscan.getPredicate() != null ||
                 indexscan.getEndExpression() != null ||
-                indexscan.getSkipNullPredicate() != null ||
-                indexscan.getInitialExpression() != null) {
+                indexscan.getSkipNullPredicate() != null) {
             return;
         }
 

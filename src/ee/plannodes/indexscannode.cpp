@@ -112,7 +112,6 @@ void IndexScanPlanNode::loadFromJSONObject(PlannerDomValue obj)
     m_target_index_name = obj.valueForKey("TARGET_INDEX_NAME").asStr();
 
     m_end_expression.reset(loadExpressionFromJSONObject("END_EXPRESSION", obj));
-    m_initial_expression.reset(loadExpressionFromJSONObject("INITIAL_EXPRESSION", obj));
     m_skip_null_predicate.reset(loadExpressionFromJSONObject("SKIP_NULL_PREDICATE", obj));
 
     m_searchkey_expressions.loadExpressionArrayFromJSONObject("SEARCHKEY_EXPRESSIONS", obj);

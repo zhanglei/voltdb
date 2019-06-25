@@ -323,10 +323,6 @@ public:
         throwFatalException("Invoked TableIndex virtual method moveToCoveringCell which has no implementation");
     }
 
-    virtual void moveToBeforePriorEntry(IndexCursor& cursor) const {
-        throwFatalException("Invoked TableIndex virtual method moveToBeforePriorEntry which has no implementation");
-    }
-
     virtual void moveToPriorEntry(IndexCursor& cursor) const {
         throwFatalException("Invoked TableIndex virtual method moveToPriorEntry which has no implementation");
     }

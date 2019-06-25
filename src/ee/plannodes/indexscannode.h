@@ -60,7 +60,6 @@ public:
         , m_searchkey_expressions()
         , m_compare_not_distinct()
         , m_end_expression()
-        , m_initial_expression()
         , m_lookup_type(INDEX_LOOKUP_TYPE_EQ)
         , m_hasOffsetRank(false)
         , m_sort_direction(SORT_DIRECTION_TYPE_INVALID)
@@ -88,8 +87,6 @@ public:
 
     AbstractExpression* getEndExpression() const { return m_end_expression.get(); }
 
-    AbstractExpression* getInitialExpression() const { return m_initial_expression.get(); }
-
     AbstractExpression* getSkipNullPredicate() const { return m_skip_null_predicate.get(); }
 
 protected:
@@ -108,9 +105,6 @@ protected:
 
     // TODO: Document
     boost::scoped_ptr<AbstractExpression> m_end_expression;
-
-    // TODO: Document
-    boost::scoped_ptr<AbstractExpression> m_initial_expression;
 
     // Index Lookup Type
     IndexLookupType m_lookup_type;
