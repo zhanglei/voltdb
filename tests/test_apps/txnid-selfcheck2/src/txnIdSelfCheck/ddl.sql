@@ -131,27 +131,73 @@ CREATE TABLE bigp
 PARTITION TABLE bigp ON COLUMN p;
 
 --  nibble delete replicated table
-CREATE TABLE nibdr
+CREATE TABLE nibdr1
 (
   p          bigint             NOT NULL
 , id         bigint             NOT NULL
 , ts         timestamp          DEFAULT NOW NOT NULL
 , value      varbinary(1048576) NOT NULL
-, CONSTRAINT PK_id_nr PRIMARY KEY (p,id)
+, CONSTRAINT PK_id_nr1 PRIMARY KEY (p,id)
 ) USING TTL 30 Seconds on column ts ;
-CREATE INDEX NIBR_TSINDEX ON nibdr (ts);
+CREATE INDEX NIBR_TSINDEX1 ON nibdr1 (ts);
+
+--  nibble delete replicated table
+CREATE TABLE nibdr2
+(
+  p          bigint             NOT NULL
+, id         bigint             NOT NULL
+, ts         timestamp          DEFAULT NOW NOT NULL
+, value      varbinary(1048576) NOT NULL
+, CONSTRAINT PK_id_nr2 PRIMARY KEY (p,id)
+) USING TTL 30 Seconds on column ts ;
+CREATE INDEX NIBR_TSINDEX2 ON nibdr2 (ts);
+
+--  nibble delete replicated table
+CREATE TABLE nibdr3
+(
+  p          bigint             NOT NULL
+, id         bigint             NOT NULL
+, ts         timestamp          DEFAULT NOW NOT NULL
+, value      varbinary(1048576) NOT NULL
+, CONSTRAINT PK_id_nr3 PRIMARY KEY (p,id)
+) USING TTL 30 Seconds on column ts ;
+CREATE INDEX NIBR_TSINDEX3 ON nibdr3 (ts);
 
 -- nibble delete partitioned table
-CREATE TABLE nibdp
+CREATE TABLE nibdp1
 (
   p          bigint             NOT NULL
 , id         bigint             NOT NULL
 , ts         timestamp          DEFAULT NOW NOT NULL
 , value      varbinary(1048576) NOT NULL
-, CONSTRAINT PK_id_np PRIMARY KEY (p,id)
+, CONSTRAINT PK_id_np1 PRIMARY KEY (p,id)
 ) USING TTL 30 Seconds on column ts ;
-PARTITION TABLE nibdp ON COLUMN p;
-CREATE INDEX NIBP_TSINDEX ON nibdp (ts);
+PARTITION TABLE nibdp1 ON COLUMN p;
+CREATE INDEX NIBP_TSINDEX1 ON nibdp1 (ts);
+
+-- nibble delete partitioned table
+CREATE TABLE nibdp2
+(
+  p          bigint             NOT NULL
+, id         bigint             NOT NULL
+, ts         timestamp          DEFAULT NOW NOT NULL
+, value      varbinary(1048576) NOT NULL
+, CONSTRAINT PK_id_np2 PRIMARY KEY (p,id)
+) USING TTL 30 Seconds on column ts ;
+PARTITION TABLE nibdp2 ON COLUMN p;
+CREATE INDEX NIBP_TSINDEX2 ON nibdp2 (ts);
+
+-- nibble delete partitioned table
+CREATE TABLE nibdp3
+(
+  p          bigint             NOT NULL
+, id         bigint             NOT NULL
+, ts         timestamp          DEFAULT NOW NOT NULL
+, value      varbinary(1048576) NOT NULL
+, CONSTRAINT PK_id_np3 PRIMARY KEY (p,id)
+) USING TTL 30 Seconds on column ts ;
+PARTITION TABLE nibdp3 ON COLUMN p;
+CREATE INDEX NIBP_TSINDEX3 ON nibdp3 (ts);
 
 CREATE TABLE forDroppedProcedure
 (
@@ -511,9 +557,16 @@ PARTITION PROCEDURE ImportInsertP ON TABLE importp COLUMN cid PARAMETER 3;
 PARTITION PROCEDURE ImportInsertP ON TABLE importbp COLUMN cid PARAMETER 3;
 CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.ImportInsertR;
 CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.exceptionUDF;
-CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDPTableInsert;
-PARTITION PROCEDURE NIBDPTableInsert ON TABLE nibdp COLUMN p;
-CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDRTableInsert;
+
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDP1TableInsert;
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDR1TableInsert;
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDP2TableInsert;
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDR2TableInsert;
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDP3TableInsert;
+CREATE PROCEDURE FROM CLASS txnIdSelfCheck.procedures.NIBDR3TableInsert;
+PARTITION PROCEDURE NIBDP1TableInsert ON TABLE nibdp1 COLUMN p;
+PARTITION PROCEDURE NIBDP2TableInsert ON TABLE nibdp2 COLUMN p;
+PARTITION PROCEDURE NIBDP3TableInsert ON TABLE nibdp3 COLUMN p;
 
 -- functions
 CREATE FUNCTION add2Bigint    FROM METHOD txnIdSelfCheck.procedures.udfs.add2Bigint;

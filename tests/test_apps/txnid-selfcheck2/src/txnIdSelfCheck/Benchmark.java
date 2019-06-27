@@ -662,15 +662,41 @@ public class Benchmark {
         log.info("Starting Benchmark");
         log.info(HORIZONTAL_RULE);
 
-        // Nibble delete Loader
+        // Nibble delete Loader -- set 1
         if (!(config.disabledThreads.contains("partNDlt") || config.disabledThreads.contains("NDlt"))) {
-            partNDlt = new TTLLoader(client, "nibdp",
+            partNDlt = new TTLLoader(client, "nibdp1",
                     100000, 1024, 50, permits, partitionCount, "TTL");
             partNDlt.start();
         }
 
         if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replNDlt") || config.disabledThreads.contains("NDlt"))) {
-            replNDlt = new TTLLoader(client, "nibdr",
+            replNDlt = new TTLLoader(client, "nibdr1",
+                    100000, 1024, 3, permits, partitionCount, "TTL");
+            replNDlt.start();
+        }
+
+        // Nibble delete Loader -- set 2
+        if (!(config.disabledThreads.contains("partNDlt") || config.disabledThreads.contains("NDlt"))) {
+            partNDlt = new TTLLoader(client, "nibdp2",
+                    100000, 1024, 50, permits, partitionCount, "TTL");
+            partNDlt.start();
+        }
+
+        if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replNDlt") || config.disabledThreads.contains("NDlt"))) {
+            replNDlt = new TTLLoader(client, "nibdr2",
+                    100000, 1024, 3, permits, partitionCount, "TTL");
+            replNDlt.start();
+        }
+
+        // Nibble delete Loader -- set 3
+        if (!(config.disabledThreads.contains("partNDlt") || config.disabledThreads.contains("NDlt"))) {
+            partNDlt = new TTLLoader(client, "nibdp3",
+                    100000, 1024, 50, permits, partitionCount, "TTL");
+            partNDlt.start();
+        }
+
+        if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replNDlt") || config.disabledThreads.contains("NDlt"))) {
+            replNDlt = new TTLLoader(client, "nibdr3",
                     100000, 1024, 3, permits, partitionCount, "TTL");
             replNDlt.start();
         }
