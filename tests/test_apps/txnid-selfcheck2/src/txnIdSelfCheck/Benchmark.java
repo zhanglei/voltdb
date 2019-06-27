@@ -708,7 +708,7 @@ public class Benchmark {
             partttlMigratelt.start();
         }
 
-        if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replNDlt") || config.disabledThreads.contains("NDlt"))) {
+        if (config.mpratio > 0.0 && !(config.disabledThreads.contains("replttlMigratelt"))) {
             replttlMigratelt = new TTLLoader(client, "ttlmigrater",
                     100000, 1024, 3, permits, partitionCount, "EXPORT");
             replttlMigratelt.start();
