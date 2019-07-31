@@ -275,6 +275,10 @@ public class SysProcFragmentId
     public static final int PF_collectDrTrackers = 400;
     public static final int PF_collectDrTrackersAgg = 401;
 
+    // @Load
+    public static final int PF_loadLicense = 410;
+    public static final int PF_loadLicenseAggregate = 411;
+
     public static boolean isEnableScoreboardFragment(byte[] planHash) {
         long fragId = VoltSystemProcedure.hashToFragId(planHash);
 

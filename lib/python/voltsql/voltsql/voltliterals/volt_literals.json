@@ -252,7 +252,8 @@
         "@SystemInformation",
         "@UpdateApplicationCatalog",
         "@UpdateClasses",
-        "@UpdateLogging"
+        "@UpdateLogging",
+		"@UpdateLicense"
     ],
     "datatypes": [
         "BIGINT",

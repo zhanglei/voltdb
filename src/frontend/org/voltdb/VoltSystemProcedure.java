@@ -206,7 +206,7 @@ public abstract class VoltSystemProcedure extends VoltProcedure {
      */
     public VoltTable[] executeSysProcPlanFragments(
             SynthesizedPlanFragment pfs[], int aggregatorOutputDependencyId) {
-
+        //System.out.println("The aggregatorOutputDependencyId is : " + aggregatorOutputDependencyId + " Why in the world is this throwing an error???");
         TransactionState txnState = m_runner.getTxnState();
 
         // the stack frame drop terminates the recursion and resumes

@@ -654,6 +654,15 @@ public class SystemProcedureCatalog {
         builder.put("@CollectDrSiteTrackers",
                 Builder.createMp("org.voltdb.sysprocs.CollectDrSiteTrackers").commercial().notDurable()
                         .allowedInReplica().build());
+
+
+
+        builder.put("@LoadLicense", Builder.createMp("org.voltdb.sysprocs.LoadLicense").commercial().notDurable()
+                .allowedInReplica().build());
+
+
+
+
         listing = builder.build();
     }
 

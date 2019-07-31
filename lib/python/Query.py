@@ -111,6 +111,8 @@ class VoltQueryClient(cmd.Cmd):
         self.shutdown = VoltProcedure(self.fs, "@Shutdown")
 
         self.promote = VoltProcedure(self.fs, "@Promote")
+        
+        self.loadlicense = VoltProcedure(self.fs, "@LoadLicense")
 
         self.response = None
 
