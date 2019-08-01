@@ -414,9 +414,17 @@ public class Cartographer extends StatsSource
 
     public int getPartitionCount()
     {
-        // The list returned by getPartitions includes the MP PID.  Need to remove that for the
-        // true partition count.
-        return Cartographer.getPartitions(m_zk).size() - 1;
+        try {
+            List<String> children = m_zk.getChildren(VoltZK.leaders_initiators, null);
+            // The list returned by getPartitions includes the MP PID.  Need to remove that for the
+            // true partition count.
+            return children.size()-1;
+        } catch (KeeperException e) {
+            VoltDB.crashLocalVoltDB("Failed to get partition IDs from ZK", true, e);
+        } catch (InterruptedException e) {
+            VoltDB.crashLocalVoltDB("Failed to get partition IDs from ZK", true, e);
+        }
+        return -1;
     }
 
     private Multimap<Integer, Integer> getHostToPartitionMap() {
@@ -561,7 +569,17 @@ public class Cartographer extends StatsSource
      * Convenience method to return the immediate count of replicas for the given partition
      */
     public int getReplicaCountForPartition(int partition) {
-        return getReplicasForPartition(partition).size();
+        String zkpath = LeaderElector.electionDirForPartition(VoltZK.leaders_initiators, partition);
+        try {
+            List<String> children = m_zk.getChildren(zkpath, null);
+            return children.size();
+        } catch (KeeperException.NoNodeException e) {
+            //Can happen when partitions are being removed
+        } catch (KeeperException | InterruptedException e) {
+            org.voltdb.VoltDB.crashLocalVoltDB("Exception getting replicas for partition: " + partition,
+                    true, e);
+        }
+        return -1;
     }
 
     /**

@@ -44,7 +44,7 @@ import org.voltdb.VoltDB;
 import org.voltdb.VoltZK;
 import org.voltdb.dtxn.TransactionState;
 import org.voltdb.export.ExportManager;
-import org.voltdb.iv2.LeaderCache.LeaderCallBackInfo;
+import org.voltdb.iv2.SingleNodeLeaderCache.LeaderCallBackInfo;
 import org.voltdb.iv2.RepairAlgo.RepairResult;
 import org.voltdb.iv2.SpScheduler.DurableUniqueIdListener;
 import org.voltdb.messaging.MigratePartitionLeaderMessage;
@@ -59,43 +59,34 @@ import com.google_voltpatches.common.collect.Sets;
  */
 public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotable
 {
-    final private LeaderCache m_leaderCache;
+    final private SingleNodeLeaderCache m_leaderCache;
     private final TickProducer m_tickProducer;
     private boolean m_promoted = false;
 
     private static final VoltLogger exportLog = new VoltLogger("EXPORT");
 
-    LeaderCache.Callback m_leadersChangeHandler = new LeaderCache.Callback()
+    SingleNodeLeaderCache.Callback m_leadersChangeHandler = new SingleNodeLeaderCache.Callback()
     {
         @Override
-        public void run(ImmutableMap<Integer, LeaderCallBackInfo> cache)
+        public void run(LeaderCallBackInfo info)
         {
             String hsidStr = CoreUtils.hsIdToString(m_initiatorMailbox.getHSId());
-            if (cache != null && tmLog.isDebugEnabled()) {
-                tmLog.debug(hsidStr + " [SpInitiator] cache keys: " + Arrays.toString(cache.keySet().toArray()));
-                tmLog.debug(hsidStr + " [SpInitiator] cache values: " + Arrays.toString(cache.values().toArray()));
+            if (info != null && tmLog.isDebugEnabled()) {
+                tmLog.debug(hsidStr + " [SpInitiator] for partition " + m_scheduler.m_partitionId + ": " + info);
             }
 
-            Set<Long> leaders = Sets.newHashSet();
-            for (Entry<Integer, LeaderCallBackInfo> entry: cache.entrySet()) {
-                LeaderCallBackInfo info = entry.getValue();
-                leaders.add(info.m_HSId);
-                if (info.m_HSId == getInitiatorHSId()){
+            if (info.m_HSId == getInitiatorHSId()){
 
-                    // Test case: Interrupt leader promotion process
-                    if (info.m_lastHSId == LeaderCache.TEST_LAST_HSID) {
-                        break;
-                    }
+                // Test case: Interrupt leader promotion process
+                if (info.m_lastHSId != LeaderCache.TEST_LAST_HSID) {
                     boolean reinstate = reinstateAsLeader(info);
                     if (!m_promoted || reinstate) {
                         acceptPromotionImpl(info.m_lastHSId, (reinstate || info.m_isMigratePartitionLeaderRequested));
                         m_promoted = true;
                     }
-                    break;
                 }
             }
-
-            if (!leaders.contains(getInitiatorHSId())) {
+            else {
                 // We used to shutdown SpTerm when the site is no longer leader,
                 // however during leader migration there is a short window between
                 // the new leader fails before leader migration comes to finish and
@@ -127,8 +118,8 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
                         startAction != StartAction.JOIN),
                 "SP", agent, startAction);
         m_scheduler.initializeScoreboard(CoreUtils.getSiteIdFromHSId(getInitiatorHSId()), m_initiatorMailbox);
-        m_leaderCache = new LeaderCache(messenger.getZK(), "SpInitiator-iv2appointees-" + partition,
-                ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(partition)), m_leadersChangeHandler);
+        m_leaderCache = new SingleNodeLeaderCache(messenger.getZK(), "SpInitiator-iv2appointees-" + partition,
+                ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(partition)), partition, m_leadersChangeHandler);
         m_tickProducer = new TickProducer(m_scheduler.m_tasks, getInitiatorHSId());
         m_scheduler.m_repairLog = m_repairLog;
     }

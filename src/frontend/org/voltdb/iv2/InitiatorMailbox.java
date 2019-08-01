@@ -92,7 +92,7 @@ public class InitiatorMailbox implements Mailbox
     protected final HostMessenger m_messenger;
     protected final RepairLog m_repairLog;
     private final JoinProducerBase m_joinProducer;
-    private final LeaderCacheReader m_masterLeaderCache;
+    private final SingleNodeLeaderCache m_masterLeaderCache;
     private long m_hsId;
     protected RepairAlgo m_algo;
 
@@ -190,8 +190,8 @@ public class InitiatorMailbox implements Mailbox
         m_repairLog = repairLog;
         m_joinProducer = joinProducer;
 
-        m_masterLeaderCache = new LeaderCache(m_messenger.getZK(),
-                "InitiatorMailbox-masterLeaderCache-" + m_partitionId, VoltZK.iv2masters);
+        m_masterLeaderCache = new SingleNodeLeaderCache(m_messenger.getZK(),
+                "InitiatorMailbox-masterLeaderCache-" + m_partitionId, VoltZK.iv2masters, m_partitionId);
         try {
             m_masterLeaderCache.start(false);
         } catch (InterruptedException ignored) {
@@ -285,7 +285,7 @@ public class InitiatorMailbox implements Mailbox
 
     public long getMasterHsId(int partitionId)
     {
-        long masterHSId = m_masterLeaderCache.get(partitionId);
+        long masterHSId = m_masterLeaderCache.get();
         return masterHSId;
     }
 
