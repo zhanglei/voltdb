@@ -61,6 +61,7 @@ import org.json_voltpatches.JSONException;
 import org.json_voltpatches.JSONObject;
 import org.json_voltpatches.JSONStringer;
 import org.voltcore.agreement.AgreementSite;
+import org.voltcore.agreement.AgreementSiteV2;
 import org.voltcore.agreement.InterfaceToMessenger;
 import org.voltcore.common.Constants;
 import org.voltcore.logging.VoltLogger;
@@ -397,7 +398,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
      */
     private volatile ImmutableMap<Integer,String> m_knownFailedHosts = ImmutableMap.of();
 
-    private AgreementSite m_agreementSite;
+    private AgreementSiteV2 m_agreementSite;
     private ZooKeeper m_zk;
     private int m_secondaryConnections;
     /* Peers within the same partition group */
@@ -708,7 +709,7 @@ public class HostMessenger implements SocketJoiner.JoinHandler, InterfaceToMesse
              * Construct the site with just this node
              */
             m_agreementSite =
-                new AgreementSite(
+                new AgreementSiteV2(
                         agreementHSId,
                         agreementSites,
                         0,

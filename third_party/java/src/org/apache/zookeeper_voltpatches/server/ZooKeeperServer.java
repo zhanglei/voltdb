@@ -610,6 +610,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider,
         throw new KeeperException.NoAuthException();
     }
 
+    // moved from prepRequestProcessor pPrequest2Txn
     /**
      * This method will be called inside the ProcessRequestThread, which is a
      * singleton, so there will be a single thread calling this code.
