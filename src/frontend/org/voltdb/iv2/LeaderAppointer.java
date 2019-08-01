@@ -277,6 +277,10 @@ public class LeaderAppointer implements Promotable
                 }
             }
 
+            if (m_state.get() == AppointerState.CLUSTER_START) {
+                return masterHSId;
+            }
+
             // If the current leader is appointed via leader migration, then re-appoint it if possible
             if (m_isLeaderMigrated && m_previousLeader != Long.MAX_VALUE && children.contains(m_previousLeader)) {
                 masterHSId = m_previousLeader;
@@ -465,6 +469,7 @@ public class LeaderAppointer implements Promotable
             m_state.set(AppointerState.DONE);
         }
 
+        m_state.set(AppointerState.CLUSTER_START);
         if (m_state.get() == AppointerState.CLUSTER_START) {
             // Need to block the return of acceptPromotion until after the MPI is promoted.  Wait for this latch
             // to countdown after appointing all the partition leaders.  The
@@ -503,6 +508,10 @@ public class LeaderAppointer implements Promotable
                     }
             },
             m_es);
+
+            m_state.set(AppointerState.DONE);
+            m_MPI.acceptPromotion();
+            m_startupLatch.set(null);
         }
         else {
             // Create MP repair ZK node to block rejoin
@@ -830,5 +839,29 @@ public class LeaderAppointer implements Promotable
 
     public boolean isLeader() {
         return m_isLeader;
+    }
+
+    public void assignPartitionLeadersOnStartup() {
+        try {
+            for (PartitionCallback cb : m_callbacks.values()) {
+                final int partitionId = cb.m_partitionId;
+                int masterHostId = m_topo.partitionsById.get(partitionId).getLeaderHostId();
+                final String path = LeaderElector.electionDirForPartition(VoltZK.leaders_initiators, partitionId);
+                long masterHSId = -1;
+                List<String> replicas = m_zk.getChildren(path, false);
+                for (String replica : replicas) {
+                    long hsid = Long.parseLong(replica.substring(0, replica.indexOf("_")));
+                    if (masterHostId == CoreUtils.getHostIdFromHSId(hsid)) {
+                        masterHSId = hsid;
+                        break;
+                    }
+                }
+                String masterPair = Long.toString(Long.MAX_VALUE) + "/" + Long.toString(masterHSId);
+                m_iv2appointees.put(partitionId, masterPair);
+                m_iv2masters.put(masterHostId, masterHSId);
+            }
+        } catch (Exception e) {
+            VoltDB.crashLocalVoltDB("Unable to appoint new masters ", true, e);
+        }
     }
 }

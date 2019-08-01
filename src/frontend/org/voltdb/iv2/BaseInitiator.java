@@ -60,10 +60,10 @@ public abstract class BaseInitiator<S extends Scheduler> implements Initiator
     protected Site m_executionSite = null;
     protected Thread m_siteThread = null;
     protected final RepairLog m_repairLog = new RepairLog();
-
+    protected final boolean m_startupAsPartitionLeader;
 
     public BaseInitiator(String zkMailboxNode, HostMessenger messenger, Integer partition,
-            S scheduler, String whoamiPrefix, StatsAgent agent, StartAction startAction)
+            S scheduler, String whoamiPrefix, StatsAgent agent, StartAction startAction, boolean startupAsPartitionLeader)
     {
         m_zkMailboxNode = zkMailboxNode;
         m_messenger = messenger;
@@ -106,6 +106,7 @@ public abstract class BaseInitiator<S extends Scheduler> implements Initiator
         }
         m_whoami = whoamiPrefix +  " " +
             CoreUtils.hsIdToString(getInitiatorHSId()) + partitionString;
+        m_startupAsPartitionLeader = startupAsPartitionLeader;
     }
 
     protected void configureCommon(BackendTarget backend,

@@ -63,7 +63,7 @@ public class MpInitiator extends BaseInitiator<MpScheduler> implements Promotabl
                     leaderId),
                 "MP",
                 agent,
-                StartAction.CREATE /* never for rejoin */);
+                StartAction.CREATE /* never for rejoin */, false);
     }
 
     @Override

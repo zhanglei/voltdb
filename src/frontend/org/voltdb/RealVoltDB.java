@@ -1335,7 +1335,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
                 m_iv2Initiators = createIv2Initiators(
                         partitions,
                         m_config.m_startAction,
-                        m_partitionsToSitesAtStartupForExportInit);
+                        m_partitionsToSitesAtStartupForExportInit, topo);
                 m_iv2InitiatorStartingTxnIds.put(MpInitiator.MP_INIT_PID,
                         TxnEgo.makeZero(MpInitiator.MP_INIT_PID).getTxnId());
 
@@ -2273,15 +2273,22 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
 
     private TreeMap<Integer, Initiator> createIv2Initiators(Collection<Integer> partitions,
                                                 StartAction startAction,
-                                                List<Pair<Integer, Integer>> partitionsToSitesAtStartupForExportInit)
+                                                List<Pair<Integer, Integer>> partitionsToSitesAtStartupForExportInit,
+                                                AbstractTopology topo)
     {
         TreeMap<Integer, Initiator> initiators = new TreeMap<>();
         // Needed when static is reused by ServerThread
         TransactionTaskQueue.resetScoreboards(m_messenger.getNextSiteId(), m_nodeSettings.getLocalSitesCount());
-        for (Integer partition : partitions)
-        {
+        for (Integer partition : partitions) {
+            boolean startupAsLeader = false;
+            if (!startAction.doesJoin()) {
+                int masterHostId = topo.partitionsById.get(partition).getLeaderHostId();
+                if (masterHostId == m_messenger.getHostId()) {
+                    startupAsLeader = true;
+                }
+            }
             Initiator initiator = new SpInitiator(m_messenger, partition, getStatsAgent(),
-                    m_snapshotCompletionMonitor, startAction);
+                    m_snapshotCompletionMonitor, startAction, startupAsLeader);
             initiators.put(partition, initiator);
             partitionsToSitesAtStartupForExportInit.add(
                     Pair.of(partition, CoreUtils.getSiteIdFromHSId(initiator.getInitiatorHSId())));
@@ -4551,6 +4558,9 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
          */
         for (Initiator initiator : m_iv2Initiators.values()) {
             initiator.enableWritingIv2FaultLog();
+            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
+                ((SpInitiator)initiator).assignLeaderOnStartup();
+            }
         }
 
         /*

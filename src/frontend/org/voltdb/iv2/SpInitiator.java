@@ -120,17 +120,34 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
 
     public SpInitiator(HostMessenger messenger, Integer partition, StatsAgent agent,
             SnapshotCompletionMonitor snapMonitor,
-            StartAction startAction)
+            StartAction startAction, boolean startupAsPartitionLeader)
     {
         super(VoltZK.iv2masters, messenger, partition,
                 new SpScheduler(partition, new SiteTaskerQueue(partition), snapMonitor,
                         startAction != StartAction.JOIN),
-                "SP", agent, startAction);
+                "SP", agent, startAction, startupAsPartitionLeader);
         m_scheduler.initializeScoreboard(CoreUtils.getSiteIdFromHSId(getInitiatorHSId()), m_initiatorMailbox);
         m_leaderCache = new LeaderCache(messenger.getZK(), "SpInitiator-iv2appointees-" + partition,
                 ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(partition)), m_leadersChangeHandler);
         m_tickProducer = new TickProducer(m_scheduler.m_tasks, getInitiatorHSId());
         m_scheduler.m_repairLog = m_repairLog;
+        if (this.m_startupAsPartitionLeader) {
+            try {
+                String masterPair = Long.toString(Long.MAX_VALUE) + "/" + Long.toString(getInitiatorHSId());
+                LeaderCache leaderAppointee = new LeaderCache(m_messenger.getZK(),
+                        "SpInitiator-iv2appointees-" + m_partitionId, VoltZK.iv2appointees);
+                leaderAppointee.put(m_partitionId, masterPair);
+                LeaderCacheWriter iv2masters = new LeaderCache(m_messenger.getZK(),
+                        "SpInitiator-iv2masters-" + m_partitionId,
+                        m_zkMailboxNode);
+                iv2masters.put(m_partitionId, getInitiatorHSId());
+                m_term = createTerm(m_messenger.getZK(),
+                        m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
+                        m_whoami);
+            } catch (Exception e) {
+                VoltDB.crashLocalVoltDB("Unable to configure SpInitiator.", true, e);
+            }
+        }
     }
 
     @Override
@@ -369,5 +386,25 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
     @Override
     protected InitiatorMailbox createInitiatorMailbox(JoinProducerBase joinProducer) {
         return new InitiatorMailbox(m_partitionId, m_scheduler, m_messenger, m_repairLog, joinProducer);
+    }
+
+    public void assignLeaderOnStartup() {
+        if (!m_startupAsPartitionLeader) {
+            return;
+        }
+        final long maxSeenTxnId = TxnEgo.makeZero(m_partitionId).getTxnId();
+        m_promoted = true;
+        m_term = createTerm(m_messenger.getZK(),
+                m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
+                m_whoami);
+        m_term.start();
+        m_initiatorMailbox.setLeaderState(maxSeenTxnId);
+        try {
+            // Put child watch on /db/iv2appointees/<partition> node
+            m_leaderCache.startPartitionWatch();
+        } catch (Exception e) {
+            VoltDB.crashLocalVoltDB("Unable to configure SpInitiator.", true, e);
+        }
+        ExportManager.instance().becomeLeader(m_partitionId);
     }
 }
