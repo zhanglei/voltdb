@@ -2111,9 +2111,6 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
         spi.setProcName(procedureName);
         spi.setParams(params);
         spi.setClientHandle(m_executeTaskAdpater.registerCallback(cb));
-        if (spi.getSerializedParams() == null) {
-            spi = MiscUtils.roundTripForCL(spi);
-        }
         synchronized (m_executeTaskAdpater) {
             m_dispatcher.createTransaction(m_executeTaskAdpater.connectionId(), spi,
                     proc.getReadonly(), proc.getSinglepartition(), proc.getEverysite(),
@@ -2298,9 +2295,6 @@ public class ClientInterface implements SnapshotDaemon.DaemonInitiator {
             spi.setProcName(procedureName);
             spi.setClientHandle(m_executeTaskAdpater.registerCallback(cb));
             spi.setParams(partitionKey, partitionId, targetHostId);
-            if (spi.getSerializedParams() == null) {
-                spi = MiscUtils.roundTripForCL(spi);
-            }
 
             //Info saved for the node failure handling
             MigratePartitionLeaderInfo spiInfo = new MigratePartitionLeaderInfo(

@@ -137,8 +137,4 @@ public class InitiateTaskMessage extends TransactionInfoBaseMessage {
 
         return sb.toString();
     }
-
-    public ByteBuffer getSerializedParams() {
-        return m_invocation.getSerializedParams();
-    }
 }

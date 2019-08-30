@@ -354,7 +354,7 @@ public class Iv2InitiateTaskMessage extends TransactionInfoBaseMessage {
         return sb.toString();
     }
 
-    public ByteBuffer getSerializedParams() {
+    public ByteBuffer getSerializedParams() throws IOException {
         return m_invocation.getSerializedParams();
     }
 

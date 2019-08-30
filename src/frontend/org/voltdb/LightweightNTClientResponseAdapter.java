@@ -34,9 +34,7 @@ import org.voltcore.utils.DeferredSerialization;
 import org.voltdb.AuthSystem.AuthUser;
 import org.voltdb.ProcedureRunnerNT.NTNestedProcedureCallback;
 import org.voltdb.client.BatchTimeoutOverrideType;
-import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcedureCallback;
-import org.voltdb.utils.MiscUtils;
 
 /**
  * This is a fork of InternalClientResponseAdapter that removes a lot of extra code like
@@ -295,21 +293,6 @@ public class LightweightNTClientResponseAdapter implements Connection, WriteStre
                 DEFAULT_INTERNAL_ADAPTER_NAME, isAdmin, connectionId());
 
         assert(m_dispatcher != null);
-
-        // JHH: I have no idea why we need to do this, but CL crashes if we don't. Sigh.
-        try {
-            task = MiscUtils.roundTripForCL(task);
-        } catch (Exception e) {
-            String msg = String.format("Cannot invoke procedure %s. failed to create task: %s",
-                    procName, e.getMessage());
-            m_logger.rateLimitedLog(SUPPRESS_INTERVAL, Level.ERROR, null, msg);
-            ClientResponseImpl cri = new ClientResponseImpl(ClientResponse.UNEXPECTED_FAILURE, new VoltTable[0], msg);
-            try {
-                cb.clientCallback(cri);
-            } catch (Exception e1) {
-                throw new IllegalStateException(e1);
-            }
-        }
 
         createTransaction(kattrs, cb, task, user);
     }

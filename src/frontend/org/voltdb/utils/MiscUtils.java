@@ -48,7 +48,6 @@ import org.voltcore.utils.CoreUtils;
 import org.voltcore.utils.DeferredSerialization;
 import org.voltdb.PrivateVoltTableFactory;
 import org.voltdb.StartAction;
-import org.voltdb.StoredProcedureInvocation;
 import org.voltdb.TheHashinator;
 import org.voltdb.VoltDB;
 import org.voltdb.VoltTable;
@@ -840,26 +839,6 @@ public class MiscUtils {
                 return Lists.newArrayList();
             }
         });
-    }
-
-    /**
-     * Serialize and then deserialize an invocation so that it has serializedParams set for command logging if the
-     * invocation is sent to a local site.
-     * @return The round-tripped version of the invocation
-     * @throws IOException
-     */
-    public static StoredProcedureInvocation roundTripForCL(StoredProcedureInvocation invocation) throws IOException
-    {
-        if (invocation.getSerializedParams() != null) {
-            return invocation;
-        }
-        ByteBuffer buf = ByteBuffer.allocate(invocation.getSerializedSize());
-        invocation.flattenToBuffer(buf);
-        buf.flip();
-
-        StoredProcedureInvocation rti = new StoredProcedureInvocation();
-        rti.initFromBuffer(buf);
-        return rti;
     }
 
     /**

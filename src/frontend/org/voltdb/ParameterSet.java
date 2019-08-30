@@ -18,6 +18,7 @@
 package org.voltdb;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -91,6 +92,13 @@ public class ParameterSet implements JSONString {
         byte[][][] encodedStringArrays = new byte[params.length][][];
         byte[][] encodedStrings = new byte[params.length][];
 
+        // params must be an Object[] so convert if it is something else
+        if (params.getClass().getComponentType() != Object.class) {
+            Object[] objectParams = new Object[params.length];
+            System.arraycopy(params, 0, objectParams, 0, params.length);
+            params = objectParams;
+        }
+
         int size = 2;
 
         for (int ii = 0; ii < params.length; ii++) {
@@ -118,11 +126,16 @@ public class ParameterSet implements JSONString {
                     continue;
                 }
 
+                if (Array.getLength(obj) > Short.MAX_VALUE) {
+                    throw new IllegalArgumentException(
+                            "Array at index " + ii + " exceeds maximum length of " + Short.MAX_VALUE + " bytes");
+                }
+
                 VoltType type;
                 try {
                     type = VoltType.typeFromClass(cls.getComponentType());
                 } catch (VoltTypeException e) {
-                    obj = getAKosherArray((Object[]) obj);
+                    params[ii] = obj = getAKosherArray((Object[]) obj);
                     cls = obj.getClass();
                     type = VoltType.typeFromClass(cls.getComponentType());
                 }
@@ -562,6 +575,8 @@ public class ParameterSet implements JSONString {
                 retval[i] = paramFromPossibleJSON(valueAtIndex);
             }
             return retval;
+        } else if (value == JSONObject.NULL) {
+            return null;
         } else {
             return value;
         }

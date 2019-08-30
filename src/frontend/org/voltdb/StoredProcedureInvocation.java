@@ -581,11 +581,19 @@ public class StoredProcedureInvocation implements JSONString {
      * to make access thread safe. Can't return a read only view because ByteBuffer.array()
      * is invoked by the command log.
      */
-    public ByteBuffer getSerializedParams() {
-        if (serializedParams != null) {
-            return serializedParams.duplicate();
+    /**
+     * @return Duplicate {@link ByteBuffer} of the serialized parameters
+     */
+    public ByteBuffer getSerializedParams() throws IOException {
+        if (serializedParams == null) {
+            ParameterSet parameterSet = getParams();
+
+            ByteBuffer tmp = ByteBuffer.allocate(parameterSet.getSerializedSize());
+            parameterSet.flattenToBuffer(tmp);
+            tmp.flip();
+            serializedParams = tmp;
         }
-        return null;
+        return serializedParams.duplicate();
     }
 
     public void setSerializedParams(ByteBuffer serializedParams) {

@@ -56,13 +56,13 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Date;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop_voltpatches.util.PureJavaCrc32C;
 import org.json_voltpatches.JSONException;
 import org.voltdb.types.TimestampType;
 import org.voltdb.types.VoltDecimalHelper;
+
+import junit.framework.TestCase;
 
 public class TestParameterSet extends TestCase {
     ParameterSet params;
@@ -341,21 +341,15 @@ public class TestParameterSet extends TestCase {
 
     private boolean arrayLengthTester(Object[] objs)
     {
-        params = ParameterSet.fromArrayNoCopy(objs);
-        ByteBuffer buf = ByteBuffer.allocate(params.getSerializedSize());
-        boolean threw = false;
-        try
-        {
-            params.flattenToBuffer(buf);
+        try {
+            params = ParameterSet.fromArrayNoCopy(objs);
+        } catch (IllegalArgumentException e) {
+            return true;
         }
-        catch (IOException ioe)
-        {
-            threw = true;
-        }
-        return threw;
+        return false;
     }
 
-    public void testArraysTooLong() throws IOException {
+    public void testArraysTooLong() {
         assertTrue("Array longer than Short.MAX_VALUE didn't fail to serialize",
                    arrayLengthTester(new Object[]{new short[Short.MAX_VALUE + 1]}));
         assertTrue("Array longer than Short.MAX_VALUE didn't fail to serialize",

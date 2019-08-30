@@ -30,7 +30,6 @@ import org.voltdb.client.BatchTimeoutOverrideType;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcedureCallback;
 import org.voltdb.iv2.MpInitiator;
-import org.voltdb.utils.MiscUtils;
 
 import com.google_voltpatches.common.collect.ImmutableMap;
 
@@ -138,15 +137,6 @@ public class InternalConnectionHandler {
             Procedure catProc, ProcedureCallback cb, boolean ntPriority, Predicate<Integer> backPressurePredicate) {
         assert task.getProcName().equals(catProc.getTypeName()) || catProc.getSystemproc();
 
-        try {
-            task = MiscUtils.roundTripForCL(task);
-        } catch (Exception e) {
-            String fmt = "Cannot invoke procedure %s. failed to create task.";
-            m_logger.rateLimitedLog(SUPPRESS_INTERVAL, Level.ERROR, null, fmt, task.getProcName());
-            m_failedCount.incrementAndGet();
-            return false;
-        }
-
         int[] partitions = null;
         try {
             partitions = InvocationDispatcher.getPartitionsForProcedure(catProc, task);
@@ -193,14 +183,6 @@ public class InternalConnectionHandler {
 
         task.setProcName(proc);
         task.setParams(fieldList);
-        try {
-            task = MiscUtils.roundTripForCL(task);
-        } catch (Exception e) {
-            String fmt = "Cannot invoke procedure %s from streaming interface %s. failed to create task.";
-            m_logger.rateLimitedLog(SUPPRESS_INTERVAL, Level.ERROR, null, fmt, proc, caller);
-            m_failedCount.incrementAndGet();
-            return false;
-        }
         int[] partitions = null;
         try {
             partitions = InvocationDispatcher.getPartitionsForProcedure(catProc, task);

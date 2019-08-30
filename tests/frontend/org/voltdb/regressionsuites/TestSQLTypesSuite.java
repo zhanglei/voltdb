@@ -1307,8 +1307,7 @@ public class TestSQLTypesSuite extends RegressionSuite {
             ProcCallException {
         try {
             client.callProcedure("ParamSetArrays", params);
-        } catch (RuntimeException e) {
-            assertTrue(e.getCause() instanceof IOException);
+        } catch (IllegalArgumentException e) {
         }
     }
 

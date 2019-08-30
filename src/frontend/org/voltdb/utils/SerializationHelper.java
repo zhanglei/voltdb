@@ -18,6 +18,7 @@
 package org.voltdb.utils;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
@@ -280,139 +281,109 @@ public class SerializationHelper {
     }
 
     public static void writeArray(short[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putShort(values[i]);
+        writeArrayLength(values, buf);
+        for (short value : values) {
+            buf.putShort(value);
         }
     }
 
     public static void writeArray(int[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putInt(values[i]);
+        writeArrayLength(values, buf);
+        for (int value : values) {
+            buf.putInt(value);
         }
     }
 
     public static void writeArray(long[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putLong(values[i]);
+        writeArrayLength(values, buf);
+        for (long value : values) {
+            buf.putLong(value);
         }
     }
 
     public static void writeArray(double[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            buf.putDouble(values[i]);
+        writeArrayLength(values, buf);
+        for (double value : values) {
+            buf.putDouble(value);
         }
     }
 
     public static void writeArray(TimestampType[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) buf.putLong(Long.MIN_VALUE);
-            else buf.putLong(values[i].getTime());
+        writeArrayLength(values, buf);
+        for (TimestampType value : values) {
+            if (value == null) {
+                buf.putLong(Long.MIN_VALUE);
+            } else {
+                buf.putLong(value.getTime());
+            }
         }
     }
 
     public static void writeArray(BigDecimal[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        writeArrayLength(values, buf);
+        for (BigDecimal value : values) {
+            if (value == null) {
                 VoltDecimalHelper.serializeNull(buf);
             }
             else {
-                VoltDecimalHelper.serializeBigDecimal(values[i], buf);
+                VoltDecimalHelper.serializeBigDecimal(value, buf);
             }
         }
     }
 
     public static void writeArray(VoltTable[] values, ByteBuffer buf) throws IOException {
-        if (values.length > Short.MAX_VALUE) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + Short.MAX_VALUE + " bytes");
-        }
-        buf.putShort((short)values.length);
+        writeArrayLength(values, buf);
         for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null)
+            if (values[i] == null) {
                 throw new IOException("Array being fastserialized can't contain null values (position " + i + ")");
+            }
             values[i].flattenToBuffer(buf);
         }
     }
 
     public static void writeArray(byte[][] values, ByteBuffer buf) throws IOException {
-        if (values.length > VoltType.MAX_VALUE_LENGTH) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + VoltType.MAX_VALUE_LENGTH + " bytes");
-        }
-        buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        writeArrayLength(values, buf);
+        for (byte[] value : values) {
+            if (value == null) {
                 buf.putInt(VoltType.NULL_STRING_LENGTH);
             }
             else {
-                writeArray(values[i], buf);
+                writeArray(value, buf);
             }
         }
     }
 
     public static void writeArray(GeographyPointValue[] values, ByteBuffer buf) throws IOException {
-        if (values.length > VoltType.MAX_VALUE_LENGTH) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + VoltType.MAX_VALUE_LENGTH + " bytes");
-        }
-        buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        writeArrayLength(values, buf);
+        for (GeographyPointValue value : values) {
+            if (value == null) {
                 GeographyPointValue.serializeNull(buf);
             }
             else {
-                values[i].flattenToBuffer(buf);
+                value.flattenToBuffer(buf);
             }
         }
     }
 
     public static void writeArray(GeographyValue[] values, ByteBuffer buf) throws IOException {
-        if (values.length > VoltType.MAX_VALUE_LENGTH) {
-            throw new IOException("Array exceeds maximum length of "
-                                  + VoltType.MAX_VALUE_LENGTH + " bytes");
-        }
-        buf.putShort((short) values.length);
-        for (int i = 0; i < values.length; ++i) {
-            if (values[i] == null) {
+        writeArrayLength(values, buf);
+        for (GeographyValue value : values) {
+            if (value == null) {
                 buf.putInt(VoltType.NULL_STRING_LENGTH);
             }
             else {
-                buf.putInt(values[i].getLengthInBytes());
-                values[i].flattenToBuffer(buf);
+                buf.putInt(value.getLengthInBytes());
+                value.flattenToBuffer(buf);
             }
         }
+    }
 
-
+    private static void writeArrayLength(Object array, ByteBuffer buf) throws IOException {
+        int length = Array.getLength(array);
+        if (length > Short.MAX_VALUE) {
+            throw new IOException("Array exceeds maximum length of " + Short.MAX_VALUE + " bytes");
+        }
+        buf.putShort((short) length);
     }
 
 }
