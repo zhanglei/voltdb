@@ -125,25 +125,29 @@ public class TestSQLTypesSuite extends RegressionSuite {
         case VARBINARY:
             boolean lhsnull = (lhs == null || lhs == VoltType.NULL_STRING_OR_VARBINARY);
             boolean rhsnull = (rhs == null || rhs == VoltType.NULL_STRING_OR_VARBINARY);
-            if (lhsnull && rhsnull)
+            if (lhsnull && rhsnull) {
                 return true;
-            if (lhsnull != rhsnull)
+            }
+            if (lhsnull != rhsnull) {
                 return false;
+            }
 
             // assume neither is null from here
 
             String lhs2 = null;
             String rhs2 = null;
 
-            if (lhs instanceof byte[])
+            if (lhs instanceof byte[]) {
                 lhs2 = Encoder.hexEncode((byte[]) lhs);
-            else
+            } else {
                 lhs2 = (String) lhs;
+            }
 
-            if (rhs instanceof byte[])
+            if (rhs instanceof byte[]) {
                 rhs2 = Encoder.hexEncode((byte[]) rhs);
-            else
+            } else {
                 rhs2 = (String) rhs;
+            }
 
             return lhs2.equalsIgnoreCase(rhs2);
         case TIMESTAMP:
@@ -615,8 +619,9 @@ public class TestSQLTypesSuite extends RegressionSuite {
                     } else {
                         params[k + 2] = m_midValues[k];
                     }
-                    if (m_types[k] == VoltType.STRING)
+                    if (m_types[k] == VoltType.STRING) {
                         curr_string++;
+                    }
                 }
                 try {
                     caught = false;
@@ -659,8 +664,9 @@ public class TestSQLTypesSuite extends RegressionSuite {
                 } else {
                     params[k + 2] = m_midValues[k];
                 }
-                if (m_types[k] == VoltType.STRING)
+                if (m_types[k] == VoltType.STRING) {
                     curr_string++;
+                }
             }
             try {
                 caught = false;
@@ -702,8 +708,9 @@ public class TestSQLTypesSuite extends RegressionSuite {
                 } else {
                     params[k + 2] = m_midValues[k];
                 }
-                if (m_types[k] == VoltType.STRING)
+                if (m_types[k] == VoltType.STRING) {
                     curr_string++;
+                }
             }
             try {
                 caught = false;
@@ -750,9 +757,9 @@ public class TestSQLTypesSuite extends RegressionSuite {
             try {
                 client.callProcedure("Insert", params);
             } catch (final ProcCallException e) {
-                if (e.getMessage().contains("CONSTRAINT VIOLATION"))
+                if (e.getMessage().contains("CONSTRAINT VIOLATION")) {
                     caught = true;
-                else {
+                } else {
                     e.printStackTrace();
                     fail();
                 }
@@ -1192,8 +1199,9 @@ public class TestSQLTypesSuite extends RegressionSuite {
 
         // select A + 11 from no_nulls where A = mid_value
         for (int i = 0; i < COLS; i++) {
-            if (!m_supportsMath[i])
+            if (!m_supportsMath[i]) {
                 continue;
+            }
 
             // TODO see trac 236.
             // Would be better here to select where the column under test
