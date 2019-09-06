@@ -64,6 +64,9 @@ public class TraceAgent extends OpsAgent {
     {
         // Default with no args is OVERVIEW
         String subselector = "status";
+        Object[] paramsArray = params.toArray();
+        int numOfParams = paramsArray.length;
+
         if (params.toArray().length < 1) {
             return "Incorrect number of arguments to @Trace (expects as least 1, received " +
                    numOfParams + ")";

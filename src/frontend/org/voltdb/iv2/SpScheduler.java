@@ -644,16 +644,19 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
         final VoltTrace.TraceEventBatch traceLog = VoltTrace.log(VoltTrace.Category.SPI);
         if (traceLog != null) {
             final String threadName = Thread.currentThread().getName(); // Thread name has to be materialized here
+            long ts = System.currentTimeMillis();
             traceLog.add(() -> VoltTrace.meta("process_name", "name", CoreUtils.getHostnameOrAddress()))
                     .add(() -> VoltTrace.meta("thread_name", "name", threadName))
                     .add(() -> VoltTrace.meta("thread_sort_index", "sort_index", Integer.toString(10000)))
-                    .add(() -> VoltTrace.beginAsync("initsp",
+                    .add(() -> VoltTrace.beginAsync("localSp",
                                                     MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), m_mailbox.getHSId(), msg.getSpHandle(), msg.getClientInterfaceHandle()),
-                                                    "ciHandle", msg.getClientInterfaceHandle(),
+//                                                    "ciHandle", msg.getClientInterfaceHandle(),
                                                     "txnId", TxnEgo.txnIdToString(msg.getTxnId()),
-                                                    "partition", m_partitionId,
                                                     "read", msg.isReadOnly(),
+                                                    "isLeader", m_isLeader,
                                                     "name", msg.getStoredProcedureName(),
+                                                    "uniqueId", msg.getUniqueId(),
+                                                    "localTime", ts,
                                                     "hsId", CoreUtils.hsIdToString(m_mailbox.getHSId())));
         }
 
@@ -804,7 +807,7 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
         // Also, don't update the truncation handle, since it won't have meaning for anyone.
         if (message.isReadOnly()) {
             if (traceLog != null) {
-                traceLog.add(() -> VoltTrace.endAsync("initsp", MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())));
+                traceLog.add(() -> VoltTrace.endAsync("localSp", MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())));
             }
 
             // InvocationDispatcher routes SAFE reads to SPI only
@@ -813,17 +816,16 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
             return;
         }
 
+        if (traceLog != null && message.m_sourceHSId == m_mailbox.getHSId()) {
+            traceLog.add(() -> VoltTrace.endAsync("localSp", MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())/*,
+                                                      "hash", message.getClientResponseData().getHashes()[0]*/));
+        }
         if (counter != null) {
-            String traceName = "initsp";
-            if (message.m_sourceHSId != m_mailbox.getHSId()) {
-                traceName = "replicatesp";
-            }
-            String finalTraceName = traceName;
             if (traceLog != null) {
-                traceLog.add(() -> VoltTrace.endAsync(finalTraceName, MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle()),
-                                                      "hash", message.getClientResponseData().getHashes()[0]));
+                traceLog.add(() -> VoltTrace.endAsync("replicateSP",
+                        MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())/*,
+                                                  "hash", message.getClientResponseData().getHashes()[0]*/));
             }
-
             int result = counter.offer(message);
             if (result == DuplicateCounter.DONE) {
                 m_duplicateCounters.remove(dcKey);
@@ -858,7 +860,7 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
         }
         else {
             if (traceLog != null) {
-                traceLog.add(() -> VoltTrace.endAsync("initsp", MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())));
+                traceLog.add(() -> VoltTrace.endAsync("localSp", MiscUtils.hsIdPairTxnIdToString(m_mailbox.getHSId(), message.m_sourceHSId, message.getSpHandle(), message.getClientInterfaceHandle())));
             }
             // the initiatorHSId is the ClientInterface mailbox.
             // this will be on SPI without k-safety or replica only with k-safety
