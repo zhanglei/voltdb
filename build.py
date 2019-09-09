@@ -41,7 +41,7 @@ CTX = BuildContext(sys.argv)
 # this does not include header/lib search paths or specific flags for
 #  specific targets
 CTX.CPPFLAGS += """-Wall -Wextra -Werror -Woverloaded-virtual
-            -Wpointer-arith -Wcast-qual -Wwrite-strings
+            -Wpointer-arith -Wcast-qual -Wwrite-strings -Wno-ignored-qualifiers -Wno-unused-local-typedefs -Wno-implicit-fallthrough
             -Winit-self -Wno-sign-compare -Wno-unused-parameter
             -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNOCLOCK
             -fno-omit-frame-pointer
