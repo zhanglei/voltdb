@@ -317,8 +317,6 @@ public class ExportManager implements ExportManagerInterface
     {
         final CatalogMap<Connector> connectors = CatalogUtil.getConnectors(catalogContext);
 
-        exportLog.warn("UpdateCatalog: requiresNewGeneration: " + requiresNewExportGeneration
-                + ", for " + connectors.size() + " connectors.");
         if (exportLog.isDebugEnabled()) {
             exportLog.debug("UpdateCatalog: requiresNewGeneration: " + requiresNewExportGeneration
                     + ", for " + connectors.size() + " connectors.");
@@ -365,7 +363,6 @@ public class ExportManager implements ExportManagerInterface
          * This occurs when export is turned on/off at runtime.
          */
         if (m_processor.get() == null) {
-            exportLog.warn("First stream created processor will be initialized: " + m_loaderClass);
             if (exportLog.isDebugEnabled()) {
                 exportLog.debug("First stream created processor will be initialized: " + m_loaderClass);
             }
@@ -374,7 +371,6 @@ public class ExportManager implements ExportManagerInterface
                 m_processor.set(newProcessor);
                 generation.initializeGenerationFromCatalog(catalogContext,
                         connectors, newProcessor, m_hostId, localPartitionsToSites, true);
-                exportLog.warn("Creating connector " + m_loaderClass);
                 if (exportLog.isDebugEnabled()) {
                     exportLog.debug("Creating connector " + m_loaderClass);
                 }
