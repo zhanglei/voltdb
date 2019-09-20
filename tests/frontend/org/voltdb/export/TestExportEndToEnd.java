@@ -26,6 +26,7 @@ package org.voltdb.export;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,7 +53,7 @@ public class TestExportEndToEnd extends ExportLocalClusterBase {
     private LocalCluster m_cluster;
 
     private static int KFACTOR = 1;
-    private static int HOST_COUNT = 3;
+    private static int HOST_COUNT = 2;
     private static int SPH = 2;
     private static final String T1_SCHEMA =
             "CREATE STREAM t_1 "
@@ -122,7 +123,6 @@ public class TestExportEndToEnd extends ExportLocalClusterBase {
         m_cluster.shutDown();
     }
 
-    @Test
     public void testExportRejoinThenDropStream_ENG_15740() throws Exception
     {
         Client client = getClient(m_cluster);
@@ -149,7 +149,6 @@ public class TestExportEndToEnd extends ExportLocalClusterBase {
         assertEquals(3, m_cluster.getLiveNodeCount());
     }
 
-    @Test
     public void testExportRejoinOldGenerationStream_ENG_16239() throws Exception
     {
         Client client = getClient(m_cluster);
@@ -201,5 +200,58 @@ public class TestExportEndToEnd extends ExportLocalClusterBase {
                 assertEquals("Stream (" + e.getKey() + ") has more than one master", 1, (int)e.getValue());
             }
         }
+    }
+
+    @Test
+    public void test1() throws Exception {
+        String d1 = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
+                "<deployment>\n" +
+                "    <cluster hostcount=\"2\" sitesperhost=\"2\" kfactor=\"1\" id=\"0\" schema=\"ddl\"/>\n" +
+                "    <paths>\n" +
+                "        <voltdbroot path=\"/tmp/chaozhou\"/>\n" +
+                "    </paths>\n" +
+                "    <partition-detection enabled=\"true\"/>\n" +
+                "    <heartbeat timeout=\"30\"/>\n" +
+                "    <ssl enabled=\"false\" external=\"false\" dr=\"false\"/>\n" +
+                "    <httpd port=\"-1\" enabled=\"false\">\n" +
+                "        <jsonapi enabled=\"true\"/>\n" +
+                "    </httpd>\n" +
+                "    <export>\n" +
+                "        <configuration target=\"export_target_a\" enabled=\"false\" type=\"custom\" exportconnectorclass=\"org.voltdb.exportclient.SocketExporter\">\n" +
+                "            <property name=\"socket.dest\">localhost:5001</property>\n" +
+                "            <property name=\"replicated\">false</property>\n" +
+                "            <property name=\"timezone\">GMT</property>\n" +
+                "            <property name=\"skipinternals\">false</property>\n" +
+                "        </configuration>\n" +
+                "        <configuration target=\"export_target_b\" enabled=\"false\" type=\"custom\" exportconnectorclass=\"org.voltdb.exportclient.SocketExporter\">\n" +
+                "            <property name=\"socket.dest\">localhost:5002</property>\n" +
+                "            <property name=\"replicated\">false</property>\n" +
+                "            <property name=\"timezone\">GMT</property>\n" +
+                "            <property name=\"skipinternals\">false</property>\n" +
+                "        </configuration>\n" +
+                "    </export>\n" +
+                "    <commandlog enabled=\"false\"/>\n" +
+                "    <systemsettings>\n" +
+                "        <temptables maxsize=\"100\"/>\n" +
+                "    </systemsettings>\n" +
+                "    <security enabled=\"false\" provider=\"hash\"/>\n" +
+                "    <dr role=\"master\"/>\n" +
+                "    <import/>\n" +
+                "</deployment>\n";
+
+        Client client = getClient(m_cluster);
+        // Generate PBD files
+        Object[] data = new Object[3];
+        Arrays.fill(data, 1);
+        insertToStream("t_1", 0, 100, client, data);
+        insertToStream("t_2", 0, 100, client, data);
+        client.drain();
+        // kill one node
+        m_cluster.killSingleHost(1);
+        Thread.sleep(1_000);
+        // change from default thread pool to named thread pool
+        ClientResponse response = client.callProcedure("@UpdateApplicationCatalog", null, d1);
+        assertEquals(ClientResponse.SUCCESS, response.getStatus());
+        client.drain();
     }
 }
