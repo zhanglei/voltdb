@@ -333,6 +333,7 @@ public class LoopbackExportClient extends ExportClientBase {
                         LOG.error("Loopback Invocation failed: %s", cr.getStatusString());
                     }
                 } finally {
+                    LOG.warn("before m_done.release(); " + m_done.availablePermits());
                     m_done.release();
                 }
             }
