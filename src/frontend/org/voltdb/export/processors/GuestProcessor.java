@@ -557,7 +557,8 @@ public class GuestProcessor implements ExportDataProcessor {
                     }
                     EXPORTLOG.warn("before edb...");
                     synchronized(p.getSecond()) {
-                        EXPORTLOG.warn("into edb...");
+                        EXPORTLOG.warn("into edb... " + edb);
+                        EXPORTLOG.warn("edb name: " + edb.getClass().getSimpleName());
                         edb.sourceNoLongerAdvertised(p.getSecond());
                         EXPORTLOG.warn("after edb...");
                     }
