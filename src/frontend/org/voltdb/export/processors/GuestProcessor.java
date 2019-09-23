@@ -536,7 +536,9 @@ public class GuestProcessor implements ExportDataProcessor {
 
     @Override
     public void shutdown() {
+        EXPORTLOG.warn("before gp shutdown...");
         synchronized (this) {
+            EXPORTLOG.warn("into gp shutdown..., m_decoders size: " + m_decoders.size());
             m_shutdown = true;
             for (final Pair<ExportDecoderBase, AdvertisedDataSource> p : m_decoders) {
                 try {
@@ -558,15 +560,18 @@ public class GuestProcessor implements ExportDataProcessor {
                     }
                 } catch (RejectedExecutionException e) {
                     //It's okay, means it was already shut down
+                    EXPORTLOG.warn(e);
                 }
             }
         }
         m_decoders.clear();
+        EXPORTLOG.warn("client shutdown...");
         for (ExportClientBase client : m_clientsByTarget.values()) {
             client.shutdown();
         }
         m_clientsByTarget.clear();
         m_targetsByTableName.clear();
         m_generation = null;
+        EXPORTLOG.warn("complete gp shutdown...");
     }
 }
