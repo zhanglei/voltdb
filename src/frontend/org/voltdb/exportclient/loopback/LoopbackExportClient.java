@@ -278,12 +278,15 @@ public class LoopbackExportClient extends ExportClientBase {
                 } catch (IOException ignoreIt) {}
             }
             if (m_es != null) {
+                LOG.warn("before loopback client shutdown... info: " + m_es);
                 m_es.shutdown();
+                LOG.warn("await loopback client shutdown...");
                 try {
                     m_es.awaitTermination(365, TimeUnit.DAYS);
                 } catch (InterruptedException e) {
                     LOG.error("Interrupted while awaiting executor shutdown", e);
                 }
+                LOG.warn("after loopback client shutdown...");
             }
             m_isShutDown = true;
         }
