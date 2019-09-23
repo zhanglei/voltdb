@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
@@ -47,6 +48,8 @@ import org.voltdb.client.BatchTimeoutOverrideType;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcedureCallback;
 import org.voltdb.export.AdvertisedDataSource;
+import org.voltdb.export.ExportManagerInterface;
+import org.voltdb.export.ExportManagerInterface.ExportMode;
 import org.voltdb.exportclient.ExportClientBase;
 import org.voltdb.exportclient.ExportClientLogger;
 import org.voltdb.exportclient.ExportDecoderBase;
@@ -150,6 +153,7 @@ public class LoopbackExportClient extends ExportClientBase {
         private BlockContext m_ctx;
         private boolean m_restarted = false;
         private boolean m_wrote = false;
+        private volatile boolean m_isShutDown;
 
         private final Supplier<CSVWriter> m_rejs;
 
@@ -186,11 +190,19 @@ public class LoopbackExportClient extends ExportClientBase {
                     .skipInternalFields(m_skipInternals)
             ;
             m_csvWriterDecoder = builder.build();
-            m_es = CoreUtils.getListeningSingleThreadExecutor(
-                    "Loopback Export decoder for partition " + source.partitionId, CoreUtils.MEDIUM_STACK_SIZE);
+            if (ExportManagerInterface.instance().getExportMode() == ExportMode.BASIC) {
+                m_es = CoreUtils.getListeningSingleThreadExecutor(
+                        "Loopback Export decoder for partition " + source.partitionId, CoreUtils.MEDIUM_STACK_SIZE);
+            } else {
+                m_es = null;
+            }
             m_user = getVoltDB().getCatalogContext().authSystem.getImporterUser();
             m_invoker = getVoltDB().getClientInterface().getInternalConnectionHandler();
-            m_shouldContinue = (x) -> !m_es.isShutdown();
+            m_shouldContinue = (x) -> !isShutDown();
+        }
+
+        public boolean isShutDown() {
+            return m_isShutDown;
         }
 
         @Override
@@ -266,14 +278,23 @@ public class LoopbackExportClient extends ExportClientBase {
                     m_rejs.get().close();
                 } catch (IOException ignoreIt) {}
             }
-            LOG.warn("before loopback1 client shutdown... info: " + m_es);
-            m_es.shutdown();
-            try {
-                m_es.awaitTermination(365, TimeUnit.DAYS);
-            } catch (InterruptedException e) {
-                LOG.error("Interrupted while awaiting executor shutdown", e);
+            if (m_es != null) {
+                LOG.warn("before loopback client shutdown... info: " + m_es);
+                m_es.shutdown();
+                LOG.warn("await loopback client shutdown...");
+                ThreadPoolExecutor tpe = (ThreadPoolExecutor) m_es;
+                LOG.warn("info: " + tpe.toString());
+                LOG.warn("queue: " + tpe.getQueue());
+                LOG.warn("q size: " + tpe.getQueue().size());
+                LOG.warn("task count: " + tpe.getTaskCount());
+                try {
+                    m_es.awaitTermination(365, TimeUnit.DAYS);
+                } catch (InterruptedException e) {
+                    LOG.error("Interrupted while awaiting executor shutdown", e);
+                }
+                LOG.warn("after loopback client shutdown...");
             }
-            LOG.warn("after loopback client shutdown...");
+            m_isShutDown = true;
         }
 
         @Override
