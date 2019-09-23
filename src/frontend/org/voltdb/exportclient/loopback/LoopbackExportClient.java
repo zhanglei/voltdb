@@ -207,14 +207,19 @@ public class LoopbackExportClient extends ExportClientBase {
 
         @Override
         public void onBlockCompletion(ExportRow row) throws RestartBlockException {
+            LOG.warn("m_ctx.invokes: " + m_ctx.invokes);
             if (m_ctx.invokes > 0) {
                 try {
+                    LOG.warn("before m_ctx.m_done.acquire(m_ctx.invokes)! " + m_ctx.m_done.availablePermits());
                     m_ctx.m_done.acquire(m_ctx.invokes);
+                    LOG.warn("after m_ctx.m_done.acquire(m_ctx.invokes)!");
                 } catch (InterruptedException e) {
                     throw new LoopbackExportException("failed to wait for block callback", e);
                 }
             }
             m_restarted = !m_ctx.m_rq.isEmpty();
+
+            LOG.warn("m_ctx.m_restarted: " + m_restarted);
 
             if (m_restarted) {
                 m_failed = new BitSet(m_ctx.recs);
@@ -233,6 +238,9 @@ public class LoopbackExportClient extends ExportClientBase {
                 m_failed = new BitSet(m_ctx.recs);
                 m_resubmit = new BitSet(m_ctx.recs);
             }
+
+            LOG.warn("m_failed: " + m_failed);
+            LOG.warn("m_resubmit: " + m_resubmit);
         }
 
         @Override
@@ -280,7 +288,7 @@ public class LoopbackExportClient extends ExportClientBase {
             }
             if (m_es != null) {
                 m_isShutDown = true;
-                LOG.warn("before loopback client shutdown... info: ");
+                LOG.warn("before loopback client shutdown... info: " + m_es.toString());
                 m_es.shutdown();
                 LOG.warn("await loopback client shutdown...");
                 try {

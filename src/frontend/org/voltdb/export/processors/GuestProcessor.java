@@ -425,9 +425,7 @@ public class GuestProcessor implements ExportDataProcessor {
                                             EXPORTLOG.warn("after onBlockStart!");
                                             firstRowOfBlock = false;
                                         }
-                                        EXPORTLOG.warn("before processRow2!");
                                         edb.processRow(row);
-                                        EXPORTLOG.warn("after processRow2!");
                                         if (committedSpHandle == 0) {
                                             committedSpHandle = extractCommittedSpHandle(row,
                                                     cont.getCommittedSeqNo());
