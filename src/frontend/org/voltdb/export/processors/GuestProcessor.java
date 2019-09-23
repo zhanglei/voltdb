@@ -555,15 +555,19 @@ public class GuestProcessor implements ExportDataProcessor {
                         EXPORTLOG.warn("AdvertisedDataSource was unexpectedly null");
                         continue;
                     }
+                    EXPORTLOG.warn("before edb...");
                     synchronized(p.getSecond()) {
+                        EXPORTLOG.warn("into edb...");
                         edb.sourceNoLongerAdvertised(p.getSecond());
+                        EXPORTLOG.warn("after edb...");
                     }
                 } catch (RejectedExecutionException e) {
                     //It's okay, means it was already shut down
-                    EXPORTLOG.warn(e);
+                    EXPORTLOG.warn("RejectedExecutionException! \n" + e.getLocalizedMessage());
                 }
             }
         }
+        EXPORTLOG.warn("clear m_decoders ...");
         m_decoders.clear();
         EXPORTLOG.warn("client shutdown...");
         for (ExportClientBase client : m_clientsByTarget.values()) {
