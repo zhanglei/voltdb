@@ -279,14 +279,10 @@ public class LoopbackExportClient extends ExportClientBase {
                 } catch (IOException ignoreIt) {}
             }
             if (m_es != null) {
-                LOG.warn("before loopback client shutdown... info: " + m_es);
+                m_isShutDown = true;
+                LOG.warn("before loopback client shutdown... info: ");
                 m_es.shutdown();
                 LOG.warn("await loopback client shutdown...");
-                ThreadPoolExecutor tpe = (ThreadPoolExecutor) m_es;
-                LOG.warn("info: " + tpe.toString());
-                LOG.warn("queue: " + tpe.getQueue());
-                LOG.warn("q size: " + tpe.getQueue().size());
-                LOG.warn("task count: " + tpe.getTaskCount());
                 try {
                     m_es.awaitTermination(365, TimeUnit.DAYS);
                 } catch (InterruptedException e) {
@@ -294,7 +290,6 @@ public class LoopbackExportClient extends ExportClientBase {
                 }
                 LOG.warn("after loopback client shutdown...");
             }
-            m_isShutDown = true;
         }
 
         @Override
