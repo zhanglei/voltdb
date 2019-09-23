@@ -398,9 +398,7 @@ public class GuestProcessor implements ExportDataProcessor {
                                             edb.onBlockStart(row);
                                             firstRowOfBlock = false;
                                         }
-                                        EXPORTLOG.warn("before processRow1!");
                                         edb.processRow(length, rowdata);
-                                        EXPORTLOG.warn("after processRow1!");
                                     } else {
                                         //New style connector.
                                         try {
@@ -422,7 +420,9 @@ public class GuestProcessor implements ExportDataProcessor {
                                             break;
                                         }
                                         if (firstRowOfBlock) {
+                                            EXPORTLOG.warn("before onBlockStart!");
                                             edb.onBlockStart(row);
+                                            EXPORTLOG.warn("after onBlockStart!");
                                             firstRowOfBlock = false;
                                         }
                                         EXPORTLOG.warn("before processRow2!");
@@ -438,7 +438,9 @@ public class GuestProcessor implements ExportDataProcessor {
                                     edb.onBlockCompletion();
                                 }
                                 if (row != null) {
+                                    EXPORTLOG.warn("before onBlockCompletion!");
                                     edb.onBlockCompletion(row);
+                                    EXPORTLOG.warn("after onBlockCompletion!");
                                 }
                                 // Make sure to discard after onBlockCompletion so that if completion
                                 // wants to retry we don't lose block.
@@ -454,6 +456,7 @@ public class GuestProcessor implements ExportDataProcessor {
                                     cont.discard();
                                     cont = null;
                                 }
+                                EXPORTLOG.warn("finish processRow round!");
                                 break;
                             } catch (RestartBlockException e) {
                                 if (m_shutdown) {
