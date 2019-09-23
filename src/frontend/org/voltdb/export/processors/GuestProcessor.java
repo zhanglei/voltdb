@@ -397,7 +397,9 @@ public class GuestProcessor implements ExportDataProcessor {
                                             edb.onBlockStart(row);
                                             firstRowOfBlock = false;
                                         }
+                                        EXPORTLOG.warn("before processRow1!");
                                         edb.processRow(length, rowdata);
+                                        EXPORTLOG.warn("after processRow1!");
                                     } else {
                                         //New style connector.
                                         try {
@@ -422,7 +424,9 @@ public class GuestProcessor implements ExportDataProcessor {
                                             edb.onBlockStart(row);
                                             firstRowOfBlock = false;
                                         }
+                                        EXPORTLOG.warn("before processRow2!");
                                         edb.processRow(row);
+                                        EXPORTLOG.warn("after processRow2!");
                                         if (committedSpHandle == 0) {
                                             committedSpHandle = extractCommittedSpHandle(row,
                                                     cont.getCommittedSeqNo());
