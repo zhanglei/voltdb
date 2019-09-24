@@ -211,8 +211,8 @@ public class LoopbackExportClient extends ExportClientBase {
             if (m_ctx.invokes > 0) {
                 try {
                     LOG.warn("before m_ctx.m_done.acquire(m_ctx.invokes)! " + m_ctx.m_done.availablePermits());
-//                    m_ctx.m_done.tryAcquire(m_ctx.invokes, 5,TimeUnit.SECONDS);
-                    m_ctx.m_done.acquire(m_ctx.invokes);
+                    m_ctx.m_done.tryAcquire(m_ctx.invokes, 5,TimeUnit.SECONDS);
+//                    m_ctx.m_done.acquire(m_ctx.invokes);
                     LOG.warn("after m_ctx.m_done.acquire(m_ctx.invokes)!");
                 } catch (InterruptedException e) {
                     throw new LoopbackExportException("failed to wait for block callback", e);
@@ -267,7 +267,7 @@ public class LoopbackExportClient extends ExportClientBase {
             }
             int firstFieldOffset = m_skipInternals ? INTERNAL_FIELD_COUNT : 0;
             LoopbackCallback cb = m_ctx.createCallback(bix);
-            LOG.warn("processRow and call loopback insertion! " + m_ctx.invokes);
+//            LOG.warn("processRow and call loopback insertion! " + m_ctx.invokes);
             if (m_invoker.callProcedure(m_user, false,
                     BatchTimeoutOverrideType.NO_TIMEOUT,
                     cb, false, m_shouldContinue, m_procedure,
@@ -294,10 +294,10 @@ public class LoopbackExportClient extends ExportClientBase {
                 m_es.shutdown();
                 LOG.warn("await loopback client shutdown...");
                 try {
-//                    m_es.awaitTermination(365, TimeUnit.DAYS);
-                    if (!m_es.awaitTermination(10, TimeUnit.SECONDS)) {
-                        m_es.shutdownNow();
-                    }
+                    m_es.awaitTermination(365, TimeUnit.DAYS);
+//                    if (!m_es.awaitTermination(10, TimeUnit.SECONDS)) {
+//                        m_es.shutdownNow();
+//                    }
 
                 } catch (InterruptedException e) {
                     LOG.error("Interrupted while awaiting executor shutdown", e);
@@ -339,7 +339,7 @@ public class LoopbackExportClient extends ExportClientBase {
                         LOG.error("Loopback Invocation failed: %s", cr.getStatusString());
                     }
                 } finally {
-                    LOG.warn("before m_done.release(); " + m_done.availablePermits());
+//                    LOG.warn("before m_done.release(); " + m_done.availablePermits());
                     m_done.release();
                 }
             }
