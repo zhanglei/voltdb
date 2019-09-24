@@ -211,7 +211,9 @@ public class LoopbackExportClient extends ExportClientBase {
             if (m_ctx.invokes > 0) {
                 try {
                     LOG.warn("before m_ctx.m_done.acquire(m_ctx.invokes)! " + m_ctx.m_done.availablePermits());
-                    m_ctx.m_done.tryAcquire(m_ctx.invokes, 5,TimeUnit.SECONDS);
+                    if(!m_ctx.m_done.tryAcquire(m_ctx.invokes, 5,TimeUnit.SECONDS)){
+                        throw new LoopbackExportException("Time out when waiting for block callback.");
+                    }
 //                    m_ctx.m_done.acquire(m_ctx.invokes);
                     LOG.warn("after m_ctx.m_done.acquire(m_ctx.invokes)!");
                 } catch (InterruptedException e) {
