@@ -266,6 +266,7 @@ public class LoopbackExportClient extends ExportClientBase {
             }
             int firstFieldOffset = m_skipInternals ? INTERNAL_FIELD_COUNT : 0;
             LoopbackCallback cb = m_ctx.createCallback(bix);
+            LOG.warn("processRow and call loopback insertion! " + m_ctx.invokes);
             if (m_invoker.callProcedure(m_user, false,
                     BatchTimeoutOverrideType.NO_TIMEOUT,
                     cb, false, m_shouldContinue, m_procedure,
