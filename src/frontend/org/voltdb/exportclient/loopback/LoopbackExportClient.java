@@ -211,6 +211,7 @@ public class LoopbackExportClient extends ExportClientBase {
             if (m_ctx.invokes > 0) {
                 try {
                     LOG.warn("before m_ctx.m_done.acquire(m_ctx.invokes)! " + m_ctx.m_done.availablePermits());
+//                    m_ctx.m_done.tryAcquire(m_ctx.invokes, 5,TimeUnit.SECONDS);
                     m_ctx.m_done.acquire(m_ctx.invokes);
                     LOG.warn("after m_ctx.m_done.acquire(m_ctx.invokes)!");
                 } catch (InterruptedException e) {
@@ -293,7 +294,11 @@ public class LoopbackExportClient extends ExportClientBase {
                 m_es.shutdown();
                 LOG.warn("await loopback client shutdown...");
                 try {
-                    m_es.awaitTermination(365, TimeUnit.DAYS);
+//                    m_es.awaitTermination(365, TimeUnit.DAYS);
+                    if (!m_es.awaitTermination(10, TimeUnit.SECONDS)) {
+                        m_es.shutdownNow();
+                    }
+
                 } catch (InterruptedException e) {
                     LOG.error("Interrupted while awaiting executor shutdown", e);
                 }
