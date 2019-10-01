@@ -1474,8 +1474,8 @@ public class ExportOnServerVerifier {
         //
         //  Uncomment these lines to dump the column data if needed for debugging.
         //
-        // System.out.println("RabbitMQ row:\n\t " + Arrays.toString(row));
-        // System.out.println("Generated row:\n\t " + valid.toString());
+        System.out.println("RabbitMQ row:\n\t " + Arrays.toString(row));
+        System.out.println("Generated row:\n\t " + valid.toString());
 
         // col 8
         Byte rowid_group = Byte.parseByte(row[++col]);
