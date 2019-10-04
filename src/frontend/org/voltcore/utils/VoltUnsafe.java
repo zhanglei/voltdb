@@ -19,6 +19,8 @@ package org.voltcore.utils;
 
 import sun.misc.Unsafe;
 
+import java.lang.management.BufferPoolMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -36,6 +38,27 @@ public abstract class VoltUnsafe {
 
     /** Unsafe. */
     private static final Unsafe UNSAFE = unsafe();
+
+    /**
+     * get maximum direct memory size set (explicitly or
+     * implicitly) for this VM instance using VM's
+     * method maxDirectMemory().
+     */
+    // TODO this not work for java 11 since the VM class has been moved
+    public static String getMaximumDirectMemorySize() {
+        return "sun.misc.VM.maxDirectMemory(): " + sun.misc.VM.maxDirectMemory()/1024.0/1024.0 + " MB";
+    }
+
+    // TODO: need hook this to some system call, maybe statis memory ?
+    public static double getDirectBufferPoolMBean(){
+        BufferPoolMXBean direct = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)
+                .stream()
+                .filter(e -> e.getName().equals("direct"))
+                .findFirst()
+                .orElseThrow(()-> new RuntimeException("Cannot get direct buffer Pool"));
+        return direct.getMemoryUsed()/1024.0/1024.0;
+    }
+
 
     /** Cleaner code for direct {@code java.nio.ByteBuffer}. */
     public static final DirectBufferCleaner DIRECT_BYTE_BUFFER_CLEANER = IS_JAVA8
