@@ -1318,6 +1318,16 @@ SHAREDLIB_JNIEXPORT void JNICALL Java_org_voltcore_utils_DBBPool_nativeDeleteCha
 }
 
 /*
+ * Utility used for create Direct ByteBuffer with cleaner
+ */
+jobject createNewDirectByteBuffer(JNIEnv *env, char * memory, jlong size) {
+    jclass cls = env->FindClass("java/nio/DirectByteBuffer");
+    jmethodID constructor = env->GetMethodID(cls, "<init>", "(IJLjava/io/FileDescriptor;Ljava/lang/Runnable;)V");
+    jobject buffer = env->NewObject(cls, constructor, size, memory, nullptr, nullptr);
+    return buffer;
+}
+
+/*
  * Class:     org_voltcore_utils_DBBPool
  * Method:    nativeAllocateUnsafeByteBuffer
  * Signature: (J)Ljava/nio/ByteBuffer;
@@ -1325,7 +1335,7 @@ SHAREDLIB_JNIEXPORT void JNICALL Java_org_voltcore_utils_DBBPool_nativeDeleteCha
 SHAREDLIB_JNIEXPORT jobject JNICALL Java_org_voltcore_utils_DBBPool_nativeAllocateUnsafeByteBuffer
   (JNIEnv *jniEnv, jclass, jlong size) {
     char *memory = new char[size];
-    jobject buffer = jniEnv->NewDirectByteBuffer( memory, size);
+    jobject buffer = createNewDirectByteBuffer(jniEnv, memory, size);
     if (buffer == NULL) {
         jniEnv->ExceptionDescribe();
         throw std::exception();

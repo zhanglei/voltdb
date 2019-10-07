@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.voltcore.utils.VoltUnsafe;
 import org.voltdb.VoltTable.ColumnInfo;
 import org.voltdb.utils.PlatformProperties;
 import org.voltdb.utils.SystemStatsCollector;
@@ -34,6 +35,7 @@ public class MemoryStats extends StatsSource {
         long indexMem = 0;
         long stringMem = 0;
         long pooledMem = 0;
+        long dbbMem = 0;
     }
     Map<Long, PartitionMemRow> m_memoryStats = new TreeMap<Long, PartitionMemRow>();
 
@@ -82,6 +84,7 @@ public class MemoryStats extends StatsSource {
         columns.add(new VoltTable.ColumnInfo("POOLEDMEMORY", VoltType.BIGINT));
         columns.add(new VoltTable.ColumnInfo("PHYSICALMEMORY", VoltType.BIGINT));
         columns.add(new VoltTable.ColumnInfo("JAVAMAXHEAP", VoltType.INTEGER));
+        columns.add(new VoltTable.ColumnInfo("DBBMEMORY", VoltType.BIGINT));
     }
 
     @Override
@@ -119,6 +122,7 @@ public class MemoryStats extends StatsSource {
         //in kb to make math simpler with other mem values.
         rowValues[columnNameToIndex.get("PHYSICALMEMORY")] = PlatformProperties.getPlatformProperties().ramInMegabytes * 1024;
         rowValues[columnNameToIndex.get("JAVAMAXHEAP")] = Runtime.getRuntime().maxMemory() / 1024;
+        rowValues[columnNameToIndex.get("DBBMEMORY")] = VoltUnsafe.getDirectBufferPoolMBean() / 1024;
         super.updateStatsRow(rowKey, rowValues);
     }
 

@@ -46,17 +46,18 @@ public abstract class VoltUnsafe {
      */
     // TODO this not work for java 11 since the VM class has been moved
     public static String getMaximumDirectMemorySize() {
-        return "sun.misc.VM.maxDirectMemory(): " + sun.misc.VM.maxDirectMemory()/1024.0/1024.0 + " MB";
+        return "sun.misc.VM.maxDirectMemory(): " + sun.misc.VM.maxDirectMemory()/1024.0 + "kb MB";
     }
 
-    // TODO: need hook this to some system call, maybe statis memory ?
-    public static double getDirectBufferPoolMBean(){
+    // TODO: need hook this to some system call, maybe statis memory.
+    // return in kb
+    public static long getDirectBufferPoolMBean(){
         BufferPoolMXBean direct = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)
                 .stream()
                 .filter(e -> e.getName().equals("direct"))
                 .findFirst()
                 .orElseThrow(()-> new RuntimeException("Cannot get direct buffer Pool"));
-        return direct.getMemoryUsed()/1024.0/1024.0;
+        return direct.getMemoryUsed();
     }
 
 
