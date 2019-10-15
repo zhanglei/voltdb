@@ -239,7 +239,7 @@ public abstract class AbstractScanPlanNode extends AbstractPlanNode {
     public void adjustDifferentiatorField(TupleValueExpression tve) {
         int storageIndex = tve.getColumnIndex();
         Integer scanIndex = m_differentiatorMap.get(storageIndex);
-        assert(scanIndex != null);
+        if (scanIndex == null) return;
         tve.setDifferentiator(storageIndex);
     }
 
