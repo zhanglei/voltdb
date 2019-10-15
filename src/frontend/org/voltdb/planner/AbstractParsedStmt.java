@@ -577,17 +577,18 @@ public abstract class AbstractParsedStmt {
             // from TestVoltCompler.testScalarSubqueriesExpectedFailures.
             throw new PlanningErrorException("Object not found: " + tableAlias);
         }
-        AbstractExpression resolvedExpr = tableScan.resolveTVE(tve);
-
-        if ((tableScan instanceof StmtCommonTableScan) || (m_stmtId == tableScan.getStatementId())) {
-            return resolvedExpr;
-        }
-
-        // This is a TVE from the correlated expression
-        int paramIdx = ParameterizationInfo.getNextParamIndex();
-        ParameterValueExpression pve = new ParameterValueExpression(paramIdx, resolvedExpr);
-        m_parameterTveMap.put(paramIdx, resolvedExpr);
-        return pve;
+        return tableScan.resolveTVE(tve);
+//        AbstractExpression resolvedExpr = tableScan.resolveTVE(tve);
+//
+//        if ((tableScan instanceof StmtCommonTableScan) || (m_stmtId == tableScan.getStatementId())) {
+//            return resolvedExpr;
+//        }
+//
+//        // This is a TVE from the correlated expression
+//        int paramIdx = ParameterizationInfo.getNextParamIndex();
+//        ParameterValueExpression pve = new ParameterValueExpression(paramIdx, resolvedExpr);
+//        m_parameterTveMap.put(paramIdx, resolvedExpr);
+//        return pve;
     }
 
     /**
