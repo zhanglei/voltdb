@@ -1799,6 +1799,7 @@ bool PersistentTable::activateStream(
     }
     vassert(m_tableStreamer == NULL || partitionId == m_tableStreamer->getPartitionID());
     if (m_tableStreamer == NULL) {
+        vassert(m_blocksPendingSnapshot.empty());
         m_tableStreamer.reset(new TableStreamer(partitionId, *this, tableId));
     }
 
