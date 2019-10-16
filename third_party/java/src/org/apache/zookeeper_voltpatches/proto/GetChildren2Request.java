@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
-public class GetChildren2Request implements Record {
+public class GetChildren2Request implements Record, Comparable<GetChildren2Request> {
     private String path;
     private boolean watch;
     public GetChildren2Request() {
@@ -82,14 +82,11 @@ public class GetChildren2Request implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof GetChildren2Request)) {
-            throw new ClassCastException("Comparing different types of records.");
-        } else {
-            return Comparator.comparing(GetChildren2Request::getPath)
-                    .thenComparing(GetChildren2Request::getWatch)
-                    .compare(this, (GetChildren2Request) peer_);
-        }
+    @Override
+    public int compareTo(GetChildren2Request peer_) {
+        return Comparator.comparing(GetChildren2Request::getPath)
+                .thenComparing(GetChildren2Request::getWatch)
+                .compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
@@ -97,14 +94,9 @@ public class GetChildren2Request implements Record {
             return false;
         } else if (peer_ == this) {
             return true;
+        } else {
+            return compareTo((GetChildren2Request) peer_) == 0;
         }
-        GetChildren2Request peer = (GetChildren2Request) peer_;
-        boolean ret = false;
-        ret = path.equals(peer.path);
-        if (!ret) return ret;
-        ret = (watch==peer.watch);
-        if (!ret) return ret;
-        return ret;
     }
     @Override
     public int hashCode() {
@@ -113,8 +105,7 @@ public class GetChildren2Request implements Record {
         ret = path.hashCode();
         result = 37*result + ret;
         ret = (watch)?0:1;
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetChildren2Request(sz)";

@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
-public class GetACLRequest implements Record {
+public class GetACLRequest implements Record, Comparable<GetACLRequest> {
     private String path;
     public GetACLRequest() {
     }
@@ -72,20 +72,17 @@ public class GetACLRequest implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof GetACLRequest)) {
-            throw new ClassCastException("Comparing different types of records.");
-        } else {
-            return Comparator.comparing(GetACLRequest::getPath)
-                    .compare(this, (GetACLRequest) peer_);
-        }
+    @Override
+    public int compareTo(GetACLRequest peer_) throws ClassCastException {
+        return Comparator.comparing(GetACLRequest::getPath)
+                .compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetACLRequest)) {
             return false;
         } else {
-            return compareTo(peer_) == 0;
+            return compareTo((GetACLRequest) peer_) == 0;
         }
     }
     @Override
@@ -93,8 +90,7 @@ public class GetACLRequest implements Record {
         int result = 17;
         int ret;
         ret = path.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetACLRequest(s)";

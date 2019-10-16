@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class GetDataResponse implements Record {
+public class GetDataResponse implements Record, Comparable<GetDataResponse> {
     private byte[] data;
     private Stat stat;
     public GetDataResponse() {
@@ -82,11 +82,7 @@ public class GetDataResponse implements Record {
     public void readFields(java.io.DataInput in) throws java.io.IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof GetDataResponse)) {
-            throw new ClassCastException("Comparing different types of records.");
-        }
-        GetDataResponse peer = (GetDataResponse) peer_;
+    public int compareTo (GetDataResponse peer) throws ClassCastException {
         byte[] my = data;
         byte[] ur = peer.data;
         int ret = Utils.compareBytes(my,0,my.length,ur,0,ur.length);
@@ -103,7 +99,7 @@ public class GetDataResponse implements Record {
         } if (peer_ == this) {
             return true;
         } else {
-            return compareTo(peer_) == 0;
+            return compareTo((GetDataResponse) peer_) == 0;
         }
     }
     @Override
@@ -112,8 +108,7 @@ public class GetDataResponse implements Record {
         int ret = Arrays.toString(data).hashCode();
         result = 37*result + ret;
         ret = stat.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetDataResponse(BLStat(lllliiiliil))";

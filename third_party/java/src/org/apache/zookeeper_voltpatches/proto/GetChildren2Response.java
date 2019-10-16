@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class GetChildren2Response implements Record {
+public class GetChildren2Response implements Record, Comparable<GetChildren2Response> {
     private List<String> children;
     private Stat stat;
     public GetChildren2Response() {
@@ -111,7 +111,8 @@ public class GetChildren2Response implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object ignored) throws ClassCastException {
+    @Override
+    public int compareTo (GetChildren2Response ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetChildren2Response is unimplemented");
     }
     @Override
@@ -122,8 +123,7 @@ public class GetChildren2Response implements Record {
             return true;
         } else {
             final GetChildren2Response peer = (GetChildren2Response) peer_;
-            return children.equals(peer.getChildren()) &&
-                    stat.equals(peer.getStat());
+            return children.equals(peer.getChildren()) && stat.equals(peer.getStat());
         }
     }
     @Override
@@ -133,8 +133,7 @@ public class GetChildren2Response implements Record {
         ret = children.hashCode();
         result = 37*result + ret;
         ret = stat.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetChildren2Response([s]LStat(lllliiiliil))";

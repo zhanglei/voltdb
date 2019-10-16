@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class GetACLResponse implements Record {
+public class GetACLResponse implements Record, Comparable<GetACLResponse> {
     private List<ACL> acl;
     private Stat stat;
     public GetACLResponse() {
@@ -115,7 +115,8 @@ public class GetACLResponse implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object ignored) throws ClassCastException {
+    @Override
+    public int compareTo(GetACLResponse ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetACLResponse is unimplemented");
     }
     @Override
@@ -125,8 +126,7 @@ public class GetACLResponse implements Record {
         } else if (peer_ == this) {
             return true;
         } else {
-            return acl == ((GetACLResponse) peer_).acl &&
-                    stat == ((GetACLResponse) peer_).stat;
+            return acl == ((GetACLResponse) peer_).acl && stat == ((GetACLResponse) peer_).stat;
         }
     }
     @Override

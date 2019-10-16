@@ -19,144 +19,139 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.SetACLRequest;
-public class SetACLRequest implements Record {
-  private String path;
-  private java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl;
-  private int version;
-  public SetACLRequest() {
-  }
-  public SetACLRequest(
-        String path,
-        java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl,
-        int version) {
-    this.path=path;
-    this.acl=acl;
-    this.version=version;
-  }
-  public String getPath() {
-    return path;
-  }
-  public void setPath(String m_) {
-    path=m_;
-  }
-  public java.util.List<org.apache.zookeeper_voltpatches.data.ACL> getAcl() {
-    return acl;
-  }
-  public void setAcl(java.util.List<org.apache.zookeeper_voltpatches.data.ACL> m_) {
-    acl=m_;
-  }
-  public int getVersion() {
-    return version;
-  }
-  public void setVersion(int m_) {
-    version=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeString(path,"path");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+import org.apache.zookeeper_voltpatches.data.ACL;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+import java.util.List;
+
+public class SetACLRequest implements Record, Comparable<SetACLRequest> {
+    private String path;
+    private List<ACL> acl;
+    private int version;
+    public SetACLRequest() {
     }
-    a_.writeInt(version,"version");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    path=a_.readString("path");
-    {
-      Index vidx1 = a_.startVector("acl");
-      if (vidx1!= null) {          acl=new java.util.ArrayList<org.apache.zookeeper_voltpatches.data.ACL>();
-          for (; !vidx1.done(); vidx1.incr()) {
-    org.apache.zookeeper_voltpatches.data.ACL e1;
-    e1= new org.apache.zookeeper_voltpatches.data.ACL();
-    a_.readRecord(e1,"e1");
-            acl.add(e1);
-          }
-      }
-    a_.endVector("acl");
+    public SetACLRequest(String path, List<ACL> acl, int version) {
+        this.path = path;
+        this.acl = acl;
+        this.version = version;
     }
-    version=a_.readInt("version");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeString(path,"path");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+    public String getPath() {
+        return path;
     }
-    a_.writeInt(version,"version");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+    public void setPath(String m_) {
+        path=m_;
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    throw new UnsupportedOperationException("comparing SetACLRequest is unimplemented");
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof SetACLRequest)) {
-      return false;
+    public List<ACL> getAcl() {
+        return acl;
     }
-    if (peer_ == this) {
-      return true;
+    public void setAcl(List<ACL> m_) {
+        acl=m_;
     }
-    SetACLRequest peer = (SetACLRequest) peer_;
-    boolean ret = false;
-    ret = path.equals(peer.path);
-    if (!ret) return ret;
-    ret = acl.equals(peer.acl);
-    if (!ret) return ret;
-    ret = (version==peer.version);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = path.hashCode();
-    result = 37*result + ret;
-    ret = acl.hashCode();
-    result = 37*result + ret;
-    ret = version;
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LSetACLRequest(s[LACL(iLId(ss))]i)";
-  }
+    public int getVersion() {
+        return version;
+    }
+    public void setVersion(int m_) {
+        version=m_;
+    }
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeString(path,"path");
+        {
+            a_.startVector(acl,"acl");
+            if (acl!= null) {
+                for (ACL e1 : acl) {
+                    a_.writeRecord(e1, "e1");
+                }
+            }
+            a_.endVector(acl,"acl");
+        }
+        a_.writeInt(version,"version");
+        a_.endRecord(this,tag);
+    }
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        path = a_.readString("path");
+        {
+            Index vidx1 = a_.startVector("acl");
+            if (vidx1!= null) {
+                acl = new java.util.ArrayList<>();
+                for (; !vidx1.done(); vidx1.incr()) {
+                    final ACL e1 = new org.apache.zookeeper_voltpatches.data.ACL();
+                    a_.readRecord(e1,"e1");
+                    acl.add(e1);
+                }
+            }
+            a_.endVector("acl");
+        }
+        version=a_.readInt("version");
+        a_.endRecord(tag);
+    }
+    @Override
+    public String toString() {
+        try {
+            final ByteArrayOutputStream s = new ByteArrayOutputStream();
+            final CsvOutputArchive a_ = new CsvOutputArchive(s);
+            a_.startRecord(this,"");
+            a_.writeString(path,"path");
+            {
+                a_.startVector(acl,"acl");
+                if (acl!= null) {
+                    for (ACL e1 : acl) {
+                        a_.writeRecord(e1, "e1");
+                    }
+                }
+                a_.endVector(acl,"acl");
+            }
+            a_.writeInt(version,"version");
+            a_.endRecord(this,"");
+            return new String(s.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+        return "ERROR";
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    public int compareTo (SetACLRequest peer_) throws ClassCastException {
+        throw new UnsupportedOperationException("comparing SetACLRequest is unimplemented");
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (!(peer_ instanceof SetACLRequest)) {
+            return false;
+        } else if (peer_ == this) {
+            return true;
+        } else {
+            SetACLRequest peer = (SetACLRequest) peer_;
+            return path.equals(peer.getPath()) &&
+                    acl.equals(peer.getAcl()) &&
+                    version == peer.getVersion();
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = path.hashCode();
+        result = 37*result + ret;
+        ret = acl.hashCode();
+        result = 37*result + ret;
+        ret = version;
+        result = 37*result + ret;
+        return result;
+    }
+    public static String signature() {
+        return "LSetACLRequest(s[LACL(iLId(ss))]i)";
+    }
 }

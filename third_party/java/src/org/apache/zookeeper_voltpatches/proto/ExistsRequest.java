@@ -24,7 +24,7 @@ import java.util.Comparator;
 
 import org.apache.jute_voltpatches.*;
 
-public class ExistsRequest implements Record {
+public class ExistsRequest implements Record, Comparable<ExistsRequest> {
     private String path;
     private boolean watch;
     public ExistsRequest() {
@@ -78,18 +78,15 @@ public class ExistsRequest implements Record {
     public void readFields(java.io.DataInput in) throws java.io.IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (! (peer_ instanceof ExistsRequest)) {
-            throw new ClassCastException("Comparing different types of records.");
-        } else {
-            return Comparator.comparing(ExistsRequest::getPath)
-                    .thenComparing(ExistsRequest::getWatch)
-                    .compare(this, (ExistsRequest) peer_);
-        }
+    @Override
+    public int compareTo(ExistsRequest peer_) throws ClassCastException {
+        return Comparator.comparing(ExistsRequest::getPath)
+                .thenComparing(ExistsRequest::getWatch)
+                .compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        return peer_ instanceof ExistsRequest && compareTo(peer_) == 0;
+        return peer_ instanceof ExistsRequest && compareTo((ExistsRequest) peer_) == 0;
     }
     @Override
     public int hashCode() {
@@ -98,8 +95,7 @@ public class ExistsRequest implements Record {
         ret = path.hashCode();
         result = 37*result + ret;
         ret = (watch)?0:1;
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LExistsRequest(sz)";

@@ -31,7 +31,7 @@ import java.util.List;
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.ACL;
 
-public class CreateRequest implements Record {
+public class CreateRequest implements Record, Comparable<CreateRequest> {
     private String path;
     private byte[] data;
     private List<ACL> acl;
@@ -131,8 +131,8 @@ public class CreateRequest implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-
-    public int compareTo (Object ignored) throws ClassCastException {
+    @Override
+    public int compareTo(CreateRequest ignored) {
         throw new UnsupportedOperationException("comparing CreateRequest is unimplemented");
     }
 
@@ -160,8 +160,7 @@ public class CreateRequest implements Record {
         ret = acl.hashCode();
         result = 37*result + ret;
         ret = flags;
-        result = 37*result + ret;
-        return result;
+        return  37*result + ret;
     }
 
     public static String signature() {

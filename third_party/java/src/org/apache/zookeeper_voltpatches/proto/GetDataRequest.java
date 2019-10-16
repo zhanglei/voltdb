@@ -22,10 +22,13 @@ package org.apache.zookeeper_voltpatches.proto;
 import org.apache.jute_voltpatches.*;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
-public class GetDataRequest implements Record {
+public class GetDataRequest implements Record, Comparable<GetDataRequest> {
     private String path;
     private boolean watch;
     public GetDataRequest() {
@@ -67,26 +70,22 @@ public class GetDataRequest implements Record {
             a_.writeString(path,"path");
             a_.writeBool(watch,"watch");
             a_.endRecord(this,"");
-            return new String(s.toByteArray(), "UTF-8");
+            return new String(s.toByteArray(), StandardCharsets.UTF_8);
         } catch (Throwable ex) {
             ex.printStackTrace();
         }
         return "ERROR";
     }
-    public void write(java.io.DataOutput out) throws java.io.IOException {
+    public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
     }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
+    public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof GetDataRequest)) {
-            throw new ClassCastException("Comparing different types of records.");
-        } else {
-            return Comparator.comparing(GetDataRequest::getPath)
-                    .thenComparing(GetDataRequest::getWatch)
-                    .compare(this, (GetDataRequest) peer_);
-        }
+    public int compareTo(GetDataRequest peer_) throws ClassCastException {
+        return Comparator.comparing(GetDataRequest::getPath)
+                .thenComparing(GetDataRequest::getWatch)
+                .compare(this, peer_);
     }
 
     @Override
@@ -96,7 +95,7 @@ public class GetDataRequest implements Record {
         } else if (peer_ == this) {
             return true;
         } else {
-            return compareTo(peer_) == 0;
+            return compareTo((GetDataRequest) peer_) == 0;
         }
     }
 
@@ -106,8 +105,7 @@ public class GetDataRequest implements Record {
         int ret = path.hashCode();
         result = 37*result + ret;
         ret = watch ? 0 : 1;
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetDataRequest(sz)";

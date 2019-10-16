@@ -21,9 +21,14 @@ package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 
-public class ACL implements Record {
+public class ACL implements Record, Comparable<ACL> {
     private int perms;
     private Id id;
     public ACL() {
@@ -60,10 +65,8 @@ public class ACL implements Record {
     @Override
     public String toString() {
         try {
-            java.io.ByteArrayOutputStream s =
-                    new java.io.ByteArrayOutputStream();
-            CsvOutputArchive a_ =
-                    new CsvOutputArchive(s);
+            final ByteArrayOutputStream s = new ByteArrayOutputStream();
+            final CsvOutputArchive a_ = new CsvOutputArchive(s);
             a_.startRecord(this,"");
             a_.writeInt(perms,"perms");
             a_.writeRecord(id,"id");
@@ -74,21 +77,16 @@ public class ACL implements Record {
         }
         return "ERROR";
     }
-    public void write(java.io.DataOutput out) throws java.io.IOException {
-        BinaryOutputArchive archive = new BinaryOutputArchive(out);
-        serialize(archive, "");
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
     }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
-        BinaryInputArchive archive = new BinaryInputArchive(in);
-        deserialize(archive, "");
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof ACL)) {
-            throw new ClassCastException("Comparing different types of records.");
-        }
-        final ACL peer = (ACL) peer_;
-        final int ret = Integer.compare(perms, peer.perms);
-        return ret == 0 ? id.compareTo(peer.id) : ret;
+    public int compareTo(ACL peer_) throws ClassCastException {
+        return Comparator.comparingInt(ACL::getPerms)
+                .thenComparing(ACL::getId)
+                .compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
@@ -107,8 +105,7 @@ public class ACL implements Record {
         ret = perms;
         result = 37*result + ret;
         ret = id.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LACL(iLId(ss))";

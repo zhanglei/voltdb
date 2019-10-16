@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
-public class Stat implements Record {
+public class Stat implements Record, Comparable<Stat> {
     private long czxid;
     private long mzxid;
     private long ctime;
@@ -191,23 +191,20 @@ public class Stat implements Record {
         BinaryInputArchive archive = new BinaryInputArchive(in);
         deserialize(archive, "");
     }
-    public int compareTo (Object peer_) throws ClassCastException {
-        if (!(peer_ instanceof Stat)) {
-            throw new ClassCastException("Comparing different types of records.");
-        } else {
-            return Comparator.comparingLong(Stat::getCzxid)
-                    .thenComparingLong(Stat::getMzxid)
-                    .thenComparingLong(Stat::getCtime)
-                    .thenComparingLong(Stat::getMtime)
-                    .thenComparingInt(Stat::getVersion)
-                    .thenComparingInt(Stat::getCversion)
-                    .thenComparingInt(Stat::getAversion)
-                    .thenComparingLong(Stat::getEphemeralOwner)
-                    .thenComparingInt(Stat::getDataLength)
-                    .thenComparingInt(Stat::getNumChildren)
-                    .thenComparingLong(Stat::getPzxid)
-                    .compare(this, (Stat) peer_);
-        }
+    @Override
+    public int compareTo(Stat peer_) throws ClassCastException {
+        return Comparator.comparingLong(Stat::getCzxid)
+                .thenComparingLong(Stat::getMzxid)
+                .thenComparingLong(Stat::getCtime)
+                .thenComparingLong(Stat::getMtime)
+                .thenComparingInt(Stat::getVersion)
+                .thenComparingInt(Stat::getCversion)
+                .thenComparingInt(Stat::getAversion)
+                .thenComparingLong(Stat::getEphemeralOwner)
+                .thenComparingInt(Stat::getDataLength)
+                .thenComparingInt(Stat::getNumChildren)
+                .thenComparingLong(Stat::getPzxid)
+                .compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
@@ -216,7 +213,7 @@ public class Stat implements Record {
         } else if (peer_ == this) {
             return true;
         } else {
-            return compareTo(peer_) == 0;
+            return compareTo((Stat) peer_) == 0;
         }
     }
     @Override

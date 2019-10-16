@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class GetChildrenResponse implements Record {
+public class GetChildrenResponse implements Record, Comparable<GetChildrenResponse> {
     private List<String> children;
     public GetChildrenResponse() {
     }
@@ -98,7 +98,8 @@ public class GetChildrenResponse implements Record {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (Object ignored) throws ClassCastException {
+    @Override
+    public int compareTo(GetChildrenResponse ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetChildrenResponse is unimplemented");
     }
     @Override
