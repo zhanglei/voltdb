@@ -27,7 +27,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SetACLRequest implements Record, Comparable<SetACLRequest> {
@@ -45,26 +45,26 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
     public List<ACL> getAcl() {
         return acl;
     }
     public void setAcl(List<ACL> m_) {
-        acl=m_;
+        acl = m_;
     }
     public int getVersion() {
         return version;
     }
     public void setVersion(int m_) {
-        version=m_;
+        version = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         {
             a_.startVector(acl,"acl");
-            if (acl!= null) {
+            if (acl != null) {
                 for (ACL e1 : acl) {
                     a_.writeRecord(e1, "e1");
                 }
@@ -80,9 +80,9 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
         {
             Index vidx1 = a_.startVector("acl");
             if (vidx1!= null) {
-                acl = new java.util.ArrayList<>();
+                acl = new ArrayList<>();
                 for (; !vidx1.done(); vidx1.incr()) {
-                    final ACL e1 = new org.apache.zookeeper_voltpatches.data.ACL();
+                    final ACL e1 = new ACL();
                     a_.readRecord(e1,"e1");
                     acl.add(e1);
                 }
@@ -120,7 +120,6 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
         serialize(new BinaryOutputArchive(out), "");
     }
     public void readFields(DataInput in) throws IOException {
-
         deserialize(new BinaryInputArchive(in), "");
     }
     public int compareTo (SetACLRequest peer_) throws ClassCastException {

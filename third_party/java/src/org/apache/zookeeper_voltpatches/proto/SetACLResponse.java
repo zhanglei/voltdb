@@ -39,7 +39,7 @@ public class SetACLResponse implements Record, Comparable<SetACLResponse> {
         return stat;
     }
     public void setStat(Stat m_) {
-        stat=m_;
+        stat = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
@@ -72,7 +72,7 @@ public class SetACLResponse implements Record, Comparable<SetACLResponse> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (SetACLResponse peer_) throws ClassCastException {
+    public int compareTo (SetACLResponse peer_) {
         return stat.compareTo(peer_.getStat());
     }
     @Override

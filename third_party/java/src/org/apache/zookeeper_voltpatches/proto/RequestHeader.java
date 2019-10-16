@@ -41,13 +41,13 @@ public class RequestHeader implements Record, Comparable<RequestHeader> {
         return xid;
     }
     public void setXid(int m_) {
-        xid=m_;
+        xid = m_;
     }
     public int getType() {
         return type;
     }
     public void setType(int m_) {
-        type=m_;
+        type = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
@@ -104,7 +104,7 @@ public class RequestHeader implements Record, Comparable<RequestHeader> {
         ret = xid;
         result = 37*result + ret;
         ret = type;
-        return  37*result + ret;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LRequestHeader(ii)";

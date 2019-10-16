@@ -41,13 +41,13 @@ public class GetDataRequest implements Record, Comparable<GetDataRequest> {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
     public boolean getWatch() {
         return watch;
     }
     public void setWatch(boolean m_) {
-        watch=m_;
+        watch = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);

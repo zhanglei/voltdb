@@ -43,19 +43,19 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
         return xid;
     }
     public void setXid(int m_) {
-        xid=m_;
+        xid = m_;
     }
     public long getZxid() {
         return zxid;
     }
     public void setZxid(long m_) {
-        zxid=m_;
+        zxid = m_;
     }
     public int getErr() {
         return err;
     }
     public void setErr(int m_) {
-        err=m_;
+        err = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
@@ -93,7 +93,8 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (ReplyHeader peer_) {
+    @Override
+    public int compareTo(ReplyHeader peer_) {
         return Comparator.comparingInt(ReplyHeader::getXid)
                 .thenComparingLong(ReplyHeader::getZxid)
                 .thenComparingInt(ReplyHeader::getErr)
@@ -117,7 +118,7 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
         ret = (int) (zxid^(zxid>>>32));
         result = 37*result + ret;
         ret = err;
-        return  37*result + ret;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LReplyHeader(ili)";

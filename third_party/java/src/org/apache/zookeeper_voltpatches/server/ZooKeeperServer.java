@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -779,8 +778,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider,
                 // this request is the last of the session so it should be ok
                 // zks.sessionTracker.checkSession(request.sessionId,
                 // request.getOwner());
-                HashSet<String> es = getZKDatabase().getEphemerals(
-                        request.sessionId);
+                Set<String> es = getZKDatabase().getEphemerals(request.sessionId);
                 synchronized (outstandingChanges) {
                     for (ChangeRecord c : outstandingChanges) {
                         if (c.stat == null) {

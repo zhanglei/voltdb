@@ -19,91 +19,81 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.SetDataResponse;
-public class SetDataResponse implements Record {
-  private org.apache.zookeeper_voltpatches.data.Stat stat;
-  public SetDataResponse() {
-  }
-  public SetDataResponse(
-        org.apache.zookeeper_voltpatches.data.Stat stat) {
-    this.stat=stat;
-  }
-  public org.apache.zookeeper_voltpatches.data.Stat getStat() {
-    return stat;
-  }
-  public void setStat(org.apache.zookeeper_voltpatches.data.Stat m_) {
-    stat=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeRecord(stat,"stat");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    stat= new org.apache.zookeeper_voltpatches.data.Stat();
-    a_.readRecord(stat,"stat");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeRecord(stat,"stat");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+import org.apache.zookeeper_voltpatches.data.Stat;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+
+public class SetDataResponse implements Record, Comparable<SetDataResponse> {
+    private Stat stat;
+    public SetDataResponse() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof SetDataResponse)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public SetDataResponse(Stat stat) {
+        this.stat=stat;
     }
-    SetDataResponse peer = (SetDataResponse) peer_;
-    int ret = 0;
-    ret = stat.compareTo(peer.stat);
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof SetDataResponse)) {
-      return false;
+    public Stat getStat() {
+        return stat;
     }
-    if (peer_ == this) {
-      return true;
+    public void setStat(Stat m_) {
+        stat = m_;
     }
-    SetDataResponse peer = (SetDataResponse) peer_;
-    boolean ret = false;
-    ret = stat.equals(peer.stat);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = stat.hashCode();
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LSetDataResponse(LStat(lllliiiliil))";
-  }
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this, tag);
+        a_.writeRecord(stat, "stat");
+        a_.endRecord(this, tag);
+    }
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        stat= new Stat();
+        a_.readRecord(stat,"stat");
+        a_.endRecord(tag);
+    }
+    @Override
+    public String toString() {
+        try {
+            final ByteArrayOutputStream s = new ByteArrayOutputStream();
+            final CsvOutputArchive a_ = new CsvOutputArchive(s);
+            a_.startRecord(this,"");
+            a_.writeRecord(stat,"stat");
+            a_.endRecord(this,"");
+            return new String(s.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+        return "ERROR";
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(SetDataResponse peer_) {
+        return Comparator.comparing(SetDataResponse::getStat).compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (! (peer_ instanceof SetDataResponse)) {
+            return false;
+        } else if (peer_ == this) {
+            return true;
+        } else {
+            return compareTo((SetDataResponse) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret = stat.hashCode();
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "LSetDataResponse(LStat(lllliiiliil))";
+    }
 }

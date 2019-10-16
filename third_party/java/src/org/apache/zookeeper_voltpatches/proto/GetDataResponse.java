@@ -40,13 +40,13 @@ public class GetDataResponse implements Record, Comparable<GetDataResponse> {
         return data;
     }
     public void setData(byte[] m_) {
-        data=m_;
+        data = m_;
     }
     public Stat getStat() {
         return stat;
     }
     public void setStat(Stat m_) {
-        stat=m_;
+        stat = m_;
     }
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
@@ -82,7 +82,7 @@ public class GetDataResponse implements Record, Comparable<GetDataResponse> {
     public void readFields(java.io.DataInput in) throws java.io.IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (GetDataResponse peer) throws ClassCastException {
+    public int compareTo(GetDataResponse peer) throws ClassCastException {
         byte[] my = data;
         byte[] ur = peer.data;
         int ret = Utils.compareBytes(my,0,my.length,ur,0,ur.length);

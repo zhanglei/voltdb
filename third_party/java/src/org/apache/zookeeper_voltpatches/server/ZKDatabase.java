@@ -18,27 +18,15 @@
 
 package org.apache.zookeeper_voltpatches.server;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.jute_voltpatches.BinaryOutputArchive;
 import org.apache.jute_voltpatches.InputArchive;
 import org.apache.jute_voltpatches.OutputArchive;
 import org.apache.jute_voltpatches.Record;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper_voltpatches.server.DataNode;
-import org.apache.zookeeper_voltpatches.server.DataTree;
-import org.apache.zookeeper_voltpatches.server.ServerCnxn;
-import org.apache.zookeeper_voltpatches.server.ZKDatabase;
 import org.apache.zookeeper_voltpatches.KeeperException;
 import org.apache.zookeeper_voltpatches.Watcher;
 import org.apache.zookeeper_voltpatches.KeeperException.NoNodeException;
@@ -154,7 +142,7 @@ public class ZKDatabase {
      * @param sessionId the session id for which paths match to
      * @return the paths for a session id
      */
-    public HashSet<String> getEphemerals(long sessionId) {
+    public Set<String> getEphemerals(long sessionId) {
         return dataTree.getEphemerals(sessionId);
     }
 
