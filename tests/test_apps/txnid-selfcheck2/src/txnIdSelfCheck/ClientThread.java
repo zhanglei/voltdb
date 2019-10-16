@@ -232,6 +232,7 @@ public class ClientThread extends BenchmarkThread {
         }
         // this implies bad data and is fatal
         else{
+            e.printStackTrace();
             hardStop("ClientThread had a proc-call exception that indicated bad data", cri);
         }
     }
@@ -270,8 +271,10 @@ public class ClientThread extends BenchmarkThread {
                 // just need to fall through and get out
             }
             catch (Exception e) {
+                e.printStackTrace();
                 hardStop("ClientThread had a non proc-call exception", e);
             }
+
         }
     }
 }

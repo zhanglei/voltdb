@@ -116,6 +116,7 @@ public class UpdateBaseProc extends VoltProcedure {
 
         // get the most recent row's data
         int rowCount = data.getRowCount();
+
         if (rowCount != 0) {
             VoltTableRow row = data.fetchRow(0);
             prevcnt = row.getLong("cnt");
@@ -142,17 +143,30 @@ public class UpdateBaseProc extends VoltProcedure {
         voltQueueSQL(getViewData, cid);
         assert dim.getRowCount() == 1;
         VoltTable[] retval = voltExecuteSQL();
-        // Is this comment below now obsolete and can be removed?
-        // Verify that our update happened.  The client is reporting data errors on this validation
-        // not seen by the server, hopefully this will bisect where they're occurring.
+
+        VoltTable deletes = retval[retval.length-3];
         data = retval[retval.length-2];
         view = retval[retval.length-1];
 
-        VoltTableRow row = data.fetchRow(0);
-        if (row.getVarbinary("value").length == 0)
-            throw new VoltAbortException("Value column contained no data in UpdateBaseProc");
+        if ( data.getRowCount() > 0 ) {
+            VoltTableRow row = data.fetchRow(0);
+            if (row.getVarbinary("value").length == 0)
+                throw new VoltAbortException("Value column contained no data in UpdateBaseProc");
 
-        validateCIDData(data, view, getClass().getName());
+
+            validateCIDData(data, view, getClass().getName());
+        } else {
+            // the CID data table should not be empty, throw out some debug info
+            // for ENG-18327
+            long deleteCnt = 0;
+            if ( deletes.getRowCount() > 0 ) {
+                deleteCnt = deletes.fetchRow(0).getLong(0);
+            }
+
+            throw new VoltAbortException("Empty data in CID table after insert, after " + String.valueOf(deleteCnt) + " deletes, cnt:"+String.valueOf(cnt)+" after insert stmt: " + insert.getText());
+
+        }
+
 
         if (usestreamviews) {
             // insert to export table done, check corresponding materialized view
