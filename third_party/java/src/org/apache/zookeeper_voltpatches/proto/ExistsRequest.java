@@ -30,8 +30,8 @@ public class ExistsRequest implements Record, Comparable<ExistsRequest> {
     public ExistsRequest() {
     }
     public ExistsRequest(String path, boolean watch) {
-        this.path=path;
-        this.watch=watch;
+        this.path = path;
+        this.watch = watch;
     }
     public String getPath() {
         return path;
@@ -45,16 +45,18 @@ public class ExistsRequest implements Record, Comparable<ExistsRequest> {
     public void setWatch(boolean m_) {
         watch=m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeBool(watch,"watch");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
         a_.startRecord(tag);
-        path=a_.readString("path");
-        watch=a_.readBool("watch");
+        path = a_.readString("path");
+        watch = a_.readBool("watch");
         a_.endRecord(tag);
     }
     @Override

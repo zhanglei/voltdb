@@ -58,6 +58,7 @@ public class SetDataRequest implements Record, Comparable<SetDataRequest> {
     public void setVersion(int m_) {
         version = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
@@ -65,6 +66,7 @@ public class SetDataRequest implements Record, Comparable<SetDataRequest> {
         a_.writeInt(version,"version");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
@@ -114,10 +116,8 @@ public class SetDataRequest implements Record, Comparable<SetDataRequest> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof SetDataRequest)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((SetDataRequest) peer_) == 0;
+            return peer_ == this || compareTo((SetDataRequest) peer_) == 0;
         }
     }
     @Override

@@ -23,6 +23,8 @@ import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.Stat;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -48,12 +50,14 @@ public class GetDataResponse implements Record, Comparable<GetDataResponse> {
     public void setStat(Stat m_) {
         stat = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeBuffer(data,"data");
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         data = a_.readBuffer("data");
@@ -76,10 +80,10 @@ public class GetDataResponse implements Record, Comparable<GetDataResponse> {
         }
         return "ERROR";
     }
-    public void write(java.io.DataOutput out) throws java.io.IOException {
+    public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
     }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
+    public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
     public int compareTo(GetDataResponse peer) throws ClassCastException {
@@ -96,10 +100,8 @@ public class GetDataResponse implements Record, Comparable<GetDataResponse> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetDataResponse)) {
             return false;
-        } if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((GetDataResponse) peer_) == 0;
+            return peer_ == this || compareTo((GetDataResponse) peer_) == 0;
         }
     }
     @Override

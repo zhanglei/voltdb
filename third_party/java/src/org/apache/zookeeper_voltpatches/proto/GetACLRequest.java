@@ -32,21 +32,22 @@ public class GetACLRequest implements Record, Comparable<GetACLRequest> {
     private String path;
     public GetACLRequest() {
     }
-    public GetACLRequest(
-            String path) {
-        this.path=path;
+    public GetACLRequest(String path) {
+        this.path = path;
     }
     public String getPath() {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
@@ -74,8 +75,7 @@ public class GetACLRequest implements Record, Comparable<GetACLRequest> {
     }
     @Override
     public int compareTo(GetACLRequest peer_) throws ClassCastException {
-        return Comparator.comparing(GetACLRequest::getPath)
-                .compare(this, peer_);
+        return Comparator.comparing(GetACLRequest::getPath).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {

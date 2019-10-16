@@ -41,24 +41,26 @@ public class ACL implements Record, Comparable<ACL> {
         return perms;
     }
     public void setPerms(int m_) {
-        perms=m_;
+        perms = m_;
     }
     public Id getId() {
         return id;
     }
     public void setId(Id m_) {
-        id=m_;
+        id = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
         a_.startRecord(this,tag);
         a_.writeInt(perms,"perms");
         a_.writeRecord(id,"id");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
         a_.startRecord(tag);
-        perms=a_.readInt("perms");
-        id= new org.apache.zookeeper_voltpatches.data.Id();
+        perms = a_.readInt("perms");
+        id = new org.apache.zookeeper_voltpatches.data.Id();
         a_.readRecord(id,"id");
         a_.endRecord(tag);
     }
@@ -83,7 +85,8 @@ public class ACL implements Record, Comparable<ACL> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo(ACL peer_) throws ClassCastException {
+    @Override
+    public int compareTo(ACL peer_) {
         return Comparator.comparingInt(ACL::getPerms)
                 .thenComparing(ACL::getId)
                 .compare(this, peer_);
@@ -92,11 +95,9 @@ public class ACL implements Record, Comparable<ACL> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof ACL)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
+        } else {
+            return peer_ == this || compareTo((ACL) peer_) == 0;
         }
-        final ACL peer = (ACL) peer_;
-        return perms == peer.perms && id.equals(peer.id);
     }
     @Override
     public int hashCode() {

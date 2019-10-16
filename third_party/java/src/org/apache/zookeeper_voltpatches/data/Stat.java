@@ -21,6 +21,9 @@ package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
@@ -51,84 +54,85 @@ public class Stat implements Record, Comparable<Stat> {
             int dataLength,
             int numChildren,
             long pzxid) {
-        this.czxid=czxid;
-        this.mzxid=mzxid;
-        this.ctime=ctime;
-        this.mtime=mtime;
-        this.version=version;
-        this.cversion=cversion;
-        this.aversion=aversion;
-        this.ephemeralOwner=ephemeralOwner;
-        this.dataLength=dataLength;
-        this.numChildren=numChildren;
-        this.pzxid=pzxid;
+        this.czxid = czxid;
+        this.mzxid = mzxid;
+        this.ctime = ctime;
+        this.mtime = mtime;
+        this.version = version;
+        this.cversion = cversion;
+        this.aversion = aversion;
+        this.ephemeralOwner = ephemeralOwner;
+        this.dataLength = dataLength;
+        this.numChildren = numChildren;
+        this.pzxid = pzxid;
     }
     public long getCzxid() {
         return czxid;
     }
     public void setCzxid(long m_) {
-        czxid=m_;
+        czxid = m_;
     }
     public long getMzxid() {
         return mzxid;
     }
     public void setMzxid(long m_) {
-        mzxid=m_;
+        mzxid = m_;
     }
     public long getCtime() {
         return ctime;
     }
     public void setCtime(long m_) {
-        ctime=m_;
+        ctime = m_;
     }
     public long getMtime() {
         return mtime;
     }
     public void setMtime(long m_) {
-        mtime=m_;
+        mtime = m_;
     }
     public int getVersion() {
         return version;
     }
     public void setVersion(int m_) {
-        version=m_;
+        version = m_;
     }
     public int getCversion() {
         return cversion;
     }
     public void setCversion(int m_) {
-        cversion=m_;
+        cversion = m_;
     }
     public int getAversion() {
         return aversion;
     }
     public void setAversion(int m_) {
-        aversion=m_;
+        aversion = m_;
     }
     public long getEphemeralOwner() {
         return ephemeralOwner;
     }
     public void setEphemeralOwner(long m_) {
-        ephemeralOwner=m_;
+        ephemeralOwner = m_;
     }
     public int getDataLength() {
         return dataLength;
     }
     public void setDataLength(int m_) {
-        dataLength=m_;
+        dataLength = m_;
     }
     public int getNumChildren() {
         return numChildren;
     }
     public void setNumChildren(int m_) {
-        numChildren=m_;
+        numChildren = m_;
     }
     public long getPzxid() {
         return pzxid;
     }
     public void setPzxid(long m_) {
-        pzxid=m_;
+        pzxid = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeLong(czxid,"czxid");
@@ -144,6 +148,7 @@ public class Stat implements Record, Comparable<Stat> {
         a_.writeLong(pzxid,"pzxid");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         czxid = a_.readLong("czxid");
@@ -162,8 +167,8 @@ public class Stat implements Record, Comparable<Stat> {
     @Override
     public String toString() {
         try {
-            java.io.ByteArrayOutputStream s = new java.io.ByteArrayOutputStream();
-            CsvOutputArchive a_ = new CsvOutputArchive(s);
+            final ByteArrayOutputStream s = new ByteArrayOutputStream();
+            final CsvOutputArchive a_ = new CsvOutputArchive(s);
             a_.startRecord(this,"");
             a_.writeLong(czxid,"czxid");
             a_.writeLong(mzxid,"mzxid");
@@ -183,13 +188,11 @@ public class Stat implements Record, Comparable<Stat> {
         }
         return "ERROR";
     }
-    public void write(java.io.DataOutput out) throws java.io.IOException {
-        BinaryOutputArchive archive = new BinaryOutputArchive(out);
-        serialize(archive, "");
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
     }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
-        BinaryInputArchive archive = new BinaryInputArchive(in);
-        deserialize(archive, "");
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(Stat peer_) throws ClassCastException {
@@ -210,10 +213,8 @@ public class Stat implements Record, Comparable<Stat> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof Stat)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((Stat) peer_) == 0;
+            return peer_ == this || compareTo((Stat) peer_) == 0;
         }
     }
     @Override
@@ -240,8 +241,7 @@ public class Stat implements Record, Comparable<Stat> {
         ret = numChildren;
         result = 37*result + ret;
         ret = (int) (pzxid^(pzxid>>>32));
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LStat(lllliiiliil)";

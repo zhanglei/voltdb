@@ -50,6 +50,7 @@ public class GetChildren2Response implements Record, Comparable<GetChildren2Resp
     public void setStat(Stat m_) {
         stat=m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         {
@@ -64,6 +65,7 @@ public class GetChildren2Response implements Record, Comparable<GetChildren2Resp
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         {

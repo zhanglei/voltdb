@@ -41,11 +41,13 @@ public class SetACLResponse implements Record, Comparable<SetACLResponse> {
     public void setStat(Stat m_) {
         stat = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         stat = new Stat();
@@ -72,25 +74,23 @@ public class SetACLResponse implements Record, Comparable<SetACLResponse> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
+    @Override
     public int compareTo (SetACLResponse peer_) {
         return stat.compareTo(peer_.getStat());
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof SetACLResponse)) {
+        if (! (peer_ instanceof SetACLResponse)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((SetACLResponse) peer_) == 0;
+            return peer_ == this || compareTo((SetACLResponse) peer_) == 0;
         }
     }
     @Override
     public int hashCode() {
         int result = 17;
         int ret = stat.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LSetACLResponse(LStat(lllliiiliil))";

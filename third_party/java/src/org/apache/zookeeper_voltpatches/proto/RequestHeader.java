@@ -49,12 +49,14 @@ public class RequestHeader implements Record, Comparable<RequestHeader> {
     public void setType(int m_) {
         type = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeInt(xid,"xid");
         a_.writeInt(type,"type");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         xid=a_.readInt("xid");
@@ -91,10 +93,8 @@ public class RequestHeader implements Record, Comparable<RequestHeader> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof RequestHeader)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((RequestHeader) peer_) == 0;
+            return peer_ == this || compareTo((RequestHeader) peer_) == 0;
         }
     }
     @Override

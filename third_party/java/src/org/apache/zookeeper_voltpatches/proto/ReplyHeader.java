@@ -57,6 +57,7 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
     public void setErr(int m_) {
         err = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeInt(xid,"xid");
@@ -64,6 +65,7 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
         a_.writeInt(err,"err");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         xid = a_.readInt("xid");
@@ -104,10 +106,8 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof ReplyHeader)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((ReplyHeader) peer_) == 0;
+            return peer_ == this || compareTo((ReplyHeader) peer_) == 0;
         }
     }
     @Override

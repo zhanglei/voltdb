@@ -42,11 +42,13 @@ public class SyncResponse implements Record, Comparable<SyncResponse> {
     public void setPath(String m_) {
         path = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
-        a_.startRecord(this,tag);
-        a_.writeString(path,"path");
-        a_.endRecord(this,tag);
+        a_.startRecord(this, tag);
+        a_.writeString(path, "path");
+        a_.endRecord(this, tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
@@ -80,10 +82,8 @@ public class SyncResponse implements Record, Comparable<SyncResponse> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof SyncResponse)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((SyncResponse) peer_) == 0;
+            return peer_ == this || compareTo((SyncResponse) peer_) == 0;
         }
     }
     @Override

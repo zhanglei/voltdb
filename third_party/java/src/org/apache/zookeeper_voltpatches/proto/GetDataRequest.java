@@ -34,8 +34,8 @@ public class GetDataRequest implements Record, Comparable<GetDataRequest> {
     public GetDataRequest() {
     }
     public GetDataRequest(String path, boolean watch) {
-        this.path=path;
-        this.watch=watch;
+        this.path = path;
+        this.watch = watch;
     }
     public String getPath() {
         return path;
@@ -49,12 +49,14 @@ public class GetDataRequest implements Record, Comparable<GetDataRequest> {
     public void setWatch(boolean m_) {
         watch = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeBool(watch,"watch");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
@@ -82,7 +84,7 @@ public class GetDataRequest implements Record, Comparable<GetDataRequest> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo(GetDataRequest peer_) throws ClassCastException {
+    public int compareTo(GetDataRequest peer_) {
         return Comparator.comparing(GetDataRequest::getPath)
                 .thenComparing(GetDataRequest::getWatch)
                 .compare(this, peer_);
@@ -92,10 +94,8 @@ public class GetDataRequest implements Record, Comparable<GetDataRequest> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof GetDataRequest)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((GetDataRequest) peer_) == 0;
+            return peer_ == this || compareTo((GetDataRequest) peer_) == 0;
         }
     }
 

@@ -59,36 +59,34 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
     public void setVersion(int m_) {
         version = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
-        {
-            a_.startVector(acl,"acl");
-            if (acl != null) {
-                for (ACL e1 : acl) {
-                    a_.writeRecord(e1, "e1");
-                }
+        a_.startVector(acl,"acl");
+        if (acl != null) {
+            for (ACL e1 : acl) {
+                a_.writeRecord(e1, "e1");
             }
-            a_.endVector(acl,"acl");
         }
+        a_.endVector(acl,"acl");
         a_.writeInt(version,"version");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
-        {
-            Index vidx1 = a_.startVector("acl");
-            if (vidx1!= null) {
-                acl = new ArrayList<>();
-                for (; !vidx1.done(); vidx1.incr()) {
-                    final ACL e1 = new ACL();
-                    a_.readRecord(e1,"e1");
-                    acl.add(e1);
-                }
+        Index vidx1 = a_.startVector("acl");
+        if (vidx1!= null) {
+            acl = new ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                final ACL e1 = new ACL();
+                a_.readRecord(e1,"e1");
+                acl.add(e1);
             }
-            a_.endVector("acl");
         }
+        a_.endVector("acl");
         version=a_.readInt("version");
         a_.endRecord(tag);
     }
@@ -99,15 +97,13 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
             final CsvOutputArchive a_ = new CsvOutputArchive(s);
             a_.startRecord(this,"");
             a_.writeString(path,"path");
-            {
-                a_.startVector(acl,"acl");
-                if (acl!= null) {
-                    for (ACL e1 : acl) {
-                        a_.writeRecord(e1, "e1");
-                    }
+            a_.startVector(acl,"acl");
+            if (acl!= null) {
+                for (ACL e1 : acl) {
+                    a_.writeRecord(e1, "e1");
                 }
-                a_.endVector(acl,"acl");
             }
+            a_.endVector(acl,"acl");
             a_.writeInt(version,"version");
             a_.endRecord(this,"");
             return new String(s.toByteArray(), StandardCharsets.UTF_8);
@@ -122,7 +118,8 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
     public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
-    public int compareTo (SetACLRequest peer_) throws ClassCastException {
+    @Override
+    public int compareTo(SetACLRequest peer_) {
         throw new UnsupportedOperationException("comparing SetACLRequest is unimplemented");
     }
     @Override

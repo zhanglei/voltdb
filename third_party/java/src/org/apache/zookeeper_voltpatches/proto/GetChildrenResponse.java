@@ -41,33 +41,31 @@ public class GetChildrenResponse implements Record, Comparable<GetChildrenRespon
     public void setChildren(List<String> m_) {
         children = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
-        {
-            a_.startVector(children,"children");
-            if (children!= null) {
-                for (String e1 : children) {
-                    a_.writeString(e1, "e1");
-                }
+        a_.startVector(children,"children");
+        if (children!= null) {
+            for (String e1 : children) {
+                a_.writeString(e1, "e1");
             }
-            a_.endVector(children,"children");
         }
+        a_.endVector(children,"children");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
-        {
-            Index vidx1 = a_.startVector("children");
-            if (vidx1!= null) {
-                children=new java.util.ArrayList<>();
-                for (; !vidx1.done(); vidx1.incr()) {
-                    String e1;
-                    e1=a_.readString("e1");
-                    children.add(e1);
-                }
+        Index vidx1 = a_.startVector("children");
+        if (vidx1!= null) {
+            children=new java.util.ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                String e1;
+                e1=a_.readString("e1");
+                children.add(e1);
             }
-            a_.endVector("children");
         }
+        a_.endVector("children");
         a_.endRecord(tag);
     }
     @Override
@@ -76,15 +74,13 @@ public class GetChildrenResponse implements Record, Comparable<GetChildrenRespon
             final ByteArrayOutputStream s = new ByteArrayOutputStream();
             final CsvOutputArchive a_ = new CsvOutputArchive(s);
             a_.startRecord(this,"");
-            {
-                a_.startVector(children,"children");
-                if (children!= null) {
-                    for (String e1 : children) {
-                        a_.writeString(e1, "e1");
-                    }
+            a_.startVector(children,"children");
+            if (children!= null) {
+                for (String e1 : children) {
+                    a_.writeString(e1, "e1");
                 }
-                a_.endVector(children,"children");
             }
+            a_.endVector(children,"children");
             a_.endRecord(this,"");
             return new String(s.toByteArray(), StandardCharsets.UTF_8);
         } catch (Throwable ex) {
@@ -106,10 +102,8 @@ public class GetChildrenResponse implements Record, Comparable<GetChildrenRespon
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetChildrenResponse)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return children.equals(((GetChildrenResponse) peer_).getChildren());
+            return peer_ == this || children.equals(((GetChildrenResponse) peer_).getChildren());
         }
     }
     @Override

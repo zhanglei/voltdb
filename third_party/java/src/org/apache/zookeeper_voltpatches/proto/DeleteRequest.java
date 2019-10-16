@@ -49,12 +49,14 @@ public class DeleteRequest implements Record, Comparable<DeleteRequest> {
     public void setVersion(int m_) {
         version = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeInt(version,"version");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
@@ -92,10 +94,8 @@ public class DeleteRequest implements Record, Comparable<DeleteRequest> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof DeleteRequest)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((DeleteRequest) peer_) == 0;
+            return peer_ == this || compareTo((DeleteRequest) peer_) == 0;
         }
     }
     @Override

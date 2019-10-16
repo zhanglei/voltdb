@@ -18,7 +18,9 @@
 
 package org.apache.jute_voltpatches;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Interface that is implemented by generated classes.

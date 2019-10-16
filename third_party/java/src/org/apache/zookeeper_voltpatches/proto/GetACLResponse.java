@@ -29,7 +29,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class GetACLResponse implements Record, Comparable<GetACLResponse> {
@@ -53,6 +52,7 @@ public class GetACLResponse implements Record, Comparable<GetACLResponse> {
     public void setStat(Stat m_) {
         stat = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         {
@@ -67,6 +67,7 @@ public class GetACLResponse implements Record, Comparable<GetACLResponse> {
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         {

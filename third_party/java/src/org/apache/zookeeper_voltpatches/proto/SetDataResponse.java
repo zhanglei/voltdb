@@ -42,11 +42,13 @@ public class SetDataResponse implements Record, Comparable<SetDataResponse> {
     public void setStat(Stat m_) {
         stat = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this, tag);
         a_.writeRecord(stat, "stat");
         a_.endRecord(this, tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         stat= new Stat();
@@ -81,10 +83,8 @@ public class SetDataResponse implements Record, Comparable<SetDataResponse> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof SetDataResponse)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((SetDataResponse) peer_) == 0;
+            return peer_ == this || compareTo((SetDataResponse) peer_) == 0;
         }
     }
     @Override
