@@ -141,28 +141,16 @@ public class CreateRequest implements Record {
             return true;
         }
         final CreateRequest peer = (CreateRequest) peer_;
-        boolean ret;
-        ret = path.equals(peer.path);
-        if (! ret) {
-            return ret;
-        }
-        ret = Utils.bufEquals(data, peer.data);
-        if (! ret) {
-            return ret;
-        }
-        ret = acl.equals(peer.acl);
-        if (! ret) {
-            return ret;
-        } else {
-            return flags == peer.flags;
-        }
+        return path.equals(peer.path) &&
+                Utils.bufEquals(data, peer.data) &&
+                acl.equals(peer.acl) &&
+                flags == peer.flags;
     }
 
     @Override
     public int hashCode() {
         int result = 17;
-        int ret;
-        ret = path.hashCode();
+        int ret = path.hashCode();
         result = 37*result + ret;
         ret = Arrays.toString(data).hashCode();
         result = 37*result + ret;

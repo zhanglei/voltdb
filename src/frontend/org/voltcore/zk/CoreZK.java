@@ -78,8 +78,7 @@ public class CoreZK {
                 cb.get();
             }
         } catch (Exception e) {
-            org.voltdb.VoltDB.crashLocalVoltDB(
-                    e.getMessage(), false, e);
+            org.voltdb.VoltDB.crashLocalVoltDB(e.getMessage(), false, e);
         }
     }
 
@@ -110,8 +109,7 @@ public class CoreZK {
      * @return -1 if the blocker is created successfully, or the host ID
      * if there is already another host rejoining.
      */
-    public static int createRejoinNodeIndicator(ZooKeeper zk, int hostId)
-    {
+    public static int createRejoinNodeIndicator(ZooKeeper zk, int hostId) {
         try {
             zk.create(rejoin_node_blocker,
                       ByteBuffer.allocate(4).putInt(hostId).array(),
@@ -125,7 +123,7 @@ public class CoreZK {
                     if (e1.code() != KeeperException.Code.NONODE) {
                         org.voltdb.VoltDB.crashLocalVoltDB("Unable to get the current rejoining node indicator");
                     }
-                } catch (InterruptedException e1) {}
+                } catch (InterruptedException ignored) {}
             } else {
                 org.voltdb.VoltDB.crashLocalVoltDB("Unable to create rejoin node Indicator", true, e);
             }
@@ -140,8 +138,7 @@ public class CoreZK {
      * Removes the rejoin blocker if the current rejoin blocker contains the given host ID.
      * @return true if the blocker is removed successfully, false otherwise.
      */
-    public static boolean removeRejoinNodeIndicatorForHost(ZooKeeper zk, int hostId)
-    {
+    public static boolean removeRejoinNodeIndicatorForHost(ZooKeeper zk, int hostId) {
         try {
             Stat stat = new Stat();
             final int rejoiningHost = ByteBuffer.wrap(zk.getData(rejoin_node_blocker, false, stat)).getInt();
@@ -151,7 +148,7 @@ public class CoreZK {
             }
         } catch (KeeperException e) {
             if (e.code() == KeeperException.Code.NONODE ||
-                e.code() == KeeperException.Code.BADVERSION) {
+                    e.code() == KeeperException.Code.BADVERSION) {
                 // Okay if the rejoin blocker for the given hostId is already gone.
                 return true;
             }
@@ -165,8 +162,7 @@ public class CoreZK {
      * Removes the join indicator for the given host ID.
      * @return true if the indicator is removed successfully, false otherwise.
      */
-    public static boolean removeJoinNodeIndicatorForHost(ZooKeeper zk, int hostId)
-    {
+    public static boolean removeJoinNodeIndicatorForHost(ZooKeeper zk, int hostId) {
         try {
             Stat stat = new Stat();
             String path = ZKUtil.joinZKPath(readyjoininghosts, Integer.toString(hostId));
@@ -192,8 +188,7 @@ public class CoreZK {
      * @throws KeeperException
      * @throws InterruptedException
      */
-    public static boolean isPartitionCleanupInProgress(ZooKeeper zk) throws KeeperException, InterruptedException
-    {
+    public static boolean isPartitionCleanupInProgress(ZooKeeper zk) throws KeeperException, InterruptedException {
         List<String> children = zk.getChildren(VoltZK.leaders_initiators, null);
         List<ZKUtil.ChildrenCallback> childrenCallbacks = Lists.newArrayList();
         for (String child : children) {
@@ -201,13 +196,11 @@ public class CoreZK {
             zk.getChildren(ZKUtil.joinZKPath(VoltZK.leaders_initiators, child), false, callback, null);
             childrenCallbacks.add(callback);
         }
-
         for (ZKUtil.ChildrenCallback callback : childrenCallbacks) {
             if (callback.get().isEmpty()) {
                 return true;
             }
         }
-
         return false;
     }
 }
