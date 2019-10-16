@@ -19,160 +19,161 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.CreateRequest;
+import org.apache.zookeeper_voltpatches.data.ACL;
+
 public class CreateRequest implements Record {
-  private String path;
-  private byte[] data;
-  private java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl;
-  private int flags;
-  public CreateRequest() {
-  }
-  public CreateRequest(
-        String path,
-        byte[] data,
-        java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl,
-        int flags) {
-    this.path=path;
-    this.data=data;
-    this.acl=acl;
-    this.flags=flags;
-  }
-  public String getPath() {
-    return path;
-  }
-  public void setPath(String m_) {
-    path=m_;
-  }
-  public byte[] getData() {
-    return data;
-  }
-  public void setData(byte[] m_) {
-    data=m_;
-  }
-  public java.util.List<org.apache.zookeeper_voltpatches.data.ACL> getAcl() {
-    return acl;
-  }
-  public void setAcl(java.util.List<org.apache.zookeeper_voltpatches.data.ACL> m_) {
-    acl=m_;
-  }
-  public int getFlags() {
-    return flags;
-  }
-  public void setFlags(int m_) {
-    flags=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeString(path,"path");
-    a_.writeBuffer(data,"data");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+    private String path;
+    private byte[] data;
+    private List<ACL> acl;
+    private int flags;
+    public CreateRequest() {
     }
-    a_.writeInt(flags,"flags");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    path=a_.readString("path");
-    data=a_.readBuffer("data");
-    {
-      Index vidx1 = a_.startVector("acl");
-      if (vidx1!= null) {          acl=new java.util.ArrayList<org.apache.zookeeper_voltpatches.data.ACL>();
-          for (; !vidx1.done(); vidx1.incr()) {
-    org.apache.zookeeper_voltpatches.data.ACL e1;
-    e1= new org.apache.zookeeper_voltpatches.data.ACL();
-    a_.readRecord(e1,"e1");
-            acl.add(e1);
-          }
-      }
-    a_.endVector("acl");
+    public String getPath() {
+        return path;
     }
-    flags=a_.readInt("flags");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeString(path,"path");
-    a_.writeBuffer(data,"data");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+    public void setPath(String m_) {
+        path=m_;
     }
-    a_.writeInt(flags,"flags");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+    public byte[] getData() {
+        return data;
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    throw new UnsupportedOperationException("comparing CreateRequest is unimplemented");
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof CreateRequest)) {
-      return false;
+    public void setData(byte[] m_) {
+        data=m_;
     }
-    if (peer_ == this) {
-      return true;
+    public List<ACL> getAcl() {
+        return acl;
     }
-    CreateRequest peer = (CreateRequest) peer_;
-    boolean ret = false;
-    ret = path.equals(peer.path);
-    if (!ret) return ret;
-    ret = org.apache.jute_voltpatches.Utils.bufEquals(data,peer.data);
-    if (!ret) return ret;
-    ret = acl.equals(peer.acl);
-    if (!ret) return ret;
-    ret = (flags==peer.flags);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = path.hashCode();
-    result = 37*result + ret;
-    ret = Arrays.toString(data).hashCode();
-    result = 37*result + ret;
-    ret = acl.hashCode();
-    result = 37*result + ret;
-    ret = flags;
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LCreateRequest(sB[LACL(iLId(ss))]i)";
-  }
+    public void setAcl(List<ACL> m_) {
+        acl=m_;
+    }
+    public int getFlags() {
+        return flags;
+    }
+    public void setFlags(int m_) {
+        flags=m_;
+    }
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeString(path,"path");
+        a_.writeBuffer(data,"data");
+        {
+            a_.startVector(acl,"acl");
+            if (acl!= null) {
+                for (ACL e1 : acl) {
+                    a_.writeRecord(e1, "e1");
+                }
+            }
+            a_.endVector(acl,"acl");
+        }
+        a_.writeInt(flags,"flags");
+        a_.endRecord(this,tag);
+    }
+    public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
+        a_.startRecord(tag);
+        path=a_.readString("path");
+        data=a_.readBuffer("data");
+        {
+            Index vidx1 = a_.startVector("acl");
+            if (vidx1 != null) {
+                acl = new ArrayList<>();
+                for (; !vidx1.done(); vidx1.incr()) {
+                    ACL e1 = new ACL();
+                    a_.readRecord(e1,"e1");
+                    acl.add(e1);
+                }
+            }
+            a_.endVector("acl");
+        }
+        flags=a_.readInt("flags");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public String toString() {
+        try {
+            ByteArrayOutputStream s = new ByteArrayOutputStream();
+            CsvOutputArchive a_ = new CsvOutputArchive(s);
+            a_.startRecord(this,"");
+            a_.writeString(path,"path");
+            a_.writeBuffer(data,"data");
+            {
+                a_.startVector(acl,"acl");
+                if (acl!= null) {
+                    for (ACL e1 : acl) {
+                        a_.writeRecord(e1, "e1");
+                    }
+                }
+                a_.endVector(acl,"acl");
+            }
+            a_.writeInt(flags,"flags");
+            a_.endRecord(this,"");
+            return new String(s.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+            return "ERROR";
+        }
+    }
+
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+
+    public int compareTo (Object ignored) throws ClassCastException {
+        throw new UnsupportedOperationException("comparing CreateRequest is unimplemented");
+    }
+
+    @Override
+    public boolean equals(Object peer_) {
+        if (! (peer_ instanceof CreateRequest)) {
+            return false;
+        } else if (peer_ == this) {
+            return true;
+        }
+        final CreateRequest peer = (CreateRequest) peer_;
+        boolean ret;
+        ret = path.equals(peer.path);
+        if (! ret) {
+            return ret;
+        }
+        ret = Utils.bufEquals(data, peer.data);
+        if (! ret) {
+            return ret;
+        }
+        ret = acl.equals(peer.acl);
+        if (! ret) {
+            return ret;
+        } else {
+            return flags == peer.flags;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = path.hashCode();
+        result = 37*result + ret;
+        ret = Arrays.toString(data).hashCode();
+        result = 37*result + ret;
+        ret = acl.hashCode();
+        result = 37*result + ret;
+        ret = flags;
+        result = 37*result + ret;
+        return result;
+    }
+
+    public static String signature() {
+        return "LCreateRequest(sB[LACL(iLId(ss))]i)";
+    }
 }
