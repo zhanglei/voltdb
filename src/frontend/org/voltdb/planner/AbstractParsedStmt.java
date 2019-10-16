@@ -577,9 +577,8 @@ public abstract class AbstractParsedStmt {
             // from TestVoltCompler.testScalarSubqueriesExpectedFailures.
             throw new PlanningErrorException("Object not found: " + tableAlias);
         }
-        return tableScan.resolveTVE(tve);
-//        AbstractExpression resolvedExpr = tableScan.resolveTVE(tve);
-//
+        AbstractExpression resolvedExpr = tableScan.resolveTVE(tve);
+        return resolvedExpr;
 //        if ((tableScan instanceof StmtCommonTableScan) || (m_stmtId == tableScan.getStatementId())) {
 //            return resolvedExpr;
 //        }
