@@ -19,6 +19,8 @@
 package org.apache.jute_voltpatches;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
@@ -30,6 +32,12 @@ public interface Record {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
     void writeCSV(CsvOutputArchive a) throws IOException;
+    default void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    default void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
     default String toStringHelper() {
         try {
             final ByteArrayOutputStream s = new ByteArrayOutputStream();

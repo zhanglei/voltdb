@@ -21,8 +21,6 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -69,6 +67,7 @@ public class SetWatches implements Record, Comparable<SetWatches> {
     public void setChildWatches(List<String> m_) {
         childWatches = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeLong(relativeZxid,"relativeZxid");
@@ -95,6 +94,7 @@ public class SetWatches implements Record, Comparable<SetWatches> {
         a_.endVector(childWatches,"childWatches");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         relativeZxid=a_.readLong("relativeZxid");
@@ -162,12 +162,6 @@ public class SetWatches implements Record, Comparable<SetWatches> {
     @Override
     public String toString() {
         return toStringHelper();
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(SetWatches peer_) {

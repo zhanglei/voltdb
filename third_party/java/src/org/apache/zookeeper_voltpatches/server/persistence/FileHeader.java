@@ -21,7 +21,6 @@ package org.apache.zookeeper_voltpatches.server.persistence;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
@@ -84,12 +83,6 @@ public class FileHeader implements Record, Comparable<FileHeader> {
     public String toString() {
         return toStringHelper();
     }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
-        deserialize(new BinaryInputArchive(in), "");
-    }
     @Override
     public int compareTo(FileHeader peer_) {
         return Comparator.comparingInt(FileHeader::getMagic)
@@ -99,7 +92,7 @@ public class FileHeader implements Record, Comparable<FileHeader> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof FileHeader)) {
+        if (! (peer_ instanceof FileHeader)) {
             return false;
         } else {
             return peer_ == this || compareTo((FileHeader) peer_) == 0;

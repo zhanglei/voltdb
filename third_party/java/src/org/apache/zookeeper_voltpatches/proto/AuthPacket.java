@@ -21,7 +21,6 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -84,12 +83,6 @@ public class AuthPacket implements Record, Comparable<AuthPacket> {
     @Override
     public String toString() {
         return toStringHelper();
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(AuthPacket peer_) {

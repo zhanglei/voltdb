@@ -22,8 +22,6 @@ package org.apache.zookeeper_voltpatches.proto;
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.Stat;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
@@ -62,12 +60,6 @@ public class ExistsResponse implements Record, Comparable<ExistsResponse> {
     @Override
     public String toString() {
         return toStringHelper();
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(ExistsResponse peer_) throws ClassCastException {

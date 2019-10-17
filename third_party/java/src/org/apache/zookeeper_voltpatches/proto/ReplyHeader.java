@@ -21,8 +21,6 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
@@ -83,12 +81,6 @@ public class ReplyHeader implements Record, Comparable<ReplyHeader> {
         a.writeLong(zxid,"zxid");
         a.writeInt(err,"err");
         a.endRecord(this,"");
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(ReplyHeader peer_) {

@@ -19,11 +19,7 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -117,13 +113,6 @@ public class CreateRequest implements Record, Comparable<CreateRequest> {
         return toStringHelper();
     }
 
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
-    }
     @Override
     public int compareTo(CreateRequest ignored) {
         throw new UnsupportedOperationException("comparing CreateRequest is unimplemented");

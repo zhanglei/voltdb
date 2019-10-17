@@ -21,8 +21,6 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
@@ -82,12 +80,6 @@ public class GetChildrenResponse implements Record, Comparable<GetChildrenRespon
         }
         a.endVector(children,"children");
         a.endRecord(this,"");
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(GetChildrenResponse ignored) throws ClassCastException {

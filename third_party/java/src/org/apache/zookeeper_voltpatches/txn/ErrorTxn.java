@@ -21,8 +21,6 @@ package org.apache.zookeeper_voltpatches.txn;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
@@ -62,12 +60,6 @@ public class ErrorTxn implements Record, Comparable<ErrorTxn> {
     @Override
     public String toString() {
         return toStringHelper();
-    }
-    public void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    public void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
     }
     @Override
     public int compareTo(ErrorTxn peer_) {
