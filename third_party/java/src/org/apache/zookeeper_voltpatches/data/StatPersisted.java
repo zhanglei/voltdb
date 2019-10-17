@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class StatPersisted implements Record<StatPersisted> {
+public class StatPersisted extends Record.AbstractRecord<StatPersisted> {
     private long czxid;
     private long mzxid;
     private long ctime;
@@ -140,10 +140,6 @@ public class StatPersisted implements Record<StatPersisted> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(StatPersisted peer_) throws ClassCastException {
         return Comparator.comparingLong(StatPersisted::getCzxid)
                 .thenComparingLong(StatPersisted::getMzxid)
@@ -158,11 +154,7 @@ public class StatPersisted implements Record<StatPersisted> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof StatPersisted)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((StatPersisted) peer_) == 0;
-        }
+        return peer_ instanceof StatPersisted && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

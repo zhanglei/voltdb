@@ -24,9 +24,10 @@ import org.apache.zookeeper_voltpatches.data.ACL;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-public class SetACLRequest implements Record<SetACLRequest> {
+public class SetACLRequest extends Record.AbstractRecord<SetACLRequest> {
     private String path;
     private List<ACL> acl;
     private int version;
@@ -88,10 +89,6 @@ public class SetACLRequest implements Record<SetACLRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(SetACLRequest peer_) {
         throw new UnsupportedOperationException("comparing SetACLRequest is unimplemented");
     }
@@ -99,13 +96,11 @@ public class SetACLRequest implements Record<SetACLRequest> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof SetACLRequest)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            SetACLRequest peer = (SetACLRequest) peer_;
-            return path.equals(peer.getPath()) &&
-                    acl.equals(peer.getAcl()) &&
-                    version == peer.getVersion();
+            return peer_ == this || Comparator.comparing(SetACLRequest::getPath)
+                    .thenComparing(SetACLRequest::getAcl, Utils::compareLists)
+                    .thenComparingInt(SetACLRequest::getVersion)
+                    .compare(this, (SetACLRequest) peer_) == 0;
         }
     }
     @Override

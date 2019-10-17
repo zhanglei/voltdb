@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class DeleteRequest implements Record<DeleteRequest> {
+public class DeleteRequest extends Record.AbstractRecord<DeleteRequest> {
     private String path;
     private int version;
     public DeleteRequest() {
@@ -61,10 +61,6 @@ public class DeleteRequest implements Record<DeleteRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(DeleteRequest peer_) {
         return Comparator.comparing(DeleteRequest::getPath)
                 .thenComparingInt(DeleteRequest::getVersion)
@@ -72,11 +68,7 @@ public class DeleteRequest implements Record<DeleteRequest> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof DeleteRequest)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((DeleteRequest) peer_) == 0;
-        }
+        return peer_ instanceof DeleteRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

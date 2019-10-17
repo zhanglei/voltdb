@@ -22,12 +22,13 @@ package org.apache.zookeeper_voltpatches.proto;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.ACL;
 
-public class CreateRequest implements Record<CreateRequest> {
+public class CreateRequest extends Record.AbstractRecord<CreateRequest> {
     private String path;
     private byte[] data;
     private List<ACL> acl;
@@ -93,27 +94,20 @@ public class CreateRequest implements Record<CreateRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-
-    @Override
     public int compareTo(CreateRequest ignored) {
         throw new UnsupportedOperationException("comparing CreateRequest is unimplemented");
     }
 
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof CreateRequest)) {
+        if (!(peer_ instanceof CreateRequest)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
+        } else {
+            return peer_ == this || Comparator.comparing(CreateRequest::getPath)
+                    .thenComparing(CreateRequest::getData, Utils::compareBytes)
+                    .thenComparingInt(CreateRequest::getFlags)
+                    .compare(this, (CreateRequest) peer_) == 0;
         }
-        final CreateRequest peer = (CreateRequest) peer_;
-        return path.equals(peer.path) &&
-                Utils.bufEquals(data, peer.data) &&
-                acl.equals(peer.acl) &&
-                flags == peer.flags;
     }
 
     @Override
@@ -126,7 +120,7 @@ public class CreateRequest implements Record<CreateRequest> {
         ret = acl.hashCode();
         result = 37*result + ret;
         ret = flags;
-        return  37*result + ret;
+        return 37*result + ret;
     }
 
     public static String signature() {

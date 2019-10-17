@@ -25,7 +25,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class GetDataResponse implements Record<GetDataResponse> {
+public class GetDataResponse extends Record.AbstractRecord<GetDataResponse> {
     private byte[] data;
     private Stat stat;
     public GetDataResponse() {
@@ -62,10 +62,6 @@ public class GetDataResponse implements Record<GetDataResponse> {
         a_.endRecord(tag);
     }
 
-    @Override
-    public String toString() {
-        return toStringHelper();
-    }
     public int compareTo(GetDataResponse peer) throws ClassCastException {
         byte[] my = data;
         byte[] ur = peer.data;
@@ -78,11 +74,7 @@ public class GetDataResponse implements Record<GetDataResponse> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof GetDataResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((GetDataResponse) peer_) == 0;
-        }
+        return peer_ instanceof GetDataResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

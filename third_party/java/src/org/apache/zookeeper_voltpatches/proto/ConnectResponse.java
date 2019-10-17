@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class ConnectResponse implements Record<ConnectResponse> {
+public class ConnectResponse extends Record.AbstractRecord<ConnectResponse> {
     private int protocolVersion;
     private int timeOut;
     private long sessionId;
@@ -84,10 +84,6 @@ public class ConnectResponse implements Record<ConnectResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ConnectResponse peer_) {
         return Comparator.comparingInt(ConnectResponse::getProtocolVersion)
                 .thenComparingInt(ConnectResponse::getTimeOut)
@@ -97,11 +93,7 @@ public class ConnectResponse implements Record<ConnectResponse> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof ConnectResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((ConnectResponse) peer_) == 0;
-        }
+        return peer_ instanceof ConnectResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

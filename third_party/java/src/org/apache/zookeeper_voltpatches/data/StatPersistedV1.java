@@ -20,11 +20,12 @@
 package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class StatPersistedV1 implements Record<StatPersistedV1> {
+public class StatPersistedV1 extends Record.AbstractRecord<StatPersistedV1> {
     private long czxid;
     private long mzxid;
     private long ctime;
@@ -129,10 +130,6 @@ public class StatPersistedV1 implements Record<StatPersistedV1> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(StatPersistedV1 peer_) {
         return Comparator.comparingLong(StatPersistedV1::getCzxid)
                 .thenComparingLong(StatPersistedV1::getMzxid)
@@ -146,11 +143,7 @@ public class StatPersistedV1 implements Record<StatPersistedV1> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof StatPersistedV1)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((StatPersistedV1) peer_) == 0;
-        }
+        return peer_ instanceof StatPersistedV1 && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

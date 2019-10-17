@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetChildren2Request implements Record<GetChildren2Request> {
+public class GetChildren2Request extends Record.AbstractRecord<GetChildren2Request> {
     private String path;
     private boolean watch;
     public GetChildren2Request() {
@@ -61,10 +61,6 @@ public class GetChildren2Request implements Record<GetChildren2Request> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(GetChildren2Request peer_) {
         return Comparator.comparing(GetChildren2Request::getPath)
                 .thenComparing(GetChildren2Request::getWatch)
@@ -72,11 +68,7 @@ public class GetChildren2Request implements Record<GetChildren2Request> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof GetChildren2Request)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((GetChildren2Request) peer_) == 0;
-        }
+        return peer_ instanceof GetChildren2Request && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

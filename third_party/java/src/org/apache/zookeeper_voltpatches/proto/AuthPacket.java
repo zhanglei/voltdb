@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class AuthPacket implements Record<AuthPacket> {
+public class AuthPacket extends Record.AbstractRecord<AuthPacket> {
     private int type;
     private String scheme;
     private byte[] auth;
@@ -72,10 +72,6 @@ public class AuthPacket implements Record<AuthPacket> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(AuthPacket peer_) {
         return Comparator.comparingInt(AuthPacket::getType)
                 .thenComparing(AuthPacket::getScheme)
@@ -84,11 +80,7 @@ public class AuthPacket implements Record<AuthPacket> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof AuthPacket)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((AuthPacket) peer_) == 0;
-        }
+        return peer_ instanceof AuthPacket && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

@@ -20,11 +20,12 @@
 package org.apache.zookeeper_voltpatches.txn;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class DeleteTxn implements Record<DeleteTxn> {
+public class DeleteTxn extends Record.AbstractRecord<DeleteTxn> {
     private String path;
     public DeleteTxn() {
     }
@@ -49,20 +50,12 @@ public class DeleteTxn implements Record<DeleteTxn> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(DeleteTxn peer_) {
         return Comparator.comparing(DeleteTxn::getPath).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if ( !(peer_ instanceof DeleteTxn)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((DeleteTxn) peer_) == 0;
-        }
+        return peer_ instanceof DeleteTxn && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

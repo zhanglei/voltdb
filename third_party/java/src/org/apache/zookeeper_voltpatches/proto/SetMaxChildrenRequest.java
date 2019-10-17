@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SetMaxChildrenRequest implements Record<SetMaxChildrenRequest> {
+public class SetMaxChildrenRequest extends Record.AbstractRecord<SetMaxChildrenRequest> {
     private String path;
     private int max;
     public SetMaxChildrenRequest() {
@@ -61,10 +61,6 @@ public class SetMaxChildrenRequest implements Record<SetMaxChildrenRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(SetMaxChildrenRequest peer_) {
         return Comparator.comparing(SetMaxChildrenRequest::getPath)
                 .thenComparingLong(SetMaxChildrenRequest::getMax)
@@ -72,11 +68,7 @@ public class SetMaxChildrenRequest implements Record<SetMaxChildrenRequest> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof SetMaxChildrenRequest)) {
-            return false;
-        } else {
-            return  peer_ == this || compareTo((SetMaxChildrenRequest) peer_) == 0;
-        }
+        return peer_ instanceof SetMaxChildrenRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

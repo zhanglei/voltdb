@@ -31,20 +31,29 @@ import java.nio.charset.StandardCharsets;
 public interface Record<T> extends Comparable<T> {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
-    default void write(DataOutput out) throws IOException {
-        serialize(new BinaryOutputArchive(out), "");
-    }
-    default void readFields(DataInput in) throws IOException {
-        deserialize(new BinaryInputArchive(in), "");
-    }
-    default String toStringHelper() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            serialize(new CsvOutputArchive(s), "");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
+
+    abstract class AbstractRecord<T> implements Record<T> {
+        public void write(DataOutput out) throws IOException {
+            serialize(new BinaryOutputArchive(out), "");
         }
-        return "ERROR";
+        public void readFields(DataInput in) throws IOException {
+            deserialize(new BinaryInputArchive(in), "");
+        }
+        @Override
+        public String toString() {
+            try {
+                final ByteArrayOutputStream s = new ByteArrayOutputStream();
+                serialize(new CsvOutputArchive(s), "");
+                return new String(s.toByteArray(), StandardCharsets.UTF_8);
+            } catch (Throwable ex) {
+                ex.printStackTrace();
+            }
+            return "ERROR";
+        }
+        @SuppressWarnings("unchecked")
+        public boolean equalsHelper(Object peer_) {
+            // Assumes that peer_ is a T.
+            return peer_ == this || compareTo((T) peer_) == 0;
+        }
     }
 }

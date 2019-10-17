@@ -25,7 +25,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ExistsResponse implements Record<ExistsResponse> {
+public class ExistsResponse extends Record.AbstractRecord<ExistsResponse> {
     private Stat stat;
     public ExistsResponse() {
     }
@@ -51,11 +51,7 @@ public class ExistsResponse implements Record<ExistsResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
-    public int compareTo(ExistsResponse peer_) throws ClassCastException {
+    public int compareTo(ExistsResponse peer_) {
         return Comparator.comparing(ExistsResponse::getStat).compare(this, peer_);
     }
     @Override

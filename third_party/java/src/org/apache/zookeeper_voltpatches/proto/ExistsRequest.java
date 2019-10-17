@@ -24,7 +24,7 @@ import java.util.Comparator;
 
 import org.apache.jute_voltpatches.*;
 
-public class ExistsRequest implements Record<ExistsRequest> {
+public class ExistsRequest extends Record.AbstractRecord<ExistsRequest> {
     private String path;
     private boolean watch;
     public ExistsRequest() {
@@ -37,13 +37,13 @@ public class ExistsRequest implements Record<ExistsRequest> {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
     public boolean getWatch() {
         return watch;
     }
     public void setWatch(boolean m_) {
-        watch=m_;
+        watch = m_;
     }
     @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
@@ -61,10 +61,6 @@ public class ExistsRequest implements Record<ExistsRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ExistsRequest peer_) {
         return Comparator.comparing(ExistsRequest::getPath)
                 .thenComparing(ExistsRequest::getWatch)
@@ -72,7 +68,7 @@ public class ExistsRequest implements Record<ExistsRequest> {
     }
     @Override
     public boolean equals(Object peer_) {
-        return peer_ instanceof ExistsRequest && compareTo((ExistsRequest) peer_) == 0;
+        return peer_ instanceof ExistsRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

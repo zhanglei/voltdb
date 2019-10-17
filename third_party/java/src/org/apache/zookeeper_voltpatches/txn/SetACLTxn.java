@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
-public class SetACLTxn implements Record<SetACLTxn> {
+public class SetACLTxn extends Record.AbstractRecord<SetACLTxn> {
     private String path;
     private List<ACL> acl;
     private int version;
@@ -87,10 +87,6 @@ public class SetACLTxn implements Record<SetACLTxn> {
         a_.endRecord(tag);
     }
 
-    @Override
-    public String toString() {
-        return toStringHelper();
-    }
     @Override
     public int compareTo(SetACLTxn peer_) {
         throw new UnsupportedOperationException("comparing SetACLTxn is unimplemented");

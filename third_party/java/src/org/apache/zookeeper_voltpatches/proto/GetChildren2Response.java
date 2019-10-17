@@ -24,9 +24,10 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-public class GetChildren2Response implements Record<GetChildren2Response> {
+public class GetChildren2Response extends Record.AbstractRecord<GetChildren2Response> {
     private List<String> children;
     private Stat stat;
     public GetChildren2Response() {
@@ -79,10 +80,6 @@ public class GetChildren2Response implements Record<GetChildren2Response> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo (GetChildren2Response ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetChildren2Response is unimplemented");
     }
@@ -90,11 +87,10 @@ public class GetChildren2Response implements Record<GetChildren2Response> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetChildren2Response)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            final GetChildren2Response peer = (GetChildren2Response) peer_;
-            return children.equals(peer.getChildren()) && stat.equals(peer.getStat());
+            return peer_ == this || Comparator.comparing(GetChildren2Response::getChildren, Utils::compareLists)
+                    .thenComparing(GetChildren2Response::getStat)
+                    .compare(this, (GetChildren2Response) peer_) == 0;
         }
     }
     @Override

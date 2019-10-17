@@ -21,11 +21,12 @@ package org.apache.zookeeper_voltpatches.data;
 
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class Id implements Record<Id> {
+public class Id extends Record.AbstractRecord<Id> {
     private String scheme;
     private String id;
     public Id() {
@@ -60,10 +61,6 @@ public class Id implements Record<Id> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(Id peer_) {
         return Comparator.comparing(Id::getScheme)
                 .thenComparing(Id::getId)
@@ -71,11 +68,7 @@ public class Id implements Record<Id> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof Id)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((Id) peer_) == 0;
-        }
+        return peer_ instanceof Id && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

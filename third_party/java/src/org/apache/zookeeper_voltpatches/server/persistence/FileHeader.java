@@ -20,11 +20,12 @@
 package org.apache.zookeeper_voltpatches.server.persistence;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class FileHeader implements Record<FileHeader> {
+public class FileHeader extends Record.AbstractRecord<FileHeader> {
     private int magic;
     private int version;
     private long dbid;
@@ -71,10 +72,6 @@ public class FileHeader implements Record<FileHeader> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(FileHeader peer_) {
         return Comparator.comparingInt(FileHeader::getMagic)
                 .thenComparingInt(FileHeader::getVersion)
@@ -83,11 +80,7 @@ public class FileHeader implements Record<FileHeader> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof FileHeader)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((FileHeader) peer_) == 0;
-        }
+        return peer_ instanceof FileHeader && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

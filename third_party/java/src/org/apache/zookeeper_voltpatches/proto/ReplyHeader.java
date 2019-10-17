@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ReplyHeader implements Record<ReplyHeader> {
+public class ReplyHeader extends Record.AbstractRecord<ReplyHeader> {
     private int xid;
     private long zxid;
     private int err;
@@ -71,10 +71,6 @@ public class ReplyHeader implements Record<ReplyHeader> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ReplyHeader peer_) {
         return Comparator.comparingInt(ReplyHeader::getXid)
                 .thenComparingLong(ReplyHeader::getZxid)
@@ -83,11 +79,7 @@ public class ReplyHeader implements Record<ReplyHeader> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof ReplyHeader)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((ReplyHeader) peer_) == 0;
-        }
+        return peer_ instanceof ReplyHeader && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

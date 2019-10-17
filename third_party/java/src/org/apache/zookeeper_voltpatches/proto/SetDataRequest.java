@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class SetDataRequest implements Record<SetDataRequest> {
+public class SetDataRequest extends Record.AbstractRecord<SetDataRequest> {
     private String path;
     private byte[] data;
     private int version;
@@ -72,33 +72,15 @@ public class SetDataRequest implements Record<SetDataRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-
-    @Override
-    public int compareTo(SetDataRequest peer) throws ClassCastException {
-        int ret;
-        ret = path.compareTo(peer.path);
-        if (ret != 0) {
-            return ret;
-        }
-        byte[] my = data;
-        byte[] ur = peer.data;
-        ret = Utils.compareBytes(my,0,my.length,ur,0,ur.length);
-        if (ret != 0) {
-            return ret;
-        } else {
-            return Comparator.comparingInt(SetDataRequest::getVersion).compare(this, peer);
-        }
+    public int compareTo(SetDataRequest peer) {
+        return Comparator.comparing(SetDataRequest::getPath)
+                .thenComparing(SetDataRequest::getData, Utils::compareBytes)
+                .thenComparingInt(SetDataRequest::getVersion)
+                .compare(this, peer);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof SetDataRequest)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SetDataRequest) peer_) == 0;
-        }
+        return peer_ instanceof SetDataRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

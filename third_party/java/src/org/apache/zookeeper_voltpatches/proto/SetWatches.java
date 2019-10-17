@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class SetWatches implements Record<SetWatches> {
+public class SetWatches extends Record.AbstractRecord<SetWatches> {
     private long relativeZxid;
     private List<String> dataWatches;
     private List<String> existWatches;
@@ -131,10 +131,6 @@ public class SetWatches implements Record<SetWatches> {
         a_.endRecord(tag);
     }
 
-    @Override
-    public String toString() {
-        return toStringHelper();
-    }
     @Override
     public int compareTo(SetWatches peer_) {
         throw new UnsupportedOperationException("comparing SetWatches is unimplemented");

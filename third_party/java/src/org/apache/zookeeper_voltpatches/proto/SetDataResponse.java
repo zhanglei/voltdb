@@ -25,7 +25,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SetDataResponse implements Record<SetDataResponse> {
+public class SetDataResponse extends Record.AbstractRecord<SetDataResponse> {
     private Stat stat;
     public SetDataResponse() {
     }
@@ -53,20 +53,12 @@ public class SetDataResponse implements Record<SetDataResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(SetDataResponse peer_) {
         return Comparator.comparing(SetDataResponse::getStat).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof SetDataResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SetDataResponse) peer_) == 0;
-        }
+        return peer_ instanceof SetDataResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

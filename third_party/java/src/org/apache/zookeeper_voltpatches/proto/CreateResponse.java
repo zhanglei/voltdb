@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class CreateResponse implements Record<CreateResponse> {
+public class CreateResponse extends Record.AbstractRecord<CreateResponse> {
     private String path;
     public CreateResponse() {
     }
@@ -51,20 +51,12 @@ public class CreateResponse implements Record<CreateResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo (CreateResponse peer_) {
         return Comparator.comparing(CreateResponse::getPath).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof CreateResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((CreateResponse) peer_) == 0;
-        }
+        return peer_ instanceof CreateResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

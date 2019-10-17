@@ -24,7 +24,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 
 import java.io.IOException;
 
-public class SetACLResponse implements Record<SetACLResponse> {
+public class SetACLResponse extends Record.AbstractRecord<SetACLResponse> {
     private Stat stat;
     public SetACLResponse() {
     }
@@ -52,21 +52,12 @@ public class SetACLResponse implements Record<SetACLResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-
-    @Override
     public int compareTo (SetACLResponse peer_) {
         return stat.compareTo(peer_.getStat());
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof SetACLResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SetACLResponse) peer_) == 0;
-        }
+        return peer_ instanceof SetACLResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

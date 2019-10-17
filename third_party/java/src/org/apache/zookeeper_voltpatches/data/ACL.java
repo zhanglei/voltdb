@@ -20,11 +20,11 @@
 package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
-import java.io.IOException;
 import java.util.Comparator;
 
-public class ACL implements Record<ACL> {
+public class ACL extends Record.AbstractRecord<ACL> {
     private int perms;
     private Id id;
     public ACL() {
@@ -62,10 +62,6 @@ public class ACL implements Record<ACL> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ACL peer_) {
         return Comparator.comparingInt(ACL::getPerms)
                 .thenComparing(ACL::getId)
@@ -73,11 +69,7 @@ public class ACL implements Record<ACL> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof ACL)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((ACL) peer_) == 0;
-        }
+        return peer_ instanceof ACL && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

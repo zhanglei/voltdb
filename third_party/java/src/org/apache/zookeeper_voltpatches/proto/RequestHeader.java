@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class RequestHeader implements Record<RequestHeader> {
+public class RequestHeader extends Record.AbstractRecord<RequestHeader> {
     private int xid;
     private int type;
     public RequestHeader() {
@@ -60,10 +60,6 @@ public class RequestHeader implements Record<RequestHeader> {
         a_.endRecord(tag);
     }
 
-    @Override
-    public String toString() {
-        return toStringHelper();
-    }
     public int compareTo (RequestHeader peer_) throws ClassCastException {
         return Comparator.comparingInt(RequestHeader::getXid)
                 .thenComparingInt(RequestHeader::getType)
@@ -71,11 +67,7 @@ public class RequestHeader implements Record<RequestHeader> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof RequestHeader)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((RequestHeader) peer_) == 0;
-        }
+        return peer_ instanceof RequestHeader && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

@@ -25,9 +25,10 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-public class GetACLResponse implements Record<GetACLResponse> {
+public class GetACLResponse extends Record.AbstractRecord<GetACLResponse> {
     private List<ACL> acl;
     private Stat stat;
     public GetACLResponse() {
@@ -81,10 +82,6 @@ public class GetACLResponse implements Record<GetACLResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(GetACLResponse ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetACLResponse is unimplemented");
     }
@@ -92,10 +89,10 @@ public class GetACLResponse implements Record<GetACLResponse> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetACLResponse)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return acl == ((GetACLResponse) peer_).acl && stat == ((GetACLResponse) peer_).stat;
+            return peer_ == this || Comparator.comparing(GetACLResponse::getAcl, Utils::compareLists)
+                    .thenComparing(GetACLResponse::getStat)
+                    .compare(this, (GetACLResponse) peer_) == 0;
         }
     }
     @Override
@@ -104,8 +101,7 @@ public class GetACLResponse implements Record<GetACLResponse> {
         int ret = acl.hashCode();
         result = 37*result + ret;
         ret = stat.hashCode();
-        result = 37*result + ret;
-        return result;
+        return 37*result + ret;
     }
     public static String signature() {
         return "LGetACLResponse([LACL(iLId(ss))]LStat(lllliiiliil))";

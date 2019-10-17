@@ -18,8 +18,6 @@
 
 package org.apache.jute_voltpatches;
 
-import org.apache.log4j.lf5.util.StreamUtils;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -287,11 +285,11 @@ public class Utils {
         return stream.toByteArray();
     }
 
-    public static int compareBytes(byte b1[], byte b2[]) {
+    public static int compareBytes(byte[] b1, byte[] b2) {
         return compareBytes(b1, 0, b1.length, b2, 0, b2.length);
     }
-    public static int compareBytes(byte b1[], int off1, int len1, byte b2[],
-            int off2, int len2) {
+    public static int compareBytes(byte[] b1, int off1, int len1, byte[] b2,
+                                   int off2, int len2) {
         int i;
         for (i = 0; i < len1 && i < len2; i++) {
             if (b1[off1 + i] != b2[off2 + i]) {

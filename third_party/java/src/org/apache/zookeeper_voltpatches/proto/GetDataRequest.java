@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetDataRequest implements Record<GetDataRequest> {
+public class GetDataRequest extends Record.AbstractRecord<GetDataRequest> {
     private String path;
     private boolean watch;
     public GetDataRequest() {
@@ -59,11 +59,7 @@ public class GetDataRequest implements Record<GetDataRequest> {
         watch = a_.readBool("watch");
         a_.endRecord(tag);
     }
-
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
     public int compareTo(GetDataRequest peer_) {
         return Comparator.comparing(GetDataRequest::getPath)
                 .thenComparing(GetDataRequest::getWatch)
@@ -72,11 +68,7 @@ public class GetDataRequest implements Record<GetDataRequest> {
 
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof GetDataRequest)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((GetDataRequest) peer_) == 0;
-        }
+        return peer_ instanceof GetDataRequest && equalsHelper(peer_);
     }
 
     @Override

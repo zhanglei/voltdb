@@ -20,12 +20,13 @@
 package org.apache.zookeeper_voltpatches.txn;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class SetDataTxn implements Record<SetDataTxn> {
+public class SetDataTxn extends Record.AbstractRecord<SetDataTxn> {
     private String path;
     private byte[] data;
     private int version;
@@ -72,10 +73,6 @@ public class SetDataTxn implements Record<SetDataTxn> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo (SetDataTxn peer_) {
         return Comparator.comparing(SetDataTxn::getPath)
                 .thenComparing(SetDataTxn::getData, Utils::compareBytes)
@@ -84,11 +81,7 @@ public class SetDataTxn implements Record<SetDataTxn> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if ( !(peer_ instanceof SetDataTxn)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SetDataTxn) peer_) == 0;
-        }
+        return peer_ instanceof SetDataTxn && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

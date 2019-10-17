@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class ConnectRequest implements Record<ConnectRequest> {
+public class ConnectRequest extends Record.AbstractRecord<ConnectRequest> {
     private int protocolVersion;
     private long lastZxidSeen;
     private int timeOut;
@@ -97,10 +97,6 @@ public class ConnectRequest implements Record<ConnectRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ConnectRequest peer_) {
         return Comparator.comparingInt(ConnectRequest::getProtocolVersion)
                 .thenComparingLong(ConnectRequest::getLastZxidSeen)
@@ -111,11 +107,7 @@ public class ConnectRequest implements Record<ConnectRequest> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof ConnectRequest)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((ConnectRequest) peer_) == 0;
-        }
+        return peer_ instanceof ConnectRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

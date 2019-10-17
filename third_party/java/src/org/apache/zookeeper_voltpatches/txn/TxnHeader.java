@@ -20,11 +20,12 @@
 package org.apache.zookeeper_voltpatches.txn;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class TxnHeader implements Record<TxnHeader> {
+public class TxnHeader extends Record.AbstractRecord<TxnHeader> {
     private long clientId;
     private int cxid;
     private long zxid;
@@ -96,10 +97,6 @@ public class TxnHeader implements Record<TxnHeader> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo (TxnHeader peer_) {
         return Comparator.comparingLong(TxnHeader::getClientId)
                 .thenComparingLong(TxnHeader::getCxid)
@@ -110,11 +107,7 @@ public class TxnHeader implements Record<TxnHeader> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof TxnHeader)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((TxnHeader) peer_) == 0;
-        }
+        return peer_ instanceof TxnHeader && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

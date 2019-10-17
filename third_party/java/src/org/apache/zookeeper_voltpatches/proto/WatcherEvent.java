@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class WatcherEvent implements Record<WatcherEvent> {
+public class WatcherEvent extends Record.AbstractRecord<WatcherEvent> {
     private int type;
     private int state;
     private String path;
@@ -71,10 +71,6 @@ public class WatcherEvent implements Record<WatcherEvent> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(WatcherEvent peer_) {
         return Comparator.comparingInt(WatcherEvent::getType)
                 .thenComparingInt(WatcherEvent::getState)
@@ -83,11 +79,7 @@ public class WatcherEvent implements Record<WatcherEvent> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof WatcherEvent)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((WatcherEvent) peer_) == 0;
-        }
+        return peer_ instanceof WatcherEvent && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

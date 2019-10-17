@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class op_result_t implements Record<op_result_t> {
+public class op_result_t extends Record.AbstractRecord<op_result_t> {
     private int rc;
     private int op;
     private byte[] response;
@@ -72,10 +72,6 @@ public class op_result_t implements Record<op_result_t> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(op_result_t peer_) {
         return Comparator.comparingInt(op_result_t::getRc)
                 .thenComparingInt(op_result_t::getOp)
@@ -84,11 +80,7 @@ public class op_result_t implements Record<op_result_t> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof op_result_t)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((op_result_t) peer_) == 0;
-        }
+        return peer_ instanceof op_result_t && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

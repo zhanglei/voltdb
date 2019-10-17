@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetACLRequest implements Record<GetACLRequest> {
+public class GetACLRequest extends Record.AbstractRecord<GetACLRequest> {
     private String path;
     public GetACLRequest() {
     }
@@ -51,20 +51,12 @@ public class GetACLRequest implements Record<GetACLRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(GetACLRequest peer_) throws ClassCastException {
         return Comparator.comparing(GetACLRequest::getPath).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof GetACLRequest)) {
-            return false;
-        } else {
-            return compareTo((GetACLRequest) peer_) == 0;
-        }
+        return peer_ instanceof GetACLRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

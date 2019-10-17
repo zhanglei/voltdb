@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetMaxChildrenResponse implements Record<GetMaxChildrenResponse> {
+public class GetMaxChildrenResponse extends Record.AbstractRecord<GetMaxChildrenResponse> {
     private int max;
     public GetMaxChildrenResponse() {
     }
@@ -51,20 +51,12 @@ public class GetMaxChildrenResponse implements Record<GetMaxChildrenResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(GetMaxChildrenResponse peer_) {
         return Comparator.comparingInt(GetMaxChildrenResponse::getMax).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof GetMaxChildrenResponse)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((GetMaxChildrenResponse) peer_) == 0;
-        }
+        return peer_ instanceof GetMaxChildrenResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

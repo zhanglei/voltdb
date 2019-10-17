@@ -24,9 +24,10 @@ import org.apache.zookeeper_voltpatches.data.ACL;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
-public class CreateTxn implements Record<CreateTxn> {
+public class CreateTxn extends Record.AbstractRecord<CreateTxn> {
     private String path;
     private byte[] data;
     private java.util.List<ACL> acl;
@@ -51,10 +52,10 @@ public class CreateTxn implements Record<CreateTxn> {
     public void setData(byte[] m_) {
         data = m_;
     }
-    public java.util.List<org.apache.zookeeper_voltpatches.data.ACL> getAcl() {
+    public List<ACL> getAcl() {
         return acl;
     }
-    public void setAcl(java.util.List<org.apache.zookeeper_voltpatches.data.ACL> m_) {
+    public void setAcl(List<ACL> m_) {
         acl = m_;
     }
     public boolean getEphemeral() {
@@ -97,10 +98,6 @@ public class CreateTxn implements Record<CreateTxn> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(CreateTxn peer_) {
         throw new UnsupportedOperationException("comparing CreateTxn is unimplemented");
     }
@@ -108,12 +105,12 @@ public class CreateTxn implements Record<CreateTxn> {
     public boolean equals(Object peer_) {
         if (! (peer_ instanceof CreateTxn)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            final CreateTxn peer = (CreateTxn) peer_;
-            return path.equals(peer.path) && Utils.bufEquals(data, peer.data) &&
-                    acl.equals(peer.getAcl()) && ephemeral == peer.getEphemeral();
+            return peer_ == this || Comparator.comparing(CreateTxn::getPath)
+                    .thenComparing(CreateTxn::getData, Utils::compareBytes)
+                    .thenComparing(CreateTxn::getAcl, Utils::compareLists)
+                    .thenComparing(CreateTxn::getEphemeral)
+                    .compare(this, (CreateTxn) peer_) == 0;
         }
     }
     @Override

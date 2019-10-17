@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.List;
 
-public class GetChildrenResponse implements Record<GetChildrenResponse> {
+public class GetChildrenResponse extends Record.AbstractRecord<GetChildrenResponse> {
     private List<String> children;
     public GetChildrenResponse() {
     }
@@ -66,20 +66,12 @@ public class GetChildrenResponse implements Record<GetChildrenResponse> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(GetChildrenResponse ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetChildrenResponse is unimplemented");
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof GetChildrenResponse)) {
-            return false;
-        } else {
-            return peer_ == this || children.equals(((GetChildrenResponse) peer_).getChildren());
-        }
+        return peer_ instanceof GetChildrenResponse && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

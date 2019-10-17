@@ -20,11 +20,12 @@
 package org.apache.zookeeper_voltpatches.txn;
 
 import org.apache.jute_voltpatches.*;
+import org.apache.zookeeper_voltpatches.proto.SetDataRequest;
 
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SetMaxChildrenTxn implements Record<SetMaxChildrenTxn> {
+public class SetMaxChildrenTxn extends Record.AbstractRecord<SetMaxChildrenTxn> {
     private String path;
     private int max;
     public SetMaxChildrenTxn() {
@@ -61,10 +62,6 @@ public class SetMaxChildrenTxn implements Record<SetMaxChildrenTxn> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(SetMaxChildrenTxn peer_) {
         return Comparator.comparing(SetMaxChildrenTxn::getPath)
                 .thenComparingInt(SetMaxChildrenTxn::getMax)
@@ -72,11 +69,7 @@ public class SetMaxChildrenTxn implements Record<SetMaxChildrenTxn> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof SetMaxChildrenTxn)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SetMaxChildrenTxn) peer_) == 0;
-        }
+        return peer_ instanceof SetMaxChildrenTxn && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

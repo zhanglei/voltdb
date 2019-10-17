@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SyncRequest implements Record<SyncRequest> {
+public class SyncRequest extends Record.AbstractRecord<SyncRequest> {
     private String path;
     public SyncRequest() {
     }
@@ -51,20 +51,12 @@ public class SyncRequest implements Record<SyncRequest> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
-    public int compareTo(SyncRequest peer_) throws ClassCastException {
+    public int compareTo(SyncRequest peer_) {
         return Comparator.comparing(SyncRequest::getPath).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof SyncRequest)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((SyncRequest) peer_) == 0;
-        }
+        return peer_ instanceof SyncRequest && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class Stat implements Record<Stat> {
+public class Stat extends Record.AbstractRecord<Stat> {
     private long czxid;
     private long mzxid;
     private long ctime;
@@ -162,10 +162,6 @@ public class Stat implements Record<Stat> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(Stat peer_) throws ClassCastException {
         return Comparator.comparingLong(Stat::getCzxid)
                 .thenComparingLong(Stat::getMzxid)
@@ -182,11 +178,7 @@ public class Stat implements Record<Stat> {
     }
     @Override
     public boolean equals(Object peer_) {
-        if (!(peer_ instanceof Stat)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((Stat) peer_) == 0;
-        }
+        return peer_ instanceof Stat && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {

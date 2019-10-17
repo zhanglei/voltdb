@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ErrorTxn implements Record<ErrorTxn> {
+public class ErrorTxn extends Record.AbstractRecord<ErrorTxn> {
     private int err;
     public ErrorTxn() {
     }
@@ -51,20 +51,12 @@ public class ErrorTxn implements Record<ErrorTxn> {
     }
 
     @Override
-    public String toString() {
-        return toStringHelper();
-    }
-    @Override
     public int compareTo(ErrorTxn peer_) {
         return Comparator.comparingInt(ErrorTxn::getErr).compare(this, peer_);
     }
     @Override
     public boolean equals(Object peer_) {
-        if (! (peer_ instanceof ErrorTxn)) {
-            return false;
-        } else {
-            return peer_ == this || compareTo((ErrorTxn) peer_) == 0;
-        }
+        return peer_ instanceof ErrorTxn && equalsHelper(peer_);
     }
     @Override
     public int hashCode() {
