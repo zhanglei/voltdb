@@ -1131,6 +1131,7 @@ inline void PersistentTable::deleteTupleStorage(TableTuple& tuple, TBPtr block, 
             snprintf(errMsg, sizeof errMsg, "Block is empty but still in pending snapshot:%s", tuple.debug(name(), false).c_str());
             errMsg[sizeof errMsg - 1] = '\0';
             LogManager::getThreadLogger(LOGGERID_HOST)->log(LOGLEVEL_ERROR, errMsg);
+            printBucketInfo();
         }
         vassert(m_blocksPendingSnapshot.find(block) == m_blocksPendingSnapshot.end());
         //Eliminates circular reference
