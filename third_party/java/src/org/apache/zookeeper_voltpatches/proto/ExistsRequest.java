@@ -19,7 +19,9 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.nio.charset.StandardCharsets;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Comparator;
 
 import org.apache.jute_voltpatches.*;
@@ -60,24 +62,21 @@ public class ExistsRequest implements Record, Comparable<ExistsRequest> {
         a_.endRecord(tag);
     }
     @Override
-    public String toString() {
-        try {
-            final java.io.ByteArrayOutputStream s = new java.io.ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.writeBool(watch,"watch");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.writeBool(watch,"watch");
+        a.endRecord(this,"");
     }
-    public void write(java.io.DataOutput out) throws java.io.IOException {
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
     }
-    public void readFields(java.io.DataInput in) throws java.io.IOException {
+    public void readFields(DataInput in) throws IOException {
         deserialize(new BinaryInputArchive(in), "");
     }
     @Override

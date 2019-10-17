@@ -42,86 +42,79 @@ public class CreateRequest implements Record, Comparable<CreateRequest> {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
     public byte[] getData() {
         return data;
     }
     public void setData(byte[] m_) {
-        data=m_;
+        data = m_;
     }
     public List<ACL> getAcl() {
         return acl;
     }
     public void setAcl(List<ACL> m_) {
-        acl=m_;
+        acl = m_;
     }
     public int getFlags() {
         return flags;
     }
     public void setFlags(int m_) {
-        flags=m_;
+        flags = m_;
     }
     @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeBuffer(data,"data");
-        {
-            a_.startVector(acl,"acl");
-            if (acl!= null) {
-                for (ACL e1 : acl) {
-                    a_.writeRecord(e1, "e1");
-                }
+        a_.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a_.writeRecord(e1, "e1");
             }
-            a_.endVector(acl,"acl");
         }
+        a_.endVector(acl,"acl");
         a_.writeInt(flags,"flags");
         a_.endRecord(this,tag);
     }
     @Override
     public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
         a_.startRecord(tag);
-        path=a_.readString("path");
-        data=a_.readBuffer("data");
-        {
-            Index vidx1 = a_.startVector("acl");
-            if (vidx1 != null) {
-                acl = new ArrayList<>();
-                for (; !vidx1.done(); vidx1.incr()) {
-                    ACL e1 = new ACL();
-                    a_.readRecord(e1,"e1");
-                    acl.add(e1);
-                }
+        path = a_.readString("path");
+        data = a_.readBuffer("data");
+        Index vidx1 = a_.startVector("acl");
+        if (vidx1 != null) {
+            acl = new ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                ACL e1 = new ACL();
+                a_.readRecord(e1,"e1");
+                acl.add(e1);
             }
-            a_.endVector("acl");
         }
-        flags=a_.readInt("flags");
+        a_.endVector("acl");
+        flags = a_.readInt("flags");
         a_.endRecord(tag);
     }
 
     @Override
-    public String toString() {
-        try {
-            ByteArrayOutputStream s = new ByteArrayOutputStream();
-            CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.writeBuffer(data,"data");
-            a_.startVector(acl,"acl");
-            if (acl!= null) {
-                for (ACL e1 : acl) {
-                    a_.writeRecord(e1, "e1");
-                }
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.writeBuffer(data,"data");
+        a.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a.writeRecord(e1, "e1");
             }
-            a_.endVector(acl,"acl");
-            a_.writeInt(flags,"flags");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-            return "ERROR";
         }
+        a.endVector(acl,"acl");
+        a.writeInt(flags,"flags");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
     }
 
     public void write(DataOutput out) throws IOException {

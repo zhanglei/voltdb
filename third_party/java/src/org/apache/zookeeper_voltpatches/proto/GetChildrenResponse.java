@@ -21,11 +21,9 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class GetChildrenResponse implements Record, Comparable<GetChildrenResponse> {
@@ -68,25 +66,22 @@ public class GetChildrenResponse implements Record, Comparable<GetChildrenRespon
         a_.endVector("children");
         a_.endRecord(tag);
     }
+
     @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.startVector(children,"children");
-            if (children!= null) {
-                for (String e1 : children) {
-                    a_.writeString(e1, "e1");
-                }
+        return toStringHelper();
+    }
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.startVector(children,"children");
+        if (children!= null) {
+            for (String e1 : children) {
+                a.writeString(e1, "e1");
             }
-            a_.endVector(children,"children");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
         }
-        return "ERROR";
+        a.endVector(children,"children");
+        a.endRecord(this,"");
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

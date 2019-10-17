@@ -19,130 +19,105 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.AuthPacket;
-public class AuthPacket implements Record {
-  private int type;
-  private String scheme;
-  private byte[] auth;
-  public AuthPacket() {
-  }
-  public AuthPacket(
-        int type,
-        String scheme,
-        byte[] auth) {
-    this.type=type;
-    this.scheme=scheme;
-    this.auth=auth;
-  }
-  public int getType() {
-    return type;
-  }
-  public void setType(int m_) {
-    type=m_;
-  }
-  public String getScheme() {
-    return scheme;
-  }
-  public void setScheme(String m_) {
-    scheme=m_;
-  }
-  public byte[] getAuth() {
-    return auth;
-  }
-  public void setAuth(byte[] m_) {
-    auth=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeInt(type,"type");
-    a_.writeString(scheme,"scheme");
-    a_.writeBuffer(auth,"auth");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    type=a_.readInt("type");
-    scheme=a_.readString("scheme");
-    auth=a_.readBuffer("auth");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeInt(type,"type");
-    a_.writeString(scheme,"scheme");
-    a_.writeBuffer(auth,"auth");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class AuthPacket implements Record, Comparable<AuthPacket> {
+    private int type;
+    private String scheme;
+    private byte[] auth;
+    public AuthPacket() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof AuthPacket)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public AuthPacket(int type, String scheme, byte[] auth) {
+        this.type = type;
+        this.scheme = scheme;
+        this.auth = auth;
     }
-    AuthPacket peer = (AuthPacket) peer_;
-    int ret = 0;
-    ret = (type == peer.type)? 0 :((type<peer.type)?-1:1);
-    if (ret != 0) return ret;
-    ret = scheme.compareTo(peer.scheme);
-    if (ret != 0) return ret;
-    {
-      byte[] my = auth;
-      byte[] ur = peer.auth;
-      ret = org.apache.jute_voltpatches.Utils.compareBytes(my,0,my.length,ur,0,ur.length);
+    public int getType() {
+        return type;
     }
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof AuthPacket)) {
-      return false;
+    public void setType(int m_) {
+        type = m_;
     }
-    if (peer_ == this) {
-      return true;
+    public String getScheme() {
+        return scheme;
     }
-    AuthPacket peer = (AuthPacket) peer_;
-    boolean ret = false;
-    ret = (type==peer.type);
-    if (!ret) return ret;
-    ret = scheme.equals(peer.scheme);
-    if (!ret) return ret;
-    ret = org.apache.jute_voltpatches.Utils.bufEquals(auth,peer.auth);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = type;
-    result = 37*result + ret;
-    ret = scheme.hashCode();
-    result = 37*result + ret;
-    ret = Arrays.toString(auth).hashCode();
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LAuthPacket(isB)";
-  }
+    public void setScheme(String m_) {
+        scheme = m_;
+    }
+    public byte[] getAuth() {
+        return auth;
+    }
+    public void setAuth(byte[] m_) {
+        auth = m_;
+    }
+    @Override
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeInt(type,"type");
+        a_.writeString(scheme,"scheme");
+        a_.writeBuffer(auth,"auth");
+        a_.endRecord(this,tag);
+    }
+    @Override
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        type = a_.readInt("type");
+        scheme = a_.readString("scheme");
+        auth = a_.readBuffer("auth");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeInt(type,"type");
+        a.writeString(scheme,"scheme");
+        a.writeBuffer(auth,"auth");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(java.io.DataInput in) throws java.io.IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(AuthPacket peer_) {
+        return Comparator.comparingInt(AuthPacket::getType)
+                .thenComparing(AuthPacket::getScheme)
+                .thenComparing(AuthPacket::getAuth, Utils::compareBytes)
+                .compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (!(peer_ instanceof AuthPacket)) {
+            return false;
+        } else {
+            return peer_ == this || compareTo((AuthPacket) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = type;
+        result = 37*result + ret;
+        ret = scheme.hashCode();
+        result = 37*result + ret;
+        ret = Arrays.toString(auth).hashCode();
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "LAuthPacket(isB)";
+    }
 }

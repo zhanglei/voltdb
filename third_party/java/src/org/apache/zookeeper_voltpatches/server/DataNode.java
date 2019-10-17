@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.jute_voltpatches.CsvOutputArchive;
 import org.apache.jute_voltpatches.InputArchive;
 import org.apache.jute_voltpatches.OutputArchive;
 import org.apache.jute_voltpatches.Record;
@@ -99,6 +100,11 @@ public class DataNode implements Record {
             children = new HashSet<String>(8);
         }
         return children.add(child);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        // dummy: not overwriting toString()
     }
 
     /**

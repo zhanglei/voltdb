@@ -29,4 +29,15 @@ import java.nio.charset.StandardCharsets;
 public interface Record {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
+    void writeCSV(CsvOutputArchive a) throws IOException;
+    default String toStringHelper() {
+        try {
+            final ByteArrayOutputStream s = new ByteArrayOutputStream();
+            writeCSV(new CsvOutputArchive(s));
+            return new String(s.toByteArray(), StandardCharsets.UTF_8);
+        } catch (Throwable ex) {
+            ex.printStackTrace();
+        }
+        return "ERROR";
+    }
 }

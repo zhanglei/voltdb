@@ -23,11 +23,9 @@ import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.ACL;
 import org.apache.zookeeper_voltpatches.data.Stat;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,60 +53,51 @@ public class GetACLResponse implements Record, Comparable<GetACLResponse> {
     @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
-        {
-            a_.startVector(acl,"acl");
-            if (acl!= null) {
-                for (ACL e1 : acl) {
-                    a_.writeRecord(e1, "e1");
-                }
+        a_.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a_.writeRecord(e1, "e1");
             }
-            a_.endVector(acl,"acl");
         }
+        a_.endVector(acl,"acl");
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
     @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
-        {
-            final Index vidx1 = a_.startVector("acl");
-            if (vidx1 != null) {
-                acl = new ArrayList<>();
-                for (; !vidx1.done(); vidx1.incr()) {
-                    ACL e1;
-                    e1 = new ACL();
-                    a_.readRecord(e1,"e1");
-                    acl.add(e1);
-                }
+        final Index vidx1 = a_.startVector("acl");
+        if (vidx1 != null) {
+            acl = new ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                ACL e1;
+                e1 = new ACL();
+                a_.readRecord(e1,"e1");
+                acl.add(e1);
             }
-            a_.endVector("acl");
         }
+        a_.endVector("acl");
         stat = new Stat();
         a_.readRecord(stat,"stat");
         a_.endRecord(tag);
     }
     @Override
-    public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            {
-                a_.startVector(acl,"acl");
-                if (acl!= null) {
-                    for (ACL e1 : acl) {
-                        a_.writeRecord(e1, "e1");
-                    }
-                }
-                a_.endVector(acl,"acl");
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a.writeRecord(e1, "e1");
             }
-            a_.writeRecord(stat,"stat");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
         }
-        return "ERROR";
+        a.endVector(acl,"acl");
+        a.writeRecord(stat,"stat");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

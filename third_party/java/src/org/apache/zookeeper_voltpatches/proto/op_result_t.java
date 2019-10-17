@@ -19,130 +19,106 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.op_result_t;
-public class op_result_t implements Record {
-  private int rc;
-  private int op;
-  private byte[] response;
-  public op_result_t() {
-  }
-  public op_result_t(
-        int rc,
-        int op,
-        byte[] response) {
-    this.rc=rc;
-    this.op=op;
-    this.response=response;
-  }
-  public int getRc() {
-    return rc;
-  }
-  public void setRc(int m_) {
-    rc=m_;
-  }
-  public int getOp() {
-    return op;
-  }
-  public void setOp(int m_) {
-    op=m_;
-  }
-  public byte[] getResponse() {
-    return response;
-  }
-  public void setResponse(byte[] m_) {
-    response=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeInt(rc,"rc");
-    a_.writeInt(op,"op");
-    a_.writeBuffer(response,"response");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    rc=a_.readInt("rc");
-    op=a_.readInt("op");
-    response=a_.readBuffer("response");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeInt(rc,"rc");
-    a_.writeInt(op,"op");
-    a_.writeBuffer(response,"response");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class op_result_t implements Record, Comparable<op_result_t> {
+    private int rc;
+    private int op;
+    private byte[] response;
+    public op_result_t() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof op_result_t)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public op_result_t(int rc, int op, byte[] response) {
+        this.rc = rc;
+        this.op = op;
+        this.response = response;
     }
-    op_result_t peer = (op_result_t) peer_;
-    int ret = 0;
-    ret = (rc == peer.rc)? 0 :((rc<peer.rc)?-1:1);
-    if (ret != 0) return ret;
-    ret = (op == peer.op)? 0 :((op<peer.op)?-1:1);
-    if (ret != 0) return ret;
-    {
-      byte[] my = response;
-      byte[] ur = peer.response;
-      ret = org.apache.jute_voltpatches.Utils.compareBytes(my,0,my.length,ur,0,ur.length);
+    public int getRc() {
+        return rc;
     }
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof op_result_t)) {
-      return false;
+    public void setRc(int m_) {
+        rc = m_;
     }
-    if (peer_ == this) {
-      return true;
+    public int getOp() {
+        return op;
     }
-    op_result_t peer = (op_result_t) peer_;
-    boolean ret = false;
-    ret = (rc==peer.rc);
-    if (!ret) return ret;
-    ret = (op==peer.op);
-    if (!ret) return ret;
-    ret = org.apache.jute_voltpatches.Utils.bufEquals(response,peer.response);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = rc;
-    result = 37*result + ret;
-    ret = op;
-    result = 37*result + ret;
-    ret = Arrays.toString(response).hashCode();
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "Lop_result_t(iiB)";
-  }
+    public void setOp(int m_) {
+        op = m_;
+    }
+    public byte[] getResponse() {
+        return response;
+    }
+    public void setResponse(byte[] m_) {
+        response = m_;
+    }
+    @Override
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeInt(rc,"rc");
+        a_.writeInt(op,"op");
+        a_.writeBuffer(response,"response");
+        a_.endRecord(this,tag);
+    }
+    @Override
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        rc = a_.readInt("rc");
+        op = a_.readInt("op");
+        response = a_.readBuffer("response");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeInt(rc,"rc");
+        a.writeInt(op,"op");
+        a.writeBuffer(response,"response");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(op_result_t peer_) {
+        return Comparator.comparingInt(op_result_t::getRc)
+                .thenComparingInt(op_result_t::getOp)
+                .thenComparing(op_result_t::getResponse, Utils::compareBytes)
+                .compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (! (peer_ instanceof op_result_t)) {
+            return false;
+        } else {
+            return peer_ == this || compareTo((op_result_t) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = rc;
+        result = 37*result + ret;
+        ret = op;
+        result = 37*result + ret;
+        ret = Arrays.toString(response).hashCode();
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "Lop_result_t(iiB)";
+    }
 }

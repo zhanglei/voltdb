@@ -19,234 +19,198 @@
 
 package org.apache.zookeeper_voltpatches.data;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.data.StatPersisted;
-public class StatPersisted implements Record {
-  private long czxid;
-  private long mzxid;
-  private long ctime;
-  private long mtime;
-  private int version;
-  private int cversion;
-  private int aversion;
-  private long ephemeralOwner;
-  private long pzxid;
-  public StatPersisted() {
-  }
-  public StatPersisted(
-        long czxid,
-        long mzxid,
-        long ctime,
-        long mtime,
-        int version,
-        int cversion,
-        int aversion,
-        long ephemeralOwner,
-        long pzxid) {
-    this.czxid=czxid;
-    this.mzxid=mzxid;
-    this.ctime=ctime;
-    this.mtime=mtime;
-    this.version=version;
-    this.cversion=cversion;
-    this.aversion=aversion;
-    this.ephemeralOwner=ephemeralOwner;
-    this.pzxid=pzxid;
-  }
-  public long getCzxid() {
-    return czxid;
-  }
-  public void setCzxid(long m_) {
-    czxid=m_;
-  }
-  public long getMzxid() {
-    return mzxid;
-  }
-  public void setMzxid(long m_) {
-    mzxid=m_;
-  }
-  public long getCtime() {
-    return ctime;
-  }
-  public void setCtime(long m_) {
-    ctime=m_;
-  }
-  public long getMtime() {
-    return mtime;
-  }
-  public void setMtime(long m_) {
-    mtime=m_;
-  }
-  public int getVersion() {
-    return version;
-  }
-  public void setVersion(int m_) {
-    version=m_;
-  }
-  public int getCversion() {
-    return cversion;
-  }
-  public void setCversion(int m_) {
-    cversion=m_;
-  }
-  public int getAversion() {
-    return aversion;
-  }
-  public void setAversion(int m_) {
-    aversion=m_;
-  }
-  public long getEphemeralOwner() {
-    return ephemeralOwner;
-  }
-  public void setEphemeralOwner(long m_) {
-    ephemeralOwner=m_;
-  }
-  public long getPzxid() {
-    return pzxid;
-  }
-  public void setPzxid(long m_) {
-    pzxid=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeLong(czxid,"czxid");
-    a_.writeLong(mzxid,"mzxid");
-    a_.writeLong(ctime,"ctime");
-    a_.writeLong(mtime,"mtime");
-    a_.writeInt(version,"version");
-    a_.writeInt(cversion,"cversion");
-    a_.writeInt(aversion,"aversion");
-    a_.writeLong(ephemeralOwner,"ephemeralOwner");
-    a_.writeLong(pzxid,"pzxid");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    czxid=a_.readLong("czxid");
-    mzxid=a_.readLong("mzxid");
-    ctime=a_.readLong("ctime");
-    mtime=a_.readLong("mtime");
-    version=a_.readInt("version");
-    cversion=a_.readInt("cversion");
-    aversion=a_.readInt("aversion");
-    ephemeralOwner=a_.readLong("ephemeralOwner");
-    pzxid=a_.readLong("pzxid");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeLong(czxid,"czxid");
-    a_.writeLong(mzxid,"mzxid");
-    a_.writeLong(ctime,"ctime");
-    a_.writeLong(mtime,"mtime");
-    a_.writeInt(version,"version");
-    a_.writeInt(cversion,"cversion");
-    a_.writeInt(aversion,"aversion");
-    a_.writeLong(ephemeralOwner,"ephemeralOwner");
-    a_.writeLong(pzxid,"pzxid");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Comparator;
+
+public class StatPersisted implements Record, Comparable<StatPersisted> {
+    private long czxid;
+    private long mzxid;
+    private long ctime;
+    private long mtime;
+    private int version;
+    private int cversion;
+    private int aversion;
+    private long ephemeralOwner;
+    private long pzxid;
+    public StatPersisted() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof StatPersisted)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public StatPersisted(
+            long czxid,
+            long mzxid,
+            long ctime,
+            long mtime,
+            int version,
+            int cversion,
+            int aversion,
+            long ephemeralOwner,
+            long pzxid) {
+        this.czxid = czxid;
+        this.mzxid = mzxid;
+        this.ctime = ctime;
+        this.mtime = mtime;
+        this.version = version;
+        this.cversion = cversion;
+        this.aversion = aversion;
+        this.ephemeralOwner = ephemeralOwner;
+        this.pzxid = pzxid;
     }
-    StatPersisted peer = (StatPersisted) peer_;
-    int ret = 0;
-    ret = (czxid == peer.czxid)? 0 :((czxid<peer.czxid)?-1:1);
-    if (ret != 0) return ret;
-    ret = (mzxid == peer.mzxid)? 0 :((mzxid<peer.mzxid)?-1:1);
-    if (ret != 0) return ret;
-    ret = (ctime == peer.ctime)? 0 :((ctime<peer.ctime)?-1:1);
-    if (ret != 0) return ret;
-    ret = (mtime == peer.mtime)? 0 :((mtime<peer.mtime)?-1:1);
-    if (ret != 0) return ret;
-    ret = (version == peer.version)? 0 :((version<peer.version)?-1:1);
-    if (ret != 0) return ret;
-    ret = (cversion == peer.cversion)? 0 :((cversion<peer.cversion)?-1:1);
-    if (ret != 0) return ret;
-    ret = (aversion == peer.aversion)? 0 :((aversion<peer.aversion)?-1:1);
-    if (ret != 0) return ret;
-    ret = (ephemeralOwner == peer.ephemeralOwner)? 0 :((ephemeralOwner<peer.ephemeralOwner)?-1:1);
-    if (ret != 0) return ret;
-    ret = (pzxid == peer.pzxid)? 0 :((pzxid<peer.pzxid)?-1:1);
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof StatPersisted)) {
-      return false;
+    public long getCzxid() {
+        return czxid;
     }
-    if (peer_ == this) {
-      return true;
+    public void setCzxid(long m_) {
+        czxid = m_;
     }
-    StatPersisted peer = (StatPersisted) peer_;
-    boolean ret = false;
-    ret = (czxid==peer.czxid);
-    if (!ret) return ret;
-    ret = (mzxid==peer.mzxid);
-    if (!ret) return ret;
-    ret = (ctime==peer.ctime);
-    if (!ret) return ret;
-    ret = (mtime==peer.mtime);
-    if (!ret) return ret;
-    ret = (version==peer.version);
-    if (!ret) return ret;
-    ret = (cversion==peer.cversion);
-    if (!ret) return ret;
-    ret = (aversion==peer.aversion);
-    if (!ret) return ret;
-    ret = (ephemeralOwner==peer.ephemeralOwner);
-    if (!ret) return ret;
-    ret = (pzxid==peer.pzxid);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = (int) (czxid^(czxid>>>32));
-    result = 37*result + ret;
-    ret = (int) (mzxid^(mzxid>>>32));
-    result = 37*result + ret;
-    ret = (int) (ctime^(ctime>>>32));
-    result = 37*result + ret;
-    ret = (int) (mtime^(mtime>>>32));
-    result = 37*result + ret;
-    ret = version;
-    result = 37*result + ret;
-    ret = cversion;
-    result = 37*result + ret;
-    ret = aversion;
-    result = 37*result + ret;
-    ret = (int) (ephemeralOwner^(ephemeralOwner>>>32));
-    result = 37*result + ret;
-    ret = (int) (pzxid^(pzxid>>>32));
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LStatPersisted(lllliiill)";
-  }
+    public long getMzxid() {
+        return mzxid;
+    }
+    public void setMzxid(long m_) {
+        mzxid = m_;
+    }
+    public long getCtime() {
+        return ctime;
+    }
+    public void setCtime(long m_) {
+        ctime = m_;
+    }
+    public long getMtime() {
+        return mtime;
+    }
+    public void setMtime(long m_) {
+        mtime = m_;
+    }
+    public int getVersion() {
+        return version;
+    }
+    public void setVersion(int m_) {
+        version = m_;
+    }
+    public int getCversion() {
+        return cversion;
+    }
+    public void setCversion(int m_) {
+        cversion = m_;
+    }
+    public int getAversion() {
+        return aversion;
+    }
+    public void setAversion(int m_) {
+        aversion = m_;
+    }
+    public long getEphemeralOwner() {
+        return ephemeralOwner;
+    }
+    public void setEphemeralOwner(long m_) {
+        ephemeralOwner = m_;
+    }
+    public long getPzxid() {
+        return pzxid;
+    }
+    public void setPzxid(long m_) {
+        pzxid = m_;
+    }
+    @Override
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeLong(czxid,"czxid");
+        a_.writeLong(mzxid,"mzxid");
+        a_.writeLong(ctime,"ctime");
+        a_.writeLong(mtime,"mtime");
+        a_.writeInt(version,"version");
+        a_.writeInt(cversion,"cversion");
+        a_.writeInt(aversion,"aversion");
+        a_.writeLong(ephemeralOwner,"ephemeralOwner");
+        a_.writeLong(pzxid,"pzxid");
+        a_.endRecord(this,tag);
+    }
+    @Override
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        czxid = a_.readLong("czxid");
+        mzxid = a_.readLong("mzxid");
+        ctime = a_.readLong("ctime");
+        mtime = a_.readLong("mtime");
+        version = a_.readInt("version");
+        cversion = a_.readInt("cversion");
+        aversion = a_.readInt("aversion");
+        ephemeralOwner = a_.readLong("ephemeralOwner");
+        pzxid = a_.readLong("pzxid");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeLong(czxid,"czxid");
+        a.writeLong(mzxid,"mzxid");
+        a.writeLong(ctime,"ctime");
+        a.writeLong(mtime,"mtime");
+        a.writeInt(version,"version");
+        a.writeInt(cversion,"cversion");
+        a.writeInt(aversion,"aversion");
+        a.writeLong(ephemeralOwner,"ephemeralOwner");
+        a.writeLong(pzxid,"pzxid");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(StatPersisted peer_) throws ClassCastException {
+        return Comparator.comparingLong(StatPersisted::getCzxid)
+                .thenComparingLong(StatPersisted::getMzxid)
+                .thenComparingLong(StatPersisted::getCtime)
+                .thenComparingLong(StatPersisted::getMtime)
+                .thenComparingLong(StatPersisted::getVersion)
+                .thenComparingLong(StatPersisted::getCversion)
+                .thenComparingLong(StatPersisted::getAversion)
+                .thenComparingLong(StatPersisted::getEphemeralOwner)
+                .thenComparingLong(StatPersisted::getPzxid)
+                .compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (!(peer_ instanceof StatPersisted)) {
+            return false;
+        } else {
+            return peer_ == this || compareTo((StatPersisted) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = (int) (czxid^(czxid>>>32));
+        result = 37*result + ret;
+        ret = (int) (mzxid^(mzxid>>>32));
+        result = 37*result + ret;
+        ret = (int) (ctime^(ctime>>>32));
+        result = 37*result + ret;
+        ret = (int) (mtime^(mtime>>>32));
+        result = 37*result + ret;
+        ret = version;
+        result = 37*result + ret;
+        ret = cversion;
+        result = 37*result + ret;
+        ret = aversion;
+        result = 37*result + ret;
+        ret = (int) (ephemeralOwner^(ephemeralOwner>>>32));
+        result = 37*result + ret;
+        ret = (int) (pzxid^(pzxid>>>32));
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "LStatPersisted(lllliiill)";
+    }
 }

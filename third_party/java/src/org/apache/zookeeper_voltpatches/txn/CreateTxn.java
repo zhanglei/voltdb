@@ -19,160 +19,142 @@
 
 package org.apache.zookeeper_voltpatches.txn;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.txn.CreateTxn;
-public class CreateTxn implements Record {
-  private String path;
-  private byte[] data;
-  private java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl;
-  private boolean ephemeral;
-  public CreateTxn() {
-  }
-  public CreateTxn(
-        String path,
-        byte[] data,
-        java.util.List<org.apache.zookeeper_voltpatches.data.ACL> acl,
-        boolean ephemeral) {
-    this.path=path;
-    this.data=data;
-    this.acl=acl;
-    this.ephemeral=ephemeral;
-  }
-  public String getPath() {
-    return path;
-  }
-  public void setPath(String m_) {
-    path=m_;
-  }
-  public byte[] getData() {
-    return data;
-  }
-  public void setData(byte[] m_) {
-    data=m_;
-  }
-  public java.util.List<org.apache.zookeeper_voltpatches.data.ACL> getAcl() {
-    return acl;
-  }
-  public void setAcl(java.util.List<org.apache.zookeeper_voltpatches.data.ACL> m_) {
-    acl=m_;
-  }
-  public boolean getEphemeral() {
-    return ephemeral;
-  }
-  public void setEphemeral(boolean m_) {
-    ephemeral=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeString(path,"path");
-    a_.writeBuffer(data,"data");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+import org.apache.zookeeper_voltpatches.data.ACL;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+public class CreateTxn implements Record, Comparable<CreateTxn> {
+    private String path;
+    private byte[] data;
+    private java.util.List<ACL> acl;
+    private boolean ephemeral;
+    public CreateTxn() {
     }
-    a_.writeBool(ephemeral,"ephemeral");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    path=a_.readString("path");
-    data=a_.readBuffer("data");
-    {
-      Index vidx1 = a_.startVector("acl");
-      if (vidx1!= null) {          acl=new java.util.ArrayList<org.apache.zookeeper_voltpatches.data.ACL>();
-          for (; !vidx1.done(); vidx1.incr()) {
-    org.apache.zookeeper_voltpatches.data.ACL e1;
-    e1= new org.apache.zookeeper_voltpatches.data.ACL();
-    a_.readRecord(e1,"e1");
-            acl.add(e1);
-          }
-      }
-    a_.endVector("acl");
+    public CreateTxn(String path, byte[] data, List<ACL> acl, boolean ephemeral) {
+        this.path = path;
+        this.data = data;
+        this.acl = acl;
+        this.ephemeral = ephemeral;
     }
-    ephemeral=a_.readBool("ephemeral");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeString(path,"path");
-    a_.writeBuffer(data,"data");
-    {
-      a_.startVector(acl,"acl");
-      if (acl!= null) {          int len1 = acl.size();
-          for(int vidx1 = 0; vidx1<len1; vidx1++) {
-            org.apache.zookeeper_voltpatches.data.ACL e1 = acl.get(vidx1);
-    a_.writeRecord(e1,"e1");
-          }
-      }
-      a_.endVector(acl,"acl");
+    public String getPath() {
+        return path;
     }
-    a_.writeBool(ephemeral,"ephemeral");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+    public void setPath(String m_) {
+        path = m_;
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    throw new UnsupportedOperationException("comparing CreateTxn is unimplemented");
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof CreateTxn)) {
-      return false;
+    public byte[] getData() {
+        return data;
     }
-    if (peer_ == this) {
-      return true;
+    public void setData(byte[] m_) {
+        data = m_;
     }
-    CreateTxn peer = (CreateTxn) peer_;
-    boolean ret = false;
-    ret = path.equals(peer.path);
-    if (!ret) return ret;
-    ret = org.apache.jute_voltpatches.Utils.bufEquals(data,peer.data);
-    if (!ret) return ret;
-    ret = acl.equals(peer.acl);
-    if (!ret) return ret;
-    ret = (ephemeral==peer.ephemeral);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = path.hashCode();
-    result = 37*result + ret;
-    ret = Arrays.toString(data).hashCode();
-    result = 37*result + ret;
-    ret = acl.hashCode();
-    result = 37*result + ret;
-     ret = (ephemeral)?0:1;
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LCreateTxn(sB[LACL(iLId(ss))]z)";
-  }
+    public java.util.List<org.apache.zookeeper_voltpatches.data.ACL> getAcl() {
+        return acl;
+    }
+    public void setAcl(java.util.List<org.apache.zookeeper_voltpatches.data.ACL> m_) {
+        acl = m_;
+    }
+    public boolean getEphemeral() {
+        return ephemeral;
+    }
+    public void setEphemeral(boolean m_) {
+        ephemeral = m_;
+    }
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeString(path,"path");
+        a_.writeBuffer(data,"data");
+        a_.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a_.writeRecord(e1, "e1");
+            }
+        }
+        a_.endVector(acl,"acl");
+        a_.writeBool(ephemeral,"ephemeral");
+        a_.endRecord(this,tag);
+    }
+    public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
+        a_.startRecord(tag);
+        path = a_.readString("path");
+        data = a_.readBuffer("data");
+        Index vidx1 = a_.startVector("acl");
+        if (vidx1 != null) {
+            acl = new java.util.ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                org.apache.zookeeper_voltpatches.data.ACL e1;
+                e1 = new org.apache.zookeeper_voltpatches.data.ACL();
+                a_.readRecord(e1,"e1");
+                acl.add(e1);
+            }
+        }
+        a_.endVector("acl");
+        ephemeral = a_.readBool("ephemeral");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.writeBuffer(data,"data");
+        a.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a.writeRecord(e1, "e1");
+            }
+        }
+        a.endVector(acl,"acl");
+        a.writeBool(ephemeral,"ephemeral");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(CreateTxn peer_) {
+        throw new UnsupportedOperationException("comparing CreateTxn is unimplemented");
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (! (peer_ instanceof CreateTxn)) {
+            return false;
+        } else if (peer_ == this) {
+            return true;
+        } else {
+            final CreateTxn peer = (CreateTxn) peer_;
+            return path.equals(peer.path) && Utils.bufEquals(data, peer.data) &&
+                    acl.equals(peer.getAcl()) && ephemeral == peer.getEphemeral();
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = path.hashCode();
+        result = 37*result + ret;
+        ret = Arrays.toString(data).hashCode();
+        result = 37*result + ret;
+        ret = acl.hashCode();
+        result = 37*result + ret;
+        ret = (ephemeral)?0:1;
+        result = 37*result + ret;
+        return result;
+    }
+    public static String signature() {
+        return "LCreateTxn(sB[LACL(iLId(ss))]z)";
+    }
 }

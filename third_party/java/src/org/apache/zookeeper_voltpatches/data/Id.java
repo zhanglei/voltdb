@@ -62,20 +62,18 @@ public class Id implements Record, Comparable<Id> {
         id = a_.readString("id");
         a_.endRecord(tag);
     }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(scheme,"scheme");
+        a.writeString(id,"id");
+        a.endRecord(this,"");
+    }
+
     @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(scheme,"scheme");
-            a_.writeString(id,"id");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
@@ -93,10 +91,8 @@ public class Id implements Record, Comparable<Id> {
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof Id)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((Id) peer_) == 0;
+            return peer_ == this || compareTo((Id) peer_) == 0;
         }
     }
     @Override

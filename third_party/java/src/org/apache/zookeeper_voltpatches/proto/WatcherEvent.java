@@ -19,126 +19,105 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.WatcherEvent;
-public class WatcherEvent implements Record {
-  private int type;
-  private int state;
-  private String path;
-  public WatcherEvent() {
-  }
-  public WatcherEvent(
-        int type,
-        int state,
-        String path) {
-    this.type=type;
-    this.state=state;
-    this.path=path;
-  }
-  public int getType() {
-    return type;
-  }
-  public void setType(int m_) {
-    type=m_;
-  }
-  public int getState() {
-    return state;
-  }
-  public void setState(int m_) {
-    state=m_;
-  }
-  public String getPath() {
-    return path;
-  }
-  public void setPath(String m_) {
-    path=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeInt(type,"type");
-    a_.writeInt(state,"state");
-    a_.writeString(path,"path");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    type=a_.readInt("type");
-    state=a_.readInt("state");
-    path=a_.readString("path");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeInt(type,"type");
-    a_.writeInt(state,"state");
-    a_.writeString(path,"path");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Comparator;
+
+public class WatcherEvent implements Record, Comparable<WatcherEvent> {
+    private int type;
+    private int state;
+    private String path;
+    public WatcherEvent() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof WatcherEvent)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public WatcherEvent(int type, int state, String path) {
+        this.type = type;
+        this.state = state;
+        this.path = path;
     }
-    WatcherEvent peer = (WatcherEvent) peer_;
-    int ret = 0;
-    ret = (type == peer.type)? 0 :((type<peer.type)?-1:1);
-    if (ret != 0) return ret;
-    ret = (state == peer.state)? 0 :((state<peer.state)?-1:1);
-    if (ret != 0) return ret;
-    ret = path.compareTo(peer.path);
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof WatcherEvent)) {
-      return false;
+    public int getType() {
+        return type;
     }
-    if (peer_ == this) {
-      return true;
+    public void setType(int m_) {
+        type = m_;
     }
-    WatcherEvent peer = (WatcherEvent) peer_;
-    boolean ret = false;
-    ret = (type==peer.type);
-    if (!ret) return ret;
-    ret = (state==peer.state);
-    if (!ret) return ret;
-    ret = path.equals(peer.path);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = type;
-    result = 37*result + ret;
-    ret = state;
-    result = 37*result + ret;
-    ret = path.hashCode();
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LWatcherEvent(iis)";
-  }
+    public int getState() {
+        return state;
+    }
+    public void setState(int m_) {
+        state = m_;
+    }
+    public String getPath() {
+        return path;
+    }
+    public void setPath(String m_) {
+        path = m_;
+    }
+    @Override
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeInt(type,"type");
+        a_.writeInt(state,"state");
+        a_.writeString(path,"path");
+        a_.endRecord(this,tag);
+    }
+    @Override
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        type = a_.readInt("type");
+        state = a_.readInt("state");
+        path = a_.readString("path");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeInt(type,"type");
+        a.writeInt(state,"state");
+        a.writeString(path,"path");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(WatcherEvent peer_) {
+        return Comparator.comparingInt(WatcherEvent::getType)
+                .thenComparingInt(WatcherEvent::getState)
+                .thenComparing(WatcherEvent::getPath)
+                .compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (! (peer_ instanceof WatcherEvent)) {
+            return false;
+        } else {
+            return peer_ == this || compareTo((WatcherEvent) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = type;
+        result = 37*result + ret;
+        ret = state;
+        result = 37*result + ret;
+        ret = path.hashCode();
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "LWatcherEvent(iis)";
+    }
 }

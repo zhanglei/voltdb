@@ -18,8 +18,12 @@
 
 package org.apache.jute_voltpatches;
 
+import org.apache.log4j.lf5.util.StreamUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * Various utility functions for Hadoop record I/O runtime.
@@ -283,6 +287,9 @@ public class Utils {
         return stream.toByteArray();
     }
 
+    public static int compareBytes(byte b1[], byte b2[]) {
+        return compareBytes(b1, 0, b1.length, b2, 0, b2.length);
+    }
     public static int compareBytes(byte b1[], int off1, int len1, byte b2[],
             int off2, int len2) {
         int i;
@@ -295,5 +302,13 @@ public class Utils {
             return len1 < len2 ? -1 : 1;
         }
         return 0;
+    }
+    public static<T extends Comparable<T>> int compareLists(List<T> lhs, List<T> rhs) {
+        final int lhs_len = lhs.size(), rhs_len = rhs.size();
+        return IntStream.range(0, Integer.min(lhs_len, rhs_len))
+                .map(index -> lhs.get(index).compareTo(rhs.get(index)))
+                .filter(cmp -> cmp != 0)
+                .findFirst()
+                .orElseGet(() -> Integer.compare(lhs_len, rhs_len));
     }
 }

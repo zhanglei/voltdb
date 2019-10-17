@@ -21,11 +21,9 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
 public class GetChildren2Request implements Record, Comparable<GetChildren2Request> {
@@ -34,47 +32,46 @@ public class GetChildren2Request implements Record, Comparable<GetChildren2Reque
     public GetChildren2Request() {
     }
     public GetChildren2Request(String path, boolean watch) {
-        this.path=path;
-        this.watch=watch;
+        this.path = path;
+        this.watch = watch;
     }
     public String getPath() {
         return path;
     }
     public void setPath(String m_) {
-        path=m_;
+        path = m_;
     }
     public boolean getWatch() {
         return watch;
     }
     public void setWatch(boolean m_) {
-        watch=m_;
+        watch = m_;
     }
+    @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeBool(watch,"watch");
         a_.endRecord(this,tag);
     }
+    @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
-        path=a_.readString("path");
-        watch=a_.readBool("watch");
+        path = a_.readString("path");
+        watch = a_.readBool("watch");
         a_.endRecord(tag);
     }
     @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.writeBool(watch,"watch");
+        a.endRecord(this,"");
+    }
+
+    @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.writeBool(watch,"watch");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
@@ -92,10 +89,8 @@ public class GetChildren2Request implements Record, Comparable<GetChildren2Reque
     public boolean equals(Object peer_) {
         if (!(peer_ instanceof GetChildren2Request)) {
             return false;
-        } else if (peer_ == this) {
-            return true;
         } else {
-            return compareTo((GetChildren2Request) peer_) == 0;
+            return peer_ == this || compareTo((GetChildren2Request) peer_) == 0;
         }
     }
     @Override

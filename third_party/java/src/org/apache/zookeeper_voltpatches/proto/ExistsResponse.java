@@ -19,91 +19,76 @@
 
 package org.apache.zookeeper_voltpatches.proto;
 
-import java.util.*;
 import org.apache.jute_voltpatches.*;
-import org.apache.zookeeper_voltpatches.proto.ExistsResponse;
-public class ExistsResponse implements Record {
-  private org.apache.zookeeper_voltpatches.data.Stat stat;
-  public ExistsResponse() {
-  }
-  public ExistsResponse(
-        org.apache.zookeeper_voltpatches.data.Stat stat) {
-    this.stat=stat;
-  }
-  public org.apache.zookeeper_voltpatches.data.Stat getStat() {
-    return stat;
-  }
-  public void setStat(org.apache.zookeeper_voltpatches.data.Stat m_) {
-    stat=m_;
-  }
-  public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(this,tag);
-    a_.writeRecord(stat,"stat");
-    a_.endRecord(this,tag);
-  }
-  public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
-    a_.startRecord(tag);
-    stat= new org.apache.zookeeper_voltpatches.data.Stat();
-    a_.readRecord(stat,"stat");
-    a_.endRecord(tag);
-}
-  @Override
-public String toString() {
-    try {
-      java.io.ByteArrayOutputStream s =
-        new java.io.ByteArrayOutputStream();
-      CsvOutputArchive a_ =
-        new CsvOutputArchive(s);
-      a_.startRecord(this,"");
-    a_.writeRecord(stat,"stat");
-      a_.endRecord(this,"");
-      return new String(s.toByteArray(), "UTF-8");
-    } catch (Throwable ex) {
-      ex.printStackTrace();
+import org.apache.zookeeper_voltpatches.data.Stat;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Comparator;
+
+public class ExistsResponse implements Record, Comparable<ExistsResponse> {
+    private Stat stat;
+    public ExistsResponse() {
     }
-    return "ERROR";
-  }
-  public void write(java.io.DataOutput out) throws java.io.IOException {
-    BinaryOutputArchive archive = new BinaryOutputArchive(out);
-    serialize(archive, "");
-  }
-  public void readFields(java.io.DataInput in) throws java.io.IOException {
-    BinaryInputArchive archive = new BinaryInputArchive(in);
-    deserialize(archive, "");
-  }
-  public int compareTo (Object peer_) throws ClassCastException {
-    if (!(peer_ instanceof ExistsResponse)) {
-      throw new ClassCastException("Comparing different types of records.");
+    public ExistsResponse(Stat stat) {
+        this.stat = stat;
     }
-    ExistsResponse peer = (ExistsResponse) peer_;
-    int ret = 0;
-    ret = stat.compareTo(peer.stat);
-    if (ret != 0) return ret;
-     return ret;
-  }
-  @Override
-public boolean equals(Object peer_) {
-    if (!(peer_ instanceof ExistsResponse)) {
-      return false;
+    public Stat getStat() {
+        return stat;
     }
-    if (peer_ == this) {
-      return true;
+    public void setStat(Stat m_) {
+        stat = m_;
     }
-    ExistsResponse peer = (ExistsResponse) peer_;
-    boolean ret = false;
-    ret = stat.equals(peer.stat);
-    if (!ret) return ret;
-     return ret;
-  }
-  @Override
-public int hashCode() {
-    int result = 17;
-    int ret;
-    ret = stat.hashCode();
-    result = 37*result + ret;
-    return result;
-  }
-  public static String signature() {
-    return "LExistsResponse(LStat(lllliiiliil))";
-  }
+    public void serialize(OutputArchive a_, String tag) throws IOException {
+        a_.startRecord(this,tag);
+        a_.writeRecord(stat,"stat");
+        a_.endRecord(this,tag);
+    }
+    public void deserialize(InputArchive a_, String tag) throws IOException {
+        a_.startRecord(tag);
+        stat = new Stat();
+        a_.readRecord(stat,"stat");
+        a_.endRecord(tag);
+    }
+
+    @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeRecord(stat,"stat");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
+    }
+    public void write(DataOutput out) throws IOException {
+        serialize(new BinaryOutputArchive(out), "");
+    }
+    public void readFields(DataInput in) throws IOException {
+        deserialize(new BinaryInputArchive(in), "");
+    }
+    @Override
+    public int compareTo(ExistsResponse peer_) throws ClassCastException {
+        return Comparator.comparing(ExistsResponse::getStat).compare(this, peer_);
+    }
+    @Override
+    public boolean equals(Object peer_) {
+        if (!(peer_ instanceof ExistsResponse)) {
+            return false;
+        } else {
+            return peer_ == this || compareTo((ExistsResponse) peer_) == 0;
+        }
+    }
+    @Override
+    public int hashCode() {
+        int result = 17;
+        int ret;
+        ret = stat.hashCode();
+        return 37*result + ret;
+    }
+    public static String signature() {
+        return "LExistsResponse(LStat(lllliiiliil))";
+    }
 }

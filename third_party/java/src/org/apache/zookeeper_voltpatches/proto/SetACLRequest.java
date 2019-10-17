@@ -22,11 +22,9 @@ package org.apache.zookeeper_voltpatches.proto;
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.ACL;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -91,26 +89,23 @@ public class SetACLRequest implements Record, Comparable<SetACLRequest> {
         a_.endRecord(tag);
     }
     @Override
-    public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.startVector(acl,"acl");
-            if (acl!= null) {
-                for (ACL e1 : acl) {
-                    a_.writeRecord(e1, "e1");
-                }
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.startVector(acl,"acl");
+        if (acl!= null) {
+            for (ACL e1 : acl) {
+                a.writeRecord(e1, "e1");
             }
-            a_.endVector(acl,"acl");
-            a_.writeInt(version,"version");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
         }
-        return "ERROR";
+        a.endVector(acl,"acl");
+        a.writeInt(version,"version");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

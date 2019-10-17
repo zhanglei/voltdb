@@ -21,11 +21,9 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
 public class SyncRequest implements Record, Comparable<SyncRequest> {
@@ -54,18 +52,15 @@ public class SyncRequest implements Record, Comparable<SyncRequest> {
         a_.endRecord(tag);
     }
     @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.endRecord(this,"");
+    }
+
+    @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

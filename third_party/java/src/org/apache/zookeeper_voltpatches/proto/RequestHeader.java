@@ -21,11 +21,9 @@ package org.apache.zookeeper_voltpatches.proto;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
 public class RequestHeader implements Record, Comparable<RequestHeader> {
@@ -59,24 +57,21 @@ public class RequestHeader implements Record, Comparable<RequestHeader> {
     @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
-        xid=a_.readInt("xid");
-        type=a_.readInt("type");
+        xid = a_.readInt("xid");
+        type = a_.readInt("type");
         a_.endRecord(tag);
     }
     @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeInt(xid,"xid");
+        a.writeInt(type,"type");
+        a.endRecord(this,"");
+    }
+
+    @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeInt(xid,"xid");
-            a_.writeInt(type,"type");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

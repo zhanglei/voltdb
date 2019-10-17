@@ -21,11 +21,9 @@ package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 
 public class Stat implements Record, Comparable<Stat> {
@@ -165,28 +163,25 @@ public class Stat implements Record, Comparable<Stat> {
         a_.endRecord(tag);
     }
     @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeLong(czxid,"czxid");
+        a.writeLong(mzxid,"mzxid");
+        a.writeLong(ctime,"ctime");
+        a.writeLong(mtime,"mtime");
+        a.writeInt(version,"version");
+        a.writeInt(cversion,"cversion");
+        a.writeInt(aversion,"aversion");
+        a.writeLong(ephemeralOwner,"ephemeralOwner");
+        a.writeInt(dataLength,"dataLength");
+        a.writeInt(numChildren,"numChildren");
+        a.writeLong(pzxid,"pzxid");
+        a.endRecord(this,"");
+    }
+
+    @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeLong(czxid,"czxid");
-            a_.writeLong(mzxid,"mzxid");
-            a_.writeLong(ctime,"ctime");
-            a_.writeLong(mtime,"mtime");
-            a_.writeInt(version,"version");
-            a_.writeInt(cversion,"cversion");
-            a_.writeInt(aversion,"aversion");
-            a_.writeLong(ephemeralOwner,"ephemeralOwner");
-            a_.writeInt(dataLength,"dataLength");
-            a_.writeInt(numChildren,"numChildren");
-            a_.writeLong(pzxid,"pzxid");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

@@ -22,11 +22,10 @@ package org.apache.zookeeper_voltpatches.proto;
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.Stat;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GetChildren2Response implements Record, Comparable<GetChildren2Response> {
@@ -53,59 +52,50 @@ public class GetChildren2Response implements Record, Comparable<GetChildren2Resp
     @Override
     public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
-        {
-            a_.startVector(children,"children");
-            if (children!= null) {
-                for (String e1 : children) {
-                    a_.writeString(e1, "e1");
-                }
+        a_.startVector(children,"children");
+        if (children!= null) {
+            for (String e1 : children) {
+                a_.writeString(e1, "e1");
             }
-            a_.endVector(children,"children");
         }
+        a_.endVector(children,"children");
         a_.writeRecord(stat,"stat");
         a_.endRecord(this,tag);
     }
     @Override
     public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
-        {
-            Index vidx1 = a_.startVector("children");
-            if (vidx1!= null) {
-                children=new java.util.ArrayList<>();
-                for (; !vidx1.done(); vidx1.incr()) {
-                    String e1;
-                    e1=a_.readString("e1");
-                    children.add(e1);
-                }
+        Index vidx1 = a_.startVector("children");
+        if (vidx1!= null) {
+            children=new ArrayList<>();
+            for (; !vidx1.done(); vidx1.incr()) {
+                String e1;
+                e1=a_.readString("e1");
+                children.add(e1);
             }
-            a_.endVector("children");
         }
+        a_.endVector("children");
         stat = new org.apache.zookeeper_voltpatches.data.Stat();
         a_.readRecord(stat,"stat");
         a_.endRecord(tag);
     }
     @Override
-    public String toString() {
-        try {
-            final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            {
-                a_.startVector(children,"children");
-                if (children!= null) {
-                    for (String e1 : children) {
-                        a_.writeString(e1, "e1");
-                    }
-                }
-                a_.endVector(children,"children");
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.startVector(children,"children");
+        if (children!= null) {
+            for (String e1 : children) {
+                a.writeString(e1, "e1");
             }
-            a_.writeRecord(stat,"stat");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
         }
-        return "ERROR";
+        a.endVector(children,"children");
+        a.writeRecord(stat,"stat");
+        a.endRecord(this,"");
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");

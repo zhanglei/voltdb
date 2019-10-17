@@ -66,19 +66,16 @@ public class GetChildrenRequest implements Record, Comparable<GetChildrenRequest
         a_.endRecord(tag);
     }
     @Override
+    public void writeCSV(CsvOutputArchive a) throws IOException {
+        a.startRecord(this,"");
+        a.writeString(path,"path");
+        a.writeBool(watch,"watch");
+        a.endRecord(this,"");
+    }
+
+    @Override
     public String toString() {
-        try {
-            final ByteArrayOutputStream s = new java.io.ByteArrayOutputStream();
-            final CsvOutputArchive a_ = new CsvOutputArchive(s);
-            a_.startRecord(this,"");
-            a_.writeString(path,"path");
-            a_.writeBool(watch,"watch");
-            a_.endRecord(this,"");
-            return new String(s.toByteArray(), StandardCharsets.UTF_8);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-        }
-        return "ERROR";
+        return toStringHelper();
     }
     public void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
