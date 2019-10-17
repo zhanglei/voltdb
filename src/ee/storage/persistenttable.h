@@ -1126,9 +1126,9 @@ inline void PersistentTable::deleteTupleStorage(TableTuple& tuple, TBPtr block, 
            m_blocksWithSpace.insert(block);
         }
         m_blocksNotPendingSnapshot.erase(block);
-        if (m_blocksPendingSnapshot.find(block) == m_blocksPendingSnapshot.end()) {
+        if (m_blocksPendingSnapshot.find(block) != m_blocksPendingSnapshot.end()) {
             char errMsg[1024];
-            snprintf(errMsg, sizeof errMsg, "Pending snapshot blocks for table %s.", name().c_str());
+            snprintf(errMsg, sizeof errMsg, "Block is empty but still in pending snapshot:%s", tuple.debug(name(), false).c_str());
             errMsg[sizeof errMsg - 1] = '\0';
             LogManager::getThreadLogger(LOGGERID_HOST)->log(LOGLEVEL_ERROR, errMsg);
         }
