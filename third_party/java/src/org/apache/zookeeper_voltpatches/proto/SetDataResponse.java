@@ -25,7 +25,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SetDataResponse implements Record, Comparable<SetDataResponse> {
+public class SetDataResponse implements Record<SetDataResponse> {
     private Stat stat;
     public SetDataResponse() {
     }

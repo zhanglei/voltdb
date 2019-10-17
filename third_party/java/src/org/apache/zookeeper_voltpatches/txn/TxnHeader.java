@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class TxnHeader implements Record, Comparable<TxnHeader> {
+public class TxnHeader implements Record<TxnHeader> {
     private long clientId;
     private int cxid;
     private long zxid;

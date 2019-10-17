@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class CreateSessionTxn implements Record, Comparable<CreateSessionTxn> {
+public class CreateSessionTxn implements Record<CreateSessionTxn> {
     private long timeOut;
     public CreateSessionTxn() {
     }

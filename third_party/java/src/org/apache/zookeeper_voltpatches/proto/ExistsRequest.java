@@ -24,7 +24,7 @@ import java.util.Comparator;
 
 import org.apache.jute_voltpatches.*;
 
-public class ExistsRequest implements Record, Comparable<ExistsRequest> {
+public class ExistsRequest implements Record<ExistsRequest> {
     private String path;
     private boolean watch;
     public ExistsRequest() {

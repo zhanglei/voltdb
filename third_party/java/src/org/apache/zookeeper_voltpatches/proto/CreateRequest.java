@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.jute_voltpatches.*;
 import org.apache.zookeeper_voltpatches.data.ACL;
 
-public class CreateRequest implements Record, Comparable<CreateRequest> {
+public class CreateRequest implements Record<CreateRequest> {
     private String path;
     private byte[] data;
     private List<ACL> acl;

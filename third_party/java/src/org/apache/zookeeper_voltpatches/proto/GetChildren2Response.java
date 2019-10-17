@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GetChildren2Response implements Record, Comparable<GetChildren2Response> {
+public class GetChildren2Response implements Record<GetChildren2Response> {
     private List<String> children;
     private Stat stat;
     public GetChildren2Response() {

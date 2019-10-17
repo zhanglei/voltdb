@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SetACLRequest implements Record, Comparable<SetACLRequest> {
+public class SetACLRequest implements Record<SetACLRequest> {
     private String path;
     private List<ACL> acl;
     private int version;

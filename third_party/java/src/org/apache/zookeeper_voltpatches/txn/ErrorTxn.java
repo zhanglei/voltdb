@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ErrorTxn implements Record, Comparable<ErrorTxn> {
+public class ErrorTxn implements Record<ErrorTxn> {
     private int err;
     public ErrorTxn() {
     }

@@ -24,7 +24,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 
 import java.io.IOException;
 
-public class SetACLResponse implements Record, Comparable<SetACLResponse> {
+public class SetACLResponse implements Record<SetACLResponse> {
     private Stat stat;
     public SetACLResponse() {
     }

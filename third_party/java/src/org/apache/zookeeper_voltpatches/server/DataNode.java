@@ -37,7 +37,7 @@ import org.apache.zookeeper_voltpatches.data.StatPersisted;
  * array of ACLs, a stat object, and a set of its children's paths.
  *
  */
-public class DataNode implements Record {
+public class DataNode implements Record<DataNode> {
     /** the parent of this datanode */
     DataNode parent;
 
@@ -105,6 +105,12 @@ public class DataNode implements Record {
     @Override
     public void writeCSV(CsvOutputArchive a) throws IOException {
         // dummy: not overwriting toString()
+    }
+
+    @Override
+    public int compareTo(DataNode o) {
+        // dummy
+        return 0;
     }
 
     /**

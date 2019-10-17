@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class ConnectResponse implements Record, Comparable<ConnectResponse> {
+public class ConnectResponse implements Record<ConnectResponse> {
     private int protocolVersion;
     private int timeOut;
     private long sessionId;

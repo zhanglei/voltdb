@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GetACLResponse implements Record, Comparable<GetACLResponse> {
+public class GetACLResponse implements Record<GetACLResponse> {
     private List<ACL> acl;
     private Stat stat;
     public GetACLResponse() {

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class SetDataTxn implements Record, Comparable<SetDataTxn> {
+public class SetDataTxn implements Record<SetDataTxn> {
     private String path;
     private byte[] data;
     private int version;

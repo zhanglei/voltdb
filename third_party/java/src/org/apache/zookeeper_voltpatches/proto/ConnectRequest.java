@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class ConnectRequest implements Record, Comparable<ConnectRequest> {
+public class ConnectRequest implements Record<ConnectRequest> {
     private int protocolVersion;
     private long lastZxidSeen;
     private int timeOut;

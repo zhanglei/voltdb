@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
-public class SetACLTxn implements Record, Comparable<SetACLTxn> {
+public class SetACLTxn implements Record<SetACLTxn> {
     private String path;
     private List<ACL> acl;
     private int version;

@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class RequestHeader implements Record, Comparable<RequestHeader> {
+public class RequestHeader implements Record<RequestHeader> {
     private int xid;
     private int type;
     public RequestHeader() {

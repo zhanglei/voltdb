@@ -28,7 +28,7 @@ import java.nio.charset.StandardCharsets;
  * Interface that is implemented by generated classes.
  *
  */
-public interface Record {
+public interface Record<T> extends Comparable<T> {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
     void writeCSV(CsvOutputArchive a) throws IOException;

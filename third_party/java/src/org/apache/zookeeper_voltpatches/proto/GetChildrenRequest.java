@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetChildrenRequest implements Record, Comparable<GetChildrenRequest> {
+public class GetChildrenRequest implements Record<GetChildrenRequest> {
     private String path;
     private boolean watch;
     public GetChildrenRequest() {

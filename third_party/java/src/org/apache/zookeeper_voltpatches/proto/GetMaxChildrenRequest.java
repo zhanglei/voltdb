@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetMaxChildrenRequest implements Record, Comparable<GetMaxChildrenRequest> {
+public class GetMaxChildrenRequest implements Record<GetMaxChildrenRequest> {
     private String path;
     public GetMaxChildrenRequest() {
     }

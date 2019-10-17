@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class WatcherEvent implements Record, Comparable<WatcherEvent> {
+public class WatcherEvent implements Record<WatcherEvent> {
     private int type;
     private int state;
     private String path;

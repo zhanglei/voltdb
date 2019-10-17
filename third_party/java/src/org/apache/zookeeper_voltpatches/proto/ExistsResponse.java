@@ -25,7 +25,7 @@ import org.apache.zookeeper_voltpatches.data.Stat;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ExistsResponse implements Record, Comparable<ExistsResponse> {
+public class ExistsResponse implements Record<ExistsResponse> {
     private Stat stat;
     public ExistsResponse() {
     }

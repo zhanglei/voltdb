@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class FileHeader implements Record, Comparable<FileHeader> {
+public class FileHeader implements Record<FileHeader> {
     private int magic;
     private int version;
     private long dbid;

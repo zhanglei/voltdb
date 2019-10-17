@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-public class CreateTxn implements Record, Comparable<CreateTxn> {
+public class CreateTxn implements Record<CreateTxn> {
     private String path;
     private byte[] data;
     private java.util.List<ACL> acl;

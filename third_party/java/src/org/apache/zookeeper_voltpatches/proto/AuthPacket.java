@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class AuthPacket implements Record, Comparable<AuthPacket> {
+public class AuthPacket implements Record<AuthPacket> {
     private int type;
     private String scheme;
     private byte[] auth;

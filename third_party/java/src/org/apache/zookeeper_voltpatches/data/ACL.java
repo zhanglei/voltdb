@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ACL implements Record, Comparable<ACL> {
+public class ACL implements Record<ACL> {
     private int perms;
     private Id id;
     public ACL() {

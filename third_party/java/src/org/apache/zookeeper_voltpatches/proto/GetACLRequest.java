@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetACLRequest implements Record, Comparable<GetACLRequest> {
+public class GetACLRequest implements Record<GetACLRequest> {
     private String path;
     public GetACLRequest() {
     }

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
 
-public class op_result_t implements Record, Comparable<op_result_t> {
+public class op_result_t implements Record<op_result_t> {
     private int rc;
     private int op;
     private byte[] response;

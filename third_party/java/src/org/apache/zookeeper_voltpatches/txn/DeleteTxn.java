@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class DeleteTxn implements Record, Comparable<DeleteTxn> {
+public class DeleteTxn implements Record<DeleteTxn> {
     private String path;
     public DeleteTxn() {
     }

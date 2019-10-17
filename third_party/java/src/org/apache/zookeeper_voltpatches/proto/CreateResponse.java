@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class CreateResponse implements Record, Comparable<CreateResponse> {
+public class CreateResponse implements Record<CreateResponse> {
     private String path;
     public CreateResponse() {
     }

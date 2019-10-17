@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class DeleteRequest implements Record, Comparable<DeleteRequest> {
+public class DeleteRequest implements Record<DeleteRequest> {
     private String path;
     private int version;
     public DeleteRequest() {

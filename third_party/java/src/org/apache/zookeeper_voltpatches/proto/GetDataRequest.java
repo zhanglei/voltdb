@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class GetDataRequest implements Record, Comparable<GetDataRequest> {
+public class GetDataRequest implements Record<GetDataRequest> {
     private String path;
     private boolean watch;
     public GetDataRequest() {

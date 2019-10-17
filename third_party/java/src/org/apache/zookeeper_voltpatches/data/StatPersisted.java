@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class StatPersisted implements Record, Comparable<StatPersisted> {
+public class StatPersisted implements Record<StatPersisted> {
     private long czxid;
     private long mzxid;
     private long ctime;

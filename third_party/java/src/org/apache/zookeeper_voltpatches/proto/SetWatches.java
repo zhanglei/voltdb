@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class SetWatches implements Record, Comparable<SetWatches> {
+public class SetWatches implements Record<SetWatches> {
     private long relativeZxid;
     private List<String> dataWatches;
     private List<String> existWatches;

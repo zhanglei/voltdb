@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.List;
 
-public class GetChildrenResponse implements Record, Comparable<GetChildrenResponse> {
+public class GetChildrenResponse implements Record<GetChildrenResponse> {
     private List<String> children;
     public GetChildrenResponse() {
     }

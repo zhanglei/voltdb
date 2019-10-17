@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class ReplyHeader implements Record, Comparable<ReplyHeader> {
+public class ReplyHeader implements Record<ReplyHeader> {
     private int xid;
     private long zxid;
     private int err;

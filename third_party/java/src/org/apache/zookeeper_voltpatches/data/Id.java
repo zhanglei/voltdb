@@ -22,12 +22,10 @@ package org.apache.zookeeper_voltpatches.data;
 
 import org.apache.jute_voltpatches.*;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class Id implements Record, Comparable<Id> {
+public class Id implements Record<Id> {
     private String scheme;
     private String id;
     public Id() {

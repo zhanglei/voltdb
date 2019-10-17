@@ -24,7 +24,7 @@ import org.apache.jute_voltpatches.*;
 import java.io.IOException;
 import java.util.Comparator;
 
-public class SyncResponse implements Record, Comparable<SyncResponse> {
+public class SyncResponse implements Record<SyncResponse> {
     private String path;
     public SyncResponse() {
     }
