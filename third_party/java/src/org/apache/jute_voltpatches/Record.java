@@ -31,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 public interface Record<T> extends Comparable<T> {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
-    void writeCSV(CsvOutputArchive a) throws IOException;
     default void write(DataOutput out) throws IOException {
         serialize(new BinaryOutputArchive(out), "");
     }
@@ -41,7 +40,7 @@ public interface Record<T> extends Comparable<T> {
     default String toStringHelper() {
         try {
             final ByteArrayOutputStream s = new ByteArrayOutputStream();
-            writeCSV(new CsvOutputArchive(s));
+            serialize(new CsvOutputArchive(s), "");
             return new String(s.toByteArray(), StandardCharsets.UTF_8);
         } catch (Throwable ex) {
             ex.printStackTrace();

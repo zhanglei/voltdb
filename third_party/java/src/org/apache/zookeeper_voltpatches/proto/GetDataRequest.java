@@ -59,13 +59,6 @@ public class GetDataRequest implements Record<GetDataRequest> {
         watch = a_.readBool("watch");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBool(watch,"watch");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

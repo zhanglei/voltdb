@@ -71,15 +71,6 @@ public class FileHeader implements Record<FileHeader> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(magic,"magic");
-        a.writeInt(version,"version");
-        a.writeLong(dbid,"dbid");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

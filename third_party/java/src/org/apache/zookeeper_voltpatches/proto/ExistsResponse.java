@@ -51,13 +51,6 @@ public class ExistsResponse implements Record<ExistsResponse> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeRecord(stat,"stat");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

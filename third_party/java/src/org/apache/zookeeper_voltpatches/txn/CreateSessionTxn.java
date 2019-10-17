@@ -51,13 +51,6 @@ public class CreateSessionTxn implements Record<CreateSessionTxn> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeLong(timeOut,"timeOut");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

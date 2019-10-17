@@ -75,14 +75,6 @@ public class ReplyHeader implements Record<ReplyHeader> {
         return toStringHelper();
     }
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(xid,"xid");
-        a.writeLong(zxid,"zxid");
-        a.writeInt(err,"err");
-        a.endRecord(this,"");
-    }
-    @Override
     public int compareTo(ReplyHeader peer_) {
         return Comparator.comparingInt(ReplyHeader::getXid)
                 .thenComparingLong(ReplyHeader::getZxid)

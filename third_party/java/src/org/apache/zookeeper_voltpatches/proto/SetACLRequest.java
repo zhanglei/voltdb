@@ -86,20 +86,6 @@ public class SetACLRequest implements Record<SetACLRequest> {
         version=a_.readInt("version");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.startVector(acl,"acl");
-        if (acl!= null) {
-            for (ACL e1 : acl) {
-                a.writeRecord(e1, "e1");
-            }
-        }
-        a.endVector(acl,"acl");
-        a.writeInt(version,"version");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

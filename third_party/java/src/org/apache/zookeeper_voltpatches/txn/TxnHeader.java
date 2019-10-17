@@ -96,17 +96,6 @@ public class TxnHeader implements Record<TxnHeader> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeLong(clientId,"clientId");
-        a.writeInt(cxid,"cxid");
-        a.writeLong(zxid,"zxid");
-        a.writeLong(time,"time");
-        a.writeInt(type,"type");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

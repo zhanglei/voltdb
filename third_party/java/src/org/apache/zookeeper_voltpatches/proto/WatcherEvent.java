@@ -71,15 +71,6 @@ public class WatcherEvent implements Record<WatcherEvent> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(type,"type");
-        a.writeInt(state,"state");
-        a.writeString(path,"path");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

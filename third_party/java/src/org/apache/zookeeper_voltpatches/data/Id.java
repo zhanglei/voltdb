@@ -60,14 +60,6 @@ public class Id implements Record<Id> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(scheme,"scheme");
-        a.writeString(id,"id");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

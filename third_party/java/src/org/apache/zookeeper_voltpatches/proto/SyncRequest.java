@@ -49,12 +49,6 @@ public class SyncRequest implements Record<SyncRequest> {
         path = a_.readString("path");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

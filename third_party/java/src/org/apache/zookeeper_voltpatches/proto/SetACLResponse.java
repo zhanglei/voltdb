@@ -52,13 +52,6 @@ public class SetACLResponse implements Record<SetACLResponse> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeRecord(stat,"stat");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

@@ -70,14 +70,6 @@ public class SetDataRequest implements Record<SetDataRequest> {
         version = a_.readInt("version");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBuffer(data,"data");
-        a.writeInt(version,"version");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

@@ -51,12 +51,6 @@ public class SetDataResponse implements Record<SetDataResponse> {
         a_.readRecord(stat,"stat");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeRecord(stat,"stat");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

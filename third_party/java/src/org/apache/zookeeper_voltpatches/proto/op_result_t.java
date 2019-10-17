@@ -72,15 +72,6 @@ public class op_result_t implements Record<op_result_t> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(rc,"rc");
-        a.writeInt(op,"op");
-        a.writeBuffer(response,"response");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

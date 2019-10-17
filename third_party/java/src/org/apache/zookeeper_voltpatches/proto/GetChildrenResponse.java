@@ -70,18 +70,6 @@ public class GetChildrenResponse implements Record<GetChildrenResponse> {
         return toStringHelper();
     }
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.startVector(children,"children");
-        if (children!= null) {
-            for (String e1 : children) {
-                a.writeString(e1, "e1");
-            }
-        }
-        a.endVector(children,"children");
-        a.endRecord(this,"");
-    }
-    @Override
     public int compareTo(GetChildrenResponse ignored) throws ClassCastException {
         throw new UnsupportedOperationException("comparing GetChildrenResponse is unimplemented");
     }

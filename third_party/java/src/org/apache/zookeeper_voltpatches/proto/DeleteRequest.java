@@ -59,13 +59,6 @@ public class DeleteRequest implements Record<DeleteRequest> {
         version = a_.readInt("version");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeInt(version,"version");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

@@ -160,22 +160,6 @@ public class Stat implements Record<Stat> {
         pzxid = a_.readLong("pzxid");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeLong(czxid,"czxid");
-        a.writeLong(mzxid,"mzxid");
-        a.writeLong(ctime,"ctime");
-        a.writeLong(mtime,"mtime");
-        a.writeInt(version,"version");
-        a.writeInt(cversion,"cversion");
-        a.writeInt(aversion,"aversion");
-        a.writeLong(ephemeralOwner,"ephemeralOwner");
-        a.writeInt(dataLength,"dataLength");
-        a.writeInt(numChildren,"numChildren");
-        a.writeLong(pzxid,"pzxid");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

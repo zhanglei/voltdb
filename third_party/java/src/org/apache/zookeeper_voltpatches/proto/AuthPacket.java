@@ -72,15 +72,6 @@ public class AuthPacket implements Record<AuthPacket> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(type,"type");
-        a.writeString(scheme,"scheme");
-        a.writeBuffer(auth,"auth");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

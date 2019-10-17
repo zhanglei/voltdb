@@ -79,19 +79,6 @@ public class GetACLResponse implements Record<GetACLResponse> {
         a_.readRecord(stat,"stat");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.startVector(acl,"acl");
-        if (acl!= null) {
-            for (ACL e1 : acl) {
-                a.writeRecord(e1, "e1");
-            }
-        }
-        a.endVector(acl,"acl");
-        a.writeRecord(stat,"stat");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

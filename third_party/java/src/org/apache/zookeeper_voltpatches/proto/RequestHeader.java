@@ -59,13 +59,6 @@ public class RequestHeader implements Record<RequestHeader> {
         type = a_.readInt("type");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(xid,"xid");
-        a.writeInt(type,"type");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

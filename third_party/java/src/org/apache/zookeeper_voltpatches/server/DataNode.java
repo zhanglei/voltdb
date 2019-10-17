@@ -103,11 +103,6 @@ public class DataNode implements Record<DataNode> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        // dummy: not overwriting toString()
-    }
-
-    @Override
     public int compareTo(DataNode o) {
         // dummy
         return 0;

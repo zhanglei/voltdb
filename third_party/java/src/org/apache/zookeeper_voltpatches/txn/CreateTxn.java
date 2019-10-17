@@ -97,22 +97,6 @@ public class CreateTxn implements Record<CreateTxn> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBuffer(data,"data");
-        a.startVector(acl,"acl");
-        if (acl!= null) {
-            for (ACL e1 : acl) {
-                a.writeRecord(e1, "e1");
-            }
-        }
-        a.endVector(acl,"acl");
-        a.writeBool(ephemeral,"ephemeral");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

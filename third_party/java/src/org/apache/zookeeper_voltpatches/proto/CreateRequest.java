@@ -93,22 +93,6 @@ public class CreateRequest implements Record<CreateRequest> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBuffer(data,"data");
-        a.startVector(acl,"acl");
-        if (acl!= null) {
-            for (ACL e1 : acl) {
-                a.writeRecord(e1, "e1");
-            }
-        }
-        a.endVector(acl,"acl");
-        a.writeInt(flags,"flags");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

@@ -51,13 +51,6 @@ public class GetMaxChildrenResponse implements Record<GetMaxChildrenResponse> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(max,"max");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

@@ -72,15 +72,6 @@ public class SetDataTxn implements Record<SetDataTxn> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBuffer(data,"data");
-        a.writeInt(version,"version");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

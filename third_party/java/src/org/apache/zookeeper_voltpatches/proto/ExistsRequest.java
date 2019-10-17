@@ -46,25 +46,18 @@ public class ExistsRequest implements Record<ExistsRequest> {
         watch=m_;
     }
     @Override
-    public void serialize(OutputArchive a_, String tag) throws java.io.IOException {
+    public void serialize(OutputArchive a_, String tag) throws IOException {
         a_.startRecord(this,tag);
         a_.writeString(path,"path");
         a_.writeBool(watch,"watch");
         a_.endRecord(this,tag);
     }
     @Override
-    public void deserialize(InputArchive a_, String tag) throws java.io.IOException {
+    public void deserialize(InputArchive a_, String tag) throws IOException {
         a_.startRecord(tag);
         path = a_.readString("path");
         watch = a_.readBool("watch");
         a_.endRecord(tag);
-    }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeBool(watch,"watch");
-        a.endRecord(this,"");
     }
 
     @Override
@@ -72,7 +65,7 @@ public class ExistsRequest implements Record<ExistsRequest> {
         return toStringHelper();
     }
     @Override
-    public int compareTo(ExistsRequest peer_) throws ClassCastException {
+    public int compareTo(ExistsRequest peer_) {
         return Comparator.comparing(ExistsRequest::getPath)
                 .thenComparing(ExistsRequest::getWatch)
                 .compare(this, peer_);
@@ -87,7 +80,7 @@ public class ExistsRequest implements Record<ExistsRequest> {
         int ret;
         ret = path.hashCode();
         result = 37*result + ret;
-        ret = (watch)?0:1;
+        ret = watch ?0:1;
         return 37*result + ret;
     }
     public static String signature() {

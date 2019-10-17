@@ -97,17 +97,6 @@ public class ConnectRequest implements Record<ConnectRequest> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(protocolVersion,"protocolVersion");
-        a.writeLong(lastZxidSeen,"lastZxidSeen");
-        a.writeInt(timeOut,"timeOut");
-        a.writeLong(sessionId,"sessionId");
-        a.writeBuffer(passwd,"passwd");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

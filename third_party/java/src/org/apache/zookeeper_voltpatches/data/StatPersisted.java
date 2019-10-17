@@ -140,21 +140,6 @@ public class StatPersisted implements Record<StatPersisted> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeLong(czxid,"czxid");
-        a.writeLong(mzxid,"mzxid");
-        a.writeLong(ctime,"ctime");
-        a.writeLong(mtime,"mtime");
-        a.writeInt(version,"version");
-        a.writeInt(cversion,"cversion");
-        a.writeInt(aversion,"aversion");
-        a.writeLong(ephemeralOwner,"ephemeralOwner");
-        a.writeLong(pzxid,"pzxid");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

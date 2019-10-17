@@ -77,19 +77,6 @@ public class GetChildren2Response implements Record<GetChildren2Response> {
         a_.readRecord(stat,"stat");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.startVector(children,"children");
-        if (children!= null) {
-            for (String e1 : children) {
-                a.writeString(e1, "e1");
-            }
-        }
-        a.endVector(children,"children");
-        a.writeRecord(stat,"stat");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {

@@ -61,14 +61,6 @@ public class SetMaxChildrenTxn implements Record<SetMaxChildrenTxn> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeString(path,"path");
-        a.writeInt(max,"max");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

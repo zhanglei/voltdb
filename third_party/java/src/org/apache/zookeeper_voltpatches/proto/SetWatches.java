@@ -132,34 +132,6 @@ public class SetWatches implements Record<SetWatches> {
     }
 
     @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeLong(relativeZxid,"relativeZxid");
-        a.startVector(dataWatches,"dataWatches");
-        if (dataWatches!= null) {
-            for (String e1 : dataWatches) {
-                a.writeString(e1, "e1");
-            }
-        }
-        a.endVector(dataWatches,"dataWatches");
-        a.startVector(existWatches,"existWatches");
-        if (existWatches!= null) {
-            for (String e1 : existWatches) {
-                a.writeString(e1, "e1");
-            }
-        }
-        a.endVector(existWatches,"existWatches");
-        a.startVector(childWatches,"childWatches");
-        if (childWatches!= null) {
-            for (String e1 : childWatches) {
-                a.writeString(e1, "e1");
-            }
-        }
-        a.endVector(childWatches,"childWatches");
-        a.endRecord(this,"");
-    }
-
-    @Override
     public String toString() {
         return toStringHelper();
     }

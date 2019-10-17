@@ -60,13 +60,6 @@ public class ACL implements Record<ACL> {
         a_.readRecord(id,"id");
         a_.endRecord(tag);
     }
-    @Override
-    public void writeCSV(CsvOutputArchive a) throws IOException {
-        a.startRecord(this,"");
-        a.writeInt(perms,"perms");
-        a.writeRecord(id,"id");
-        a.endRecord(this,"");
-    }
 
     @Override
     public String toString() {
