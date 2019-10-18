@@ -287,6 +287,18 @@ public class VoltLogger {
         execute(Level.DEBUG, message, t);
     }
 
+    public static void sdebug(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.debug(message);
+        }
+    }
+
+    public static void sdebug(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.debug(message, t);
+        }
+    }
+
     public boolean isDebugEnabled() {
         return m_logger.isEnabledFor(Level.DEBUG);
     }
@@ -299,6 +311,18 @@ public class VoltLogger {
         submit(Level.ERROR, message, t);
     }
 
+    public static void serror(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.error(message);
+        }
+    }
+
+    public static void serror(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.error(message, t);
+        }
+    }
+
     public void fatal(Object message) {
         submit(Level.FATAL, message, null);
     }
@@ -307,12 +331,36 @@ public class VoltLogger {
         submit(Level.FATAL, message, t);
     }
 
+    public static void sfatal(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.fatal(message);
+        }
+    }
+
+    public static void sfatal(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.fatal(message, t);
+        }
+    }
+
     public void info(Object message) {
         execute(Level.INFO, message, null);
     }
 
     public void info(Object message, Throwable t) {
         execute(Level.INFO, message, t);
+    }
+
+    public static void sinfo(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.info(message);
+        }
+    }
+
+    public static void sinfo(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.info(message, t);
+        }
     }
 
     public boolean isInfoEnabled() {
@@ -327,6 +375,18 @@ public class VoltLogger {
         execute(Level.TRACE, message, t);
     }
 
+    public static void strace(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.trace(message);
+        }
+    }
+
+    public static void strace(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.trace(message, t);
+        }
+    }
+
     public boolean isTraceEnabled() {
         return m_logger.isEnabledFor(Level.TRACE);
     }
@@ -337,6 +397,18 @@ public class VoltLogger {
 
     public void warn(Object message, Throwable t) {
         execute(Level.WARN, message, t);
+    }
+
+    public static void swarn(VoltLogger logger, Object message) {
+        if (logger != null) {
+            logger.warn(message);
+        }
+    }
+
+    public static void swarn(VoltLogger logger, Object message, Throwable t) {
+        if (logger != null) {
+            logger.warn(message, t);
+        }
     }
 
     public void l7dlog(final Level level, final String key, final Throwable t) {
@@ -361,6 +433,12 @@ public class VoltLogger {
             break;
         default:
             throw new AssertionError("Unrecognized level " + level);
+        }
+    }
+
+    public static void slog(VoltLogger logger, Level level, Object message, Throwable t) {
+        if (logger != null) {
+            logger.log(level, message, t);
         }
     }
 
@@ -409,8 +487,7 @@ public class VoltLogger {
             Constructor<?> constructor = loggerClz.getConstructor(String.class);
             tempLogger = (CoreVoltLogger) constructor.newInstance(classname);
         }
-        catch (Exception e) {}
-        catch (LinkageError e) {}
+        catch (Exception | LinkageError ignored) {}
 
         // if unable to load Log4j, use java.util.logging
         if (tempLogger == null) {

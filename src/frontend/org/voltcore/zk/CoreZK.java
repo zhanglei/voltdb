@@ -67,8 +67,8 @@ public class CoreZK {
      * Creates the ZK directory nodes. Only the leader should do this.
      */
     public static void createHierarchy(ZooKeeper zk) {
-        LinkedList<ZKUtil.StringCallback> callbacks = new LinkedList<ZKUtil.StringCallback>();
-        for (String node : CoreZK.ZK_HIERARCHY) {
+        final List<ZKUtil.StringCallback> callbacks = new LinkedList<>();
+        for (String node : ZK_HIERARCHY) {
                 ZKUtil.StringCallback cb = new ZKUtil.StringCallback();
                 callbacks.add(cb);
                 zk.create(node, null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, cb, null);
@@ -145,17 +145,15 @@ public class CoreZK {
             if (hostId == rejoiningHost) {
                 zk.delete(rejoin_node_blocker, stat.getVersion());
                 return true;
+            } else {
+                return false;
             }
         } catch (KeeperException e) {
-            if (e.code() == KeeperException.Code.NONODE ||
-                    e.code() == KeeperException.Code.BADVERSION) {
-                // Okay if the rejoin blocker for the given hostId is already gone.
-                return true;
-            }
+            // Okay if the rejoin blocker for the given hostId is already gone.
+            return e.code() == KeeperException.Code.NONODE || e.code() == KeeperException.Code.BADVERSION;
         } catch (InterruptedException e) {
             return false;
         }
-        return false;
     }
 
     /**
@@ -170,15 +168,11 @@ public class CoreZK {
             zk.delete(path, stat.getVersion());
             return true;
         } catch (KeeperException e) {
-            if (e.code() == KeeperException.Code.NONODE ||
-                    e.code() == KeeperException.Code.BADVERSION) {
-                // Okay if the join indicator for the given hostId is already gone.
-                return true;
-            }
+            // Okay if the join indicator for the given hostId is already gone.
+            return e.code() == KeeperException.Code.NONODE || e.code() == KeeperException.Code.BADVERSION;
         } catch (InterruptedException e) {
             return false;
         }
-        return false;
     }
 
     /**

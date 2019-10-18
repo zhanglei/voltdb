@@ -22,8 +22,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.zookeeper_voltpatches.KeeperException;
-
 @SuppressWarnings("serial")
 public abstract class KeeperException extends Exception {
 

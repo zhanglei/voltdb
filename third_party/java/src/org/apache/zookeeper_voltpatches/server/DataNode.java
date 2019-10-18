@@ -37,7 +37,7 @@ import org.apache.zookeeper_voltpatches.data.StatPersisted;
  * array of ACLs, a stat object, and a set of its children's paths.
  *
  */
-public class DataNode implements Record<DataNode> {
+public class DataNode implements Record {
     /** the parent of this datanode */
     DataNode parent;
 
@@ -80,7 +80,7 @@ public class DataNode implements Record<DataNode> {
      * @param stat
      *            the stat for this node.
      */
-    public DataNode(DataNode parent, byte data[], Long acl, StatPersisted stat) {
+    public DataNode(DataNode parent, byte[] data, Long acl, StatPersisted stat) {
         this.parent = parent;
         this.data = data;
         this.acl = acl;
@@ -100,12 +100,6 @@ public class DataNode implements Record<DataNode> {
             children = new HashSet<String>(8);
         }
         return children.add(child);
-    }
-
-    @Override
-    public int compareTo(DataNode o) {
-        // dummy
-        return 0;
     }
 
     /**

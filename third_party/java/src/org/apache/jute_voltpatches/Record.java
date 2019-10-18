@@ -28,11 +28,11 @@ import java.nio.charset.StandardCharsets;
  * Interface that is implemented by generated classes.
  *
  */
-public interface Record<T> extends Comparable<T> {
+public interface Record {
     void serialize(OutputArchive archive, String tag) throws IOException;
     void deserialize(InputArchive archive, String tag) throws IOException;
 
-    abstract class AbstractRecord<T> implements Record<T> {
+    abstract class AbstractRecord<T> implements Record, Comparable<T>  {
         public void write(DataOutput out) throws IOException {
             serialize(new BinaryOutputArchive(out), "");
         }

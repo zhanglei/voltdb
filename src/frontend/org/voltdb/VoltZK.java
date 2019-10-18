@@ -18,7 +18,6 @@
 package org.voltdb;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
 import org.apache.zookeeper_voltpatches.KeeperException;
@@ -115,17 +115,11 @@ public class VoltZK {
     public static final String lastKnownLiveNodes = "/db/lastKnownLiveNodes";
 
     public static String debugLeadersInfo(ZooKeeper zk) {
-        StringBuilder builder = new StringBuilder("ZooKeeper:\n");
-        printZKDir(zk, iv2masters, builder);
-        printZKDir(zk, iv2appointees, builder);
-        printZKDir(zk, iv2mpi, builder);
-        printZKDir(zk, leaders_initiators, builder);
-        printZKDir(zk, leaders_globalservice, builder);
-
-        return builder.toString();
+        return printZKDir(zk, "ZooKeeper:\n",
+                iv2masters, iv2appointees, iv2mpi, leaders_initiators, leaders_globalservice);
     }
 
-    public static void printZKDir(ZooKeeper zk, String dir, StringBuilder builder) {
+    private static void printZKDir(ZooKeeper zk, String dir, StringBuilder builder) {
         builder.append(dir).append(":\t ");
         try {
             List<String> keys = zk.getChildren(dir, null);
@@ -157,6 +151,14 @@ public class VoltZK {
         } catch (KeeperException | InterruptedException e) {
             builder.append(e.getMessage());
         }
+    }
+
+    public static String printZKDir(ZooKeeper zk, String... paths) {
+        final StringBuilder sb = new StringBuilder();
+        for (String path : paths) {
+            printZKDir(zk, path, sb);
+        }
+        return sb.toString();
     }
 
     // flag of initialization process complete
@@ -267,15 +269,11 @@ public class VoltZK {
     public static List<MailboxNodeContent> parseMailboxContents(List<String> jsons) throws JSONException {
         final List<MailboxNodeContent> objects = new ArrayList<>(jsons.size());
         for (String json : jsons) {
-            MailboxNodeContent content;
-            JSONObject jsObj = new JSONObject(json);
-            long HSId = jsObj.getLong("HSId");
-            Integer partitionId = null;
-            if (jsObj.has("partitionId")) {
-                partitionId = jsObj.getInt("partitionId");
-            }
-            content = new MailboxNodeContent(HSId, partitionId);
-            objects.add(content);
+            final JSONObject jsObj = new JSONObject(json);
+            final long HSId = jsObj.getLong("HSId");
+            final Integer partitionId = jsObj.has("partitionId") ?
+                    jsObj.getInt("partitionId") : null;
+            objects.add(new MailboxNodeContent(HSId, partitionId));
         }
         return objects;
     }
@@ -291,7 +289,7 @@ public class VoltZK {
         /*
          * Remove anything that is no longer part of the cluster
          */
-        Set<Integer> keySetCopy = new HashSet<>(clusterMetadata.keySet());
+        final Set<Integer> keySetCopy = new HashSet<>(clusterMetadata.keySet());
         keySetCopy.removeAll(hostIds);
         for (Integer failedHostId : keySetCopy) {
             clusterMetadata.remove(failedHostId);
@@ -529,31 +527,22 @@ public class VoltZK {
     }
 
     public static boolean removeActionBlocker(ZooKeeper zk, String node, VoltLogger log) {
-        if (log != null) {
-            log.info("Removing action blocker " + node);
-        }
+        VoltLogger.sinfo(log, "Removing action blocker " + node);
         try {
             zk.delete(node, -1);
         } catch (KeeperException e) {
             if (e.code() == KeeperException.Code.NONODE) {
-                if (log != null) {
-                    log.info("Action blocker " + node + " does not exist.");
-                }
+                VoltLogger.sinfo(log, "Action blocker " + node + " does not exist.");
                 return true;
+            } else {
+                VoltLogger.serror(log, "Failed to remove action blocker: " + node + "\n" + e.getMessage(), e);
+                return false;
             }
-            if (log != null) {
-                log.error("Failed to remove action blocker: " + node + "\n" + e.getMessage(), e);
-            }
-            return false;
         } catch (InterruptedException e) {
-            if (log != null) {
-                log.error("Failed to remove action blocker: " + node + "\n" + e.getMessage(), e);
-            }
+            VoltLogger.serror(log, "Failed to remove action blocker: " + node + "\n" + e.getMessage(), e);
             return false;
         }
-        if (log != null) {
-            log.info("Remove action blocker " + node + " successfully.");
-        }
+        VoltLogger.sinfo(log, "Remove action blocker " + node + " successfully.");
         return true;
     }
 
@@ -580,8 +569,10 @@ public class VoltZK {
                 } catch (KeeperException | InterruptedException | JSONException ignored) {
                 }
                 return false;
+            } else {
+                org.voltdb.VoltDB.crashLocalVoltDB("Unable to create MigratePartitionLeader Indicator",
+                        true, e);
             }
-            org.voltdb.VoltDB.crashLocalVoltDB("Unable to create MigratePartitionLeader Indicator", true, e);
         } catch (InterruptedException | JSONException e) {
             org.voltdb.VoltDB.crashLocalVoltDB("Unable to create MigratePartitionLeader Indicator", true, e);
         }

@@ -18,8 +18,6 @@
 package org.apache.zookeeper_voltpatches;
 
 import org.apache.log4j.Logger;
-import org.apache.zookeeper_voltpatches.CreateMode;
-import org.apache.zookeeper_voltpatches.KeeperException;
 
 /***
  * CreateMode value determines how the znode is created on ZooKeeper.
