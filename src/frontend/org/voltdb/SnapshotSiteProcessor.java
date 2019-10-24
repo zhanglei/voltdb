@@ -35,6 +35,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -181,6 +182,9 @@ public class SnapshotSiteProcessor {
 
     private boolean m_isTruncation;
     private boolean m_perSiteLastSnapshotSucceded = true;
+
+    // Remember if the destination host is down for stream snapshotting
+    private static AtomicBoolean s_streamTargetHostDown = new AtomicBoolean(false);
 
     /**
      * List of threads to join to block on snapshot completion
@@ -413,6 +417,9 @@ public class SnapshotSiteProcessor {
             boolean isTruncation,
             ExtensibleSnapshotDigestData extraSnapshotData)
     {
+        // New snapshot, reset the flag
+        s_streamTargetHostDown.compareAndSet(true, false);
+
         // TRAIL [SnapSave:8] 4 [all SP] Initiate snapshot, build table streamers.
         ExecutionSitesCurrentlySnapshotting.add(this);
         final long now = System.currentTimeMillis();
@@ -431,10 +438,15 @@ public class SnapshotSiteProcessor {
             TableStreamer streamer =
                     new TableStreamer(tableId, format.getStreamType(), hiddenColumnFilter, m_snapshotTableTasks.get(tableId));
             if (!streamer.activate(context, tablePredicates.getValue())) {
-                VoltDB.crashLocalVoltDB("Failed to activate snapshot stream on table " +
-                                        CatalogUtil.getTableNameFromId(context.getDatabase(), tableId), false, null);
+                if (!s_streamTargetHostDown.get()) {
+                    VoltDB.crashLocalVoltDB("Failed to activate snapshot stream on table " +
+                            CatalogUtil.getTableNameFromId(context.getDatabase(), tableId), false, null);
+                }
             }
             m_streamers.put(tableId, streamer);
+            if (s_streamTargetHostDown.get()) {
+                break;
+            }
         }
 
         /*
@@ -460,6 +472,10 @@ public class SnapshotSiteProcessor {
      */
     public void startSnapshotWithTargets(Collection<SnapshotDataTarget> targets, long now)
     {
+        if (SNAP_LOG.isDebugEnabled()) {
+            SNAP_LOG.debug("Starting snapshot with target count:" + targets.size());
+        }
+
         // TRAIL [SnapSave:9] 5 [all SP] Start snapshot by putting task into the site queue.
         //Basically asserts that there are no tasks with null targets at this point
         //getTarget checks and crashes
@@ -496,8 +512,9 @@ public class SnapshotSiteProcessor {
         Map<Integer, byte[]> predicateBytes = Maps.newHashMap();
 
         for (SnapshotTableTask task : tasks) {
-            SNAP_LOG.debug("Examining SnapshotTableTask: " + task);
-
+            if (SNAP_LOG.isDebugEnabled()) {
+                SNAP_LOG.debug("Examining SnapshotTableTask: " + task);
+            }
             // Add the task to the task list for the given table
             m_snapshotTableTasks.put(task.m_table.getRelativeIndex(), task);
 
@@ -593,12 +610,8 @@ public class SnapshotSiteProcessor {
          * a snapshot is finished. If the snapshot buffer is loaned out that means
          * it is pending I/O somewhere so there is no work to do until it comes back.
          */
-        if (m_snapshotTableTasks == null) {
+        if (m_snapshotTableTasks == null || m_snapshotTargets == null) {
             return retval;
-        }
-
-        if (m_snapshotTargets == null) {
-            return null;
         }
 
         /*
@@ -623,7 +636,6 @@ public class SnapshotSiteProcessor {
                 break;
             }
 
-
             // Stream more and add a listener to handle any failures
             Pair<ListenableFuture<?>, Boolean> streamResult =
                     m_streamers.get(tableId).streamMore(context, outputBuffers, null);
@@ -645,7 +657,7 @@ public class SnapshotSiteProcessor {
                                         VoltDB.crashLocalVoltDB("Unexpected exception while attempting to create truncation snapshot",
                                                 true, t);
                                     }
-                                    SNAP_LOG.error("Error while attempting to write snapshot data", t);
+                                    SNAP_LOG.error("Error while attempting to write snapshot data:" + t);
                                 }
                                 m_perSiteLastSnapshotSucceded = false;
                             }
@@ -663,8 +675,10 @@ public class SnapshotSiteProcessor {
                 // XXX: Guava's multimap will clear the tableTasks collection when the entry is
                 // removed from the containing map, so don't use the collection after removal!
                 taskIter.remove();
-                SNAP_LOG.debug("Finished snapshot tasks for table " + tableId +
-                               ": " + tableTasks);
+                if (SNAP_LOG.isDebugEnabled()) {
+                    SNAP_LOG.debug("Finished snapshot tasks for table " + tableId +
+                            ": " + tableTasks);
+                }
             } else {
                 break;
             }
@@ -675,7 +689,9 @@ public class SnapshotSiteProcessor {
          * Check the AtomicInteger to find out if this is the last one.
          */
         if (m_snapshotTableTasks.isEmpty()) {
-            SNAP_LOG.debug("Finished with tasks");
+            if (SNAP_LOG.isDebugEnabled()) {
+                SNAP_LOG.debug("Finished with tasks");
+            }
             // In case this is a non-blocking snapshot, do the post-snapshot tasks here.
             runPostSnapshotTasks(context);
             final ArrayList<SnapshotDataTarget> snapshotTargets = m_snapshotTargets;
@@ -699,7 +715,9 @@ public class SnapshotSiteProcessor {
              * sync every file descriptor and that may block for a while.
              */
             if (IamLast) {
-                SNAP_LOG.debug("I AM LAST!");
+                if (SNAP_LOG.isDebugEnabled()) {
+                    SNAP_LOG.debug("I AM LAST!");
+                }
                 final long txnId = m_lastSnapshotTxnId;
                 final ExtensibleSnapshotDigestData snapshotDataForZookeeper = m_extraSnapshotData;
                 m_extraSnapshotData = null;
@@ -727,12 +745,11 @@ public class SnapshotSiteProcessor {
                             for (final SnapshotDataTarget t : snapshotTargets) {
                                 try {
                                     t.close();
-                                } catch (IOException e) {
-                                    snapshotSucceeded = false;
-                                    throw new RuntimeException(e);
-                                } catch (InterruptedException e) {
-                                    snapshotSucceeded = false;
-                                    throw new RuntimeException(e);
+                                } catch (IOException | InterruptedException e) {
+                                    if (!s_streamTargetHostDown.get()) {
+                                        snapshotSucceeded = false;
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
 
@@ -753,6 +770,9 @@ public class SnapshotSiteProcessor {
                             try {
                                 VoltDB.instance().getHostMessenger().getZK().delete(
                                         VoltZK.nodes_currently_snapshotting + "/" + VoltDB.instance().getHostMessenger().getHostId(), -1);
+                                if (SNAP_LOG.isDebugEnabled()) {
+                                    SNAP_LOG.debug("Remove " + VoltZK.nodes_currently_snapshotting + " for host " + VoltDB.instance().getHostMessenger().getHostId());
+                                }
                             } catch (NoNodeException e) {
                                 SNAP_LOG.warn("Expect the snapshot node to already exist during deletion", e);
                             } catch (Exception e) {
@@ -774,8 +794,8 @@ public class SnapshotSiteProcessor {
                             }
 
                             logSnapshotCompleteToZK(txnId,
-                                                    snapshotSucceeded,
-                                                    snapshotDataForZookeeper);
+                                    snapshotSucceeded,
+                                    snapshotDataForZookeeper);
                         }
                     }
                 };
@@ -789,7 +809,9 @@ public class SnapshotSiteProcessor {
 
     public static void runPostSnapshotTasks(SystemProcedureExecutionContext context)
     {
-        SNAP_LOG.debug("Running post-snapshot tasks");
+        if (SNAP_LOG.isDebugEnabled()) {
+            SNAP_LOG.debug("Running post-snapshot tasks");
+        }
         PostSnapshotTask postSnapshotTask = m_siteTasksPostSnapshotting.remove(context.getPartitionId());
         if (postSnapshotTask != null) {
             postSnapshotTask.run(context);
@@ -928,5 +950,13 @@ public class SnapshotSiteProcessor {
         }
 
         return retval;
+    }
+
+    public void checkSnapshotTarget(Set<Integer> failedHosts) {
+        final List<SnapshotDataTarget> snapshotTargets = m_snapshotTargets;
+        if (m_isTruncation || snapshotTargets == null || snapshotTargets.isEmpty()) {
+            return;
+        }
+        snapshotTargets.forEach(t->t.checkSnapshotTarget(failedHosts));
     }
 }

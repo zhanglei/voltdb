@@ -47,6 +47,7 @@ import org.voltdb.utils.CompressionService;
 
 import com.google_voltpatches.common.base.Preconditions;
 import com.google_voltpatches.common.base.Throwables;
+import com.google_voltpatches.common.collect.Sets;
 import com.google_voltpatches.common.primitives.Longs;
 import com.google_voltpatches.common.util.concurrent.Futures;
 import com.google_voltpatches.common.util.concurrent.ListenableFuture;
@@ -58,7 +59,7 @@ import com.google_voltpatches.common.util.concurrent.SettableFuture;
  */
 public class StreamSnapshotDataTarget extends StreamSnapshotBase
 implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
-    private static final VoltLogger rejoinLog = new VoltLogger("REJOIN");
+    private static final VoltLogger REJOIN_LOG = new VoltLogger("REJOIN");
 
     // triggers specific test code for TestMidRejoinDeath
     static boolean m_rejoinDeathTestMode = System.getProperties().containsKey("rejoindeathtest");
@@ -79,6 +80,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
     // HSId of the destination mailbox
     private final long m_destHSId;
     private final Set<Long> m_otherDestHostHSIds;
+    private final Set<Integer> m_destinationHosts;
     private boolean m_replicatedTableTarget;
     // input and output threads
     private final SnapshotSender m_sender;
@@ -102,6 +104,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
 
     private final AtomicBoolean m_closed = new AtomicBoolean(false);
 
+    // Remember if the destination host is down for stream snapshotting
+    private final AtomicBoolean m_targetHostDown = new AtomicBoolean(false);
+
     public StreamSnapshotDataTarget(long HSId, boolean lowestDestSite, Set<Long> allDestHostHSIds,
                                     byte[] hashinatorConfig, Map<Integer, Pair<Boolean, byte[]>> schemas,
                                     SnapshotSender sender, StreamSnapshotAckReceiver ackReceiver)
@@ -120,14 +125,21 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         m_replicatedTableTarget = lowestDestSite;
         m_otherDestHostHSIds = new HashSet<>(allDestHostHSIds);
         m_otherDestHostHSIds.remove(m_destHSId);
+        m_destinationHosts = Sets.newHashSet();
+        m_destinationHosts.add(CoreUtils.getHostIdFromHSId(m_destHSId));
+        for (Long hsid : m_otherDestHostHSIds) {
+            m_destinationHosts.add(CoreUtils.getHostIdFromHSId(hsid));
+        }
         m_sender = sender;
         m_sender.registerDataTarget(m_targetId);
         m_ackReceiver = ackReceiver;
         m_ackReceiver.setCallback(m_targetId, this, m_replicatedTableTarget ? allDestHostHSIds.size() : 1);
 
-        rejoinLog.debug(String.format("Initializing snapshot stream processor " +
-                "for source site id: %s, and with processorid: %d%s" ,
-                CoreUtils.hsIdToString(HSId), m_targetId, (lowestDestSite?" [Lowest Site]":"")));
+        if (REJOIN_LOG.isDebugEnabled()) {
+            REJOIN_LOG.debug(String.format("Initializing snapshot stream processor " +
+                    "for source site id: %s, and with processorid: %d%s" ,
+                    CoreUtils.hsIdToString(HSId), m_targetId, (lowestDestSite?" [Lowest Site]":"")));
+        }
 
         // start a periodic task to look for timed out connections
         VoltDB.instance().scheduleWork(new Watchdog(0, writeTimeout), WATCHDOG_PERIOS_S, -1, TimeUnit.SECONDS);
@@ -270,9 +282,11 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                     m_ackCounter = new AtomicInteger(1);
                     sentBytes = send(mb, msgFactory, m_message);
                 }
-                rejoinLog.trace("Sent " + m_type.name() + " from " + m_targetId +
-                        " expected ackCounter " + m_ackCounter +
-                        " otherDestHSIds " + m_otherDestHSIds);
+                if (REJOIN_LOG.isTraceEnabled()) {
+                    REJOIN_LOG.trace("Sent " + m_type.name() + " from " + m_targetId +
+                            " expected ackCounter " + m_ackCounter +
+                            " otherDestHSIds " + m_otherDestHSIds);
+                }
                 return sentBytes;
             } finally {
                 // Buffers are only discarded after they are acked. Discarding them here would cause the sender to
@@ -318,14 +332,14 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
 
         @Override
         public void run() {
-            if (m_closed.get()) {
+            if (m_closed.get() || m_targetHostDown.get()) {
                 return;
             }
 
             long bytesWritten = 0;
             try {
                 bytesWritten = m_sender.m_bytesSent.get(m_targetId).get();
-                rejoinLog.info(String.format("While sending rejoin data to site %s, %d bytes have been sent in the past %s seconds.",
+                REJOIN_LOG.info(String.format("While sending rejoin data to site %s, %d bytes have been sent in the past %s seconds.",
                         CoreUtils.hsIdToString(m_destHSId), bytesWritten - m_bytesWrittenSinceConstruction, WATCHDOG_PERIOS_S));
 
                 checkTimeout(m_writeTimeout);
@@ -333,10 +347,12 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                     clearOutstanding(); // idempotent
                 }
             } catch (Throwable t) {
-                rejoinLog.error("Stream snapshot watchdog thread threw an exception", t);
+                REJOIN_LOG.error("Stream snapshot watchdog thread threw an exception", t);
             } finally {
                 // schedule to run again
-                VoltDB.instance().scheduleWork(new Watchdog(bytesWritten, m_writeTimeout), WATCHDOG_PERIOS_S, -1, TimeUnit.SECONDS);
+                if (!m_closed.get()) {
+                    VoltDB.instance().scheduleWork(new Watchdog(bytesWritten, m_writeTimeout), WATCHDOG_PERIOS_S, -1, TimeUnit.SECONDS);
+                }
             }
         }
     }
@@ -356,7 +372,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                                 "A snapshot write task failed after a timeout (currently %d seconds outstanding). " +
                                         "Node rejoin may need to be retried",
                                 (now - work.m_ts) / 1000));
-                rejoinLog.error(exception.getMessage());
+                REJOIN_LOG.error(exception.getMessage());
                 setWriteFailed(exception);
             }
         }
@@ -371,7 +387,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
             return;
         }
 
-        rejoinLog.trace("Clearing outstanding work.");
+        if (REJOIN_LOG.isTraceEnabled()) {
+            REJOIN_LOG.trace("Clearing outstanding work.");
+        }
 
         for (Entry<Integer, SendWork> e : m_outstandingWork.entrySet()) {
             e.getValue().discard();
@@ -391,22 +409,23 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
 
         // releases the BBContainers and cleans up
         if (work == null || work.m_ackCounter == null) {
-            rejoinLog.warn("Received invalid blockIndex ack for targetId " + m_targetId +
+            REJOIN_LOG.warn("Received invalid blockIndex ack for targetId " + m_targetId +
                     " for index " + String.valueOf(blockIndex) +
                     ((work == null) ? " already removed the block." : " ack counter haven't been initialized."));
             return;
         }
         if (work.receiveAck()) {
-            rejoinLog.trace("Received ack for targetId " + m_targetId +
-                    " removes block for index " + String.valueOf(blockIndex));
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Received ack for targetId " + m_targetId +
+                        " removes block for index " + String.valueOf(blockIndex));
+            }
             if (m_outstandingWorkCount.decrementAndGet() == 0) {
                 notifyAll();
             }
             m_outstandingWork.remove(blockIndex);
             work.discard();
-        }
-        else {
-            rejoinLog.trace("Received ack for targetId " + m_targetId +
+        } else if (REJOIN_LOG.isTraceEnabled()){
+            REJOIN_LOG.trace("Received ack for targetId " + m_targetId +
                     " decrements counter for block index " + String.valueOf(blockIndex));
         }
     }
@@ -428,6 +447,8 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         final Map<Long, AtomicLong> m_bytesSent;
         final Map<Long, AtomicLong> m_worksSent;
         volatile Exception m_lastException = null;
+
+        private final AtomicBoolean m_stop = new AtomicBoolean(Boolean.FALSE);
 
         public SnapshotSender(Mailbox mb)
         {
@@ -457,19 +478,28 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
             m_workQueue.offer(work);
         }
 
+        public void stop() {
+            m_stop.set(true);
+        }
+
         @Override
         public void run() {
-            rejoinLog.trace("Starting stream sender thread");
-
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Starting stream sender thread");
+            }
             while (true) {
                 SendWork work;
 
                 try {
-                    rejoinLog.trace("Blocking on sending work queue");
+                    if (REJOIN_LOG.isTraceEnabled()) {
+                        REJOIN_LOG.trace("Blocking on sending work queue");
+                    }
                     work = m_workQueue.poll(10, TimeUnit.MINUTES);
-
+                    if (m_stop.get()) {
+                        break;
+                    }
                     if (work == null) {
-                        rejoinLog.warn("No stream snapshot send work was produced in the past 10 minutes");
+                        REJOIN_LOG.warn("No stream snapshot send work was produced in the past 10 minutes");
                         break;
                     } else if (work.m_isEmpty) {
                         // Empty work indicates the end of the queue.
@@ -488,11 +518,13 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                 }
                 catch (Exception e) {
                     m_lastException = e;
-                    rejoinLog.error("Error sending a recovery stream message", e);
+                    REJOIN_LOG.error("Error sending a recovery stream message", e);
                 }
             }
             CompressionService.releaseThreadLocal();
-            rejoinLog.trace("Stream sender thread exiting");
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Stream sender thread exiting");
+            }
         }
     }
 
@@ -504,7 +536,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
     @Override
     public ListenableFuture<?> write(Callable<BBContainer> tupleData, int tableId) {
         synchronized(this) {
-            rejoinLog.trace("Starting write");
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Starting write");
+            }
             try {
                 BBContainer chunkC;
                 ByteBuffer chunk;
@@ -535,8 +569,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                 if (m_closed.get()) {
                     chunkC.discard();
 
-                    IOException e = new IOException("Trying to write snapshot data " +
-                            "after the stream is closed");
+                    IOException e = new IOException("Trying to write snapshot data after the stream is closed");
                     setWriteFailed(e);
                     return Futures.immediateFailedFuture(e);
                 }
@@ -547,9 +580,12 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                     // remove the schema once sent
                     byte[] schema = tableInfo.getSecond();
                     m_schemas.put(tableId, Pair.of(tableInfo.getFirst(), null));
-                    rejoinLog.debug("Sending schema for table " + tableId);
-
-                    rejoinLog.trace("Writing schema as part of this write");
+                    if (REJOIN_LOG.isDebugEnabled()) {
+                        REJOIN_LOG.debug("Sending schema for table " + tableId);
+                    }
+                    if (REJOIN_LOG.isTraceEnabled()) {
+                        REJOIN_LOG.trace("Writing schema as part of this write");
+                    }
                     send(StreamSnapshotMessageType.SCHEMA, tableId, schema, tableInfo.getFirst());
                 }
 
@@ -560,7 +596,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                 chunk.position(0);
                 return send(StreamSnapshotMessageType.DATA, m_blockIndex++, chunkC, tableInfo.getFirst());
             } finally {
-                rejoinLog.trace("Finished call to write");
+                if (REJOIN_LOG.isTraceEnabled()) {
+                    REJOIN_LOG.trace("Finished call to write");
+                }
             }
         }
     }
@@ -590,10 +628,14 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
      */
     synchronized ListenableFuture<Boolean> send(StreamSnapshotMessageType type, int blockIndex, BBContainer chunk, boolean replicatedTable) {
         SettableFuture<Boolean> sendFuture = SettableFuture.create();
-        if (rejoinLog.isTraceEnabled()) {
-            rejoinLog.trace("Sending block " + blockIndex + " of type " + (replicatedTable?"REPLICATED ":"PARTITIONED ") + type.name() +
+        if (REJOIN_LOG.isTraceEnabled()) {
+            REJOIN_LOG.trace("Sending block " + blockIndex + " of type " + (replicatedTable?"REPLICATED ":"PARTITIONED ") + type.name() +
                     " from targetId " + m_targetId + " to " + CoreUtils.hsIdToString(m_destHSId) +
                     (replicatedTable?", " + CoreUtils.hsIdCollectionToString(m_otherDestHostHSIds):""));
+        }
+        if (m_targetHostDown.get()) {
+            sendFuture.set(true);
+            return sendFuture;
         }
         SendWork sendWork = new SendWork(type, m_targetId, m_destHSId,
                 replicatedTable?m_otherDestHostHSIds:null, chunk, sendFuture);
@@ -622,8 +664,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
          * target
          */
         if (!m_closed.get()) {
-            rejoinLog.trace("Closing stream snapshot target " + m_targetId);
-
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Closing stream snapshot target " + m_targetId);
+            }
             // block until all acks have arrived
             waitForOutstandingWork();
 
@@ -640,8 +683,9 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
 
                 assert(m_outstandingWork.size() == 0);
             }
-
-            rejoinLog.trace("Closed stream snapshot target " + m_targetId);
+            if (REJOIN_LOG.isTraceEnabled()) {
+                REJOIN_LOG.trace("Closed stream snapshot target " + m_targetId);
+            }
         }
 
         Runnable closeHandle = m_onCloseHandler.get();
@@ -686,7 +730,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
     private synchronized void waitForOutstandingWork()
     {
         boolean interrupted = false;
-        while (m_writeFailed.get() == null && (m_outstandingWorkCount.get() > 0)) {
+        while (m_writeFailed.get() == null && (m_outstandingWorkCount.get() > 0) && !m_targetHostDown.get()) {
             try {
                 wait();
             } catch (InterruptedException e) {
@@ -751,6 +795,24 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         m_ackReceiver.forceStop();
         if (m_writeFailed.compareAndSet(null, exception)) {
             notifyAll();
+        }
+    }
+
+    @Override
+    public void checkSnapshotTarget(Set<Integer> failedHosts) {
+        if (!m_closed.get()) {
+            m_destinationHosts.removeAll(failedHosts);
+            if (m_destinationHosts.isEmpty()) {
+                m_targetHostDown.set(true);
+
+                // Target host failed. Stop sender and receiver
+                m_ackReceiver.forceStop();
+                m_sender.m_stop.set(true);
+            }
+            if (REJOIN_LOG.isDebugEnabled()) {
+                REJOIN_LOG.debug("The stream destination host " + CoreUtils.getHostIdFromHSId(m_destHSId) +
+                        " failed. Snapshot target " + m_targetId);
+            }
         }
     }
 }

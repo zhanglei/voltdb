@@ -227,4 +227,8 @@ public abstract class BaseInitiator<S extends Scheduler> implements Initiator
     }
 
     protected abstract InitiatorMailbox createInitiatorMailbox(JoinProducerBase joinProducer);
+
+    public Site getExecutionSite() {
+        return m_executionSite;
+    }
 }

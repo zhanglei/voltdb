@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1929,5 +1930,9 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
     @Override
     public long getMaxTotalMpResponseSize() {
         return MpTransactionState.MP_MAX_TOTAL_RESP_SIZE;
+    }
+
+    public void checkSnapshotTarget(Set<Integer> failedHosts) {
+        m_snapshotter.checkSnapshotTarget(failedHosts);
     }
 }

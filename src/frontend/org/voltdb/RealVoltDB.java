@@ -1825,6 +1825,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
                 if (failedHosts.isEmpty()) {
                     return;
                 }
+                handleStreamSnapshotOnHostFailure(failedHosts);
                 //create a blocker for repair if this is a MP leader and partition leaders change
                 if (m_leaderAppointer.isLeader() && m_cartographer.hasPartitionMastersOnHosts(failedHosts)) {
                     VoltZK.createActionBlocker(m_messenger.getZK(), VoltZK.mpRepairInProgress,
@@ -1937,6 +1938,15 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
         } else if (failedHosts.contains(newHostId) && oldHostId == m_messenger.getHostId()) {
             //The new leader is down, on old leader host:
             VoltZK.removeMigratePartitionLeaderInfo(m_messenger.getZK());
+        }
+    }
+
+    private void handleStreamSnapshotOnHostFailure(Set<Integer> failedHosts) {
+        for (Initiator initiator : m_iv2Initiators.values()) {
+            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
+                SpInitiator spInitiator = (SpInitiator)initiator;
+                spInitiator.getExecutionSite().checkSnapshotTarget(failedHosts);
+            }
         }
     }
 

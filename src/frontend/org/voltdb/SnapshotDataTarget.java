@@ -18,6 +18,7 @@
 package org.voltdb;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import org.voltcore.utils.DBBPool.BBContainer;
@@ -79,4 +80,12 @@ public interface SnapshotDataTarget {
      *   ROW_COUNT_UNSUPPORTED if the implementor does not support it
      */
     public int getInContainerRowCount(BBContainer tupleData);
+
+   /**
+    *
+    * @param failedHosts The host IDs of the failed hosts
+    * @return true if the snapshot target host fails
+    */
+   default void checkSnapshotTarget(Set<Integer> failedHosts) {
+   }
 }
