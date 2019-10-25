@@ -45,6 +45,7 @@ import org.apache.zookeeper_voltpatches.ZooKeeper;
 import org.apache.zookeeper_voltpatches.data.Stat;
 import org.json_voltpatches.JSONObject;
 import org.voltcore.logging.VoltLogger;
+import org.voltcore.messaging.HostMessenger;
 import org.voltcore.utils.CoreUtils;
 import org.voltcore.utils.DBBPool;
 import org.voltcore.utils.DBBPool.BBContainer;
@@ -766,12 +767,12 @@ public class SnapshotSiteProcessor {
                             // ExecutionSitesCurrentlySnapshotting set, so
                             // logSnapshotCompletionToZK() will not see incorrect values
                             // from the next snapshot
-
+                            final HostMessenger messenger = VoltDB.instance().getHostMessenger();
                             try {
-                                VoltDB.instance().getHostMessenger().getZK().delete(
-                                        VoltZK.nodes_currently_snapshotting + "/" + VoltDB.instance().getHostMessenger().getHostId(), -1);
+                                messenger.getZK().delete(
+                                        VoltZK.nodes_currently_snapshotting + "/" + messenger.getHostId(), -1);
                                 if (SNAP_LOG.isDebugEnabled()) {
-                                    SNAP_LOG.debug("Remove " + VoltZK.nodes_currently_snapshotting + " for host " + VoltDB.instance().getHostMessenger().getHostId());
+                                    SNAP_LOG.debug("Remove " + VoltZK.nodes_currently_snapshotting + " for host " + messenger.getHostId());
                                 }
                             } catch (NoNodeException e) {
                                 SNAP_LOG.warn("Expect the snapshot node to already exist during deletion", e);
@@ -793,6 +794,14 @@ public class SnapshotSiteProcessor {
                                 ExecutionSitesCurrentlySnapshotting.remove(SnapshotSiteProcessor.this);
                             }
 
+                            // Remove the stream snap node under action blockers if there exists
+                            try {
+                                final String blocker = VoltZK.streamSnapshotInProgress + messenger.getHostId();
+                                messenger.getZK().delete(blocker, -1);
+                            } catch (NoNodeException e) {
+                            } catch (Exception e) {
+                                VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
+                            }
                             logSnapshotCompleteToZK(txnId,
                                     snapshotSucceeded,
                                     snapshotDataForZookeeper);
@@ -952,11 +961,11 @@ public class SnapshotSiteProcessor {
         return retval;
     }
 
-    public void checkSnapshotTarget(Set<Integer> failedHosts) {
+    public void checkRejoinStreamSnapshot(Set<Integer> failedHosts) {
         final List<SnapshotDataTarget> snapshotTargets = m_snapshotTargets;
         if (m_isTruncation || snapshotTargets == null || snapshotTargets.isEmpty()) {
             return;
         }
-        snapshotTargets.forEach(t->t.checkSnapshotTarget(failedHosts));
+        snapshotTargets.forEach(t->t.checkRejoinStreamSnapshot(failedHosts));
     }
 }

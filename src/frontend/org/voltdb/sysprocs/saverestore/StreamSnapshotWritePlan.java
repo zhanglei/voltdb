@@ -116,6 +116,9 @@ public class StreamSnapshotWritePlan extends SnapshotWritePlan
             createUpdatePartitionCountTasksForSites(tracker, context, newPartitionCount);
         }
 
+        // Elastic join will go through this path for replicated tables
+        final boolean rejoiningStream = (newPartitionCount == null);
+
         // Mark snapshot start in registry
         final AtomicInteger numTables = new AtomicInteger(config.tables.length);
         m_snapshotRecord =
@@ -135,7 +138,7 @@ public class StreamSnapshotWritePlan extends SnapshotWritePlan
                         Pair.of(table.getIsreplicated(), PrivateVoltTableFactory.getSchemaBytes(schemaTable)));
         }
 
-        List<DataTargetInfo> sdts = createDataTargets(localStreams, destsByHostId, hashinatorData, schemas);
+        List<DataTargetInfo> sdts = createDataTargets(localStreams, destsByHostId, hashinatorData, schemas, rejoiningStream);
 
         // If there's no work to do on this host, just claim success, return an empty plan,
         // and things will sort themselves out properly
@@ -165,7 +168,8 @@ public class StreamSnapshotWritePlan extends SnapshotWritePlan
     private List<DataTargetInfo> createDataTargets(List<StreamSnapshotRequestConfig.Stream> localStreams,
                                                    Map<Integer, Set<Long>> destsByHostId,
                                                    HashinatorSnapshotData hashinatorData,
-                                                   Map<Integer, Pair<Boolean, byte[]>> schemas)
+                                                   Map<Integer, Pair<Boolean, byte[]>> schemas,
+                                                   boolean rejoiningStream)
     {
         byte[] hashinatorConfig = null;
         if (hashinatorData != null) {
@@ -201,7 +205,8 @@ public class StreamSnapshotWritePlan extends SnapshotWritePlan
                                                new StreamSnapshotDataTarget(destHSId,
                                                                             (destHSId == stream.lowestSiteSinkHSId),
                                                                             destsByHostId.get(CoreUtils.getHostIdFromHSId(destHSId)),
-                                                                            hashinatorConfig, schemas, sender, ackReceiver));
+                                                                            hashinatorConfig, schemas,
+                                                                            sender, ackReceiver, rejoiningStream));
                     sdts.add(nextTarget);
                 }
             }

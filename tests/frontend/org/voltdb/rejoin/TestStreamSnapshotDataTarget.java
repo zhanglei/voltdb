@@ -102,7 +102,7 @@ public class TestStreamSnapshotDataTarget {
         }
 
         return new StreamSnapshotDataTarget(destHSId, lowestSite, new HashSet<Long>(Arrays.asList(destHSId)),
-                hashinatorBytes, m_schemas, m_sender, m_ack);
+                hashinatorBytes, m_schemas, m_sender, m_ack, true);
     }
 
     private Callable<DBBPool.BBContainer> makeTuples()

@@ -86,6 +86,6 @@ public interface SnapshotDataTarget {
     * @param failedHosts The host IDs of the failed hosts
     * @return true if the snapshot target host fails
     */
-   default void checkSnapshotTarget(Set<Integer> failedHosts) {
+   default void checkRejoinStreamSnapshot(Set<Integer> failedHosts) {
    }
 }

@@ -107,16 +107,18 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
     // Remember if the destination host is down for stream snapshotting
     private final AtomicBoolean m_targetHostDown = new AtomicBoolean(false);
 
+    private final boolean m_rejoining;
+
     public StreamSnapshotDataTarget(long HSId, boolean lowestDestSite, Set<Long> allDestHostHSIds,
                                     byte[] hashinatorConfig, Map<Integer, Pair<Boolean, byte[]>> schemas,
-                                    SnapshotSender sender, StreamSnapshotAckReceiver ackReceiver)
+                                    SnapshotSender sender, StreamSnapshotAckReceiver ackReceiver, boolean rejoining)
     {
-        this(HSId, lowestDestSite, allDestHostHSIds, hashinatorConfig, schemas, DEFAULT_WRITE_TIMEOUT_MS, sender, ackReceiver);
+        this(HSId, lowestDestSite, allDestHostHSIds, hashinatorConfig, schemas, DEFAULT_WRITE_TIMEOUT_MS, sender, ackReceiver, rejoining);
     }
 
     public StreamSnapshotDataTarget(long HSId, boolean lowestDestSite, Set<Long> allDestHostHSIds,
                                     byte[] hashinatorConfig, Map<Integer, Pair<Boolean, byte[]>> schemas,
-                                    long writeTimeout, SnapshotSender sender, StreamSnapshotAckReceiver ackReceiver)
+                                    long writeTimeout, SnapshotSender sender, StreamSnapshotAckReceiver ackReceiver, boolean rejoining)
     {
         super();
         m_targetId = m_totalSnapshotTargetCount.getAndIncrement();
@@ -127,6 +129,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         m_otherDestHostHSIds.remove(m_destHSId);
         m_destinationHosts = Sets.newHashSet();
         m_destinationHosts.add(CoreUtils.getHostIdFromHSId(m_destHSId));
+        m_rejoining = rejoining;
         for (Long hsid : m_otherDestHostHSIds) {
             m_destinationHosts.add(CoreUtils.getHostIdFromHSId(hsid));
         }
@@ -670,13 +673,14 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
             // block until all acks have arrived
             waitForOutstandingWork();
 
-            // Send the EOS message after clearing outstanding work so that if there's a failure,
-            // we'll send the correct EOS to the receiving end
-            sendEOS();
+            if (!m_targetHostDown.get()) {
+                // Send the EOS message after clearing outstanding work so that if there's a failure,
+                // we'll send the correct EOS to the receiving end
+                sendEOS();
 
-            // Terminate the sender thread after the last block
-            m_sender.offer(new SendWork());
-
+                // Terminate the sender thread after the last block
+                m_sender.offer(new SendWork());
+            }
             // locked so m_closed is true when the ack thread dies
             synchronized(this) {
                 m_closed.set(true);
@@ -799,7 +803,10 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
     }
 
     @Override
-    public void checkSnapshotTarget(Set<Integer> failedHosts) {
+    public void checkRejoinStreamSnapshot(Set<Integer> failedHosts) {
+        if (!m_rejoining) {
+            return;
+        }
         if (!m_closed.get()) {
             m_destinationHosts.removeAll(failedHosts);
             if (m_destinationHosts.isEmpty()) {

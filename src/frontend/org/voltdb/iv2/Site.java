@@ -1932,7 +1932,7 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
         return MpTransactionState.MP_MAX_TOTAL_RESP_SIZE;
     }
 
-    public void checkSnapshotTarget(Set<Integer> failedHosts) {
-        m_snapshotter.checkSnapshotTarget(failedHosts);
+    public void checkRejoinStreamSnapshot(Set<Integer> failedHosts) {
+        m_snapshotter.checkRejoinStreamSnapshot(failedHosts);
     }
 }

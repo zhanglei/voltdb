@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
 import org.apache.zookeeper_voltpatches.KeeperException;
@@ -185,6 +186,7 @@ public class VoltZK {
     public static final String banElasticOperation = actionBlockers + "/" + leafNodeBanElasticOperation;
     public static final String leafNodeElasticMigration = "elastic_migration_blocker";
     public static final String elasticMigration = actionBlockers + "/" + leafNodeElasticMigration;
+    public static final String streamSnapshotInProgress = actionBlockers + "/streamHost_";
 
     public static final String leafNodeRejoinInProgress = "rejoin_blocker";
     public static final String rejoinInProgress = actionBlockers + "/" + leafNodeRejoinInProgress;
@@ -482,6 +484,12 @@ public class VoltZK {
                     // unregistered after repair is done. Let rejoining nodes wait to avoid any
                     // interference with the transaction repair process.
                     errorMsg = "while leader promotion or transaction repair are in progress. Please retry node rejoin later.";
+                }
+
+                // Check if stream snapshot is in progress
+                boolean snapshot = blockers.stream().filter(s->s.startsWith(streamSnapshotInProgress)).collect(Collectors.toList()).isEmpty();
+                if (!snapshot) {
+                    errorMsg = "while stream snapshot is in progress. Please retry node rejoin later.";
                 }
                 break;
             case elasticOperationInProgress:
