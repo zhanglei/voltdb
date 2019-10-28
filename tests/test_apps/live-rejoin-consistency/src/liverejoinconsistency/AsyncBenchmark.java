@@ -428,7 +428,7 @@ public class AsyncBenchmark {
         @Override
         public void clientCallback(ClientResponse response) throws Exception {
             if (response.getStatus() != ClientResponse.SUCCESS) {
-                log.error(_F("Database operation failed with %s\n",
+                log.warn(_F("Database operation failed with %s\n",
                         ((ClientResponseImpl)response).toJSONString()));
                 //System.exit(1);
             } else {

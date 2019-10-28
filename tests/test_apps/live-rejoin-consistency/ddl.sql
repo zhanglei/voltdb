@@ -46,7 +46,7 @@ LOAD CLASSES liverejoinconsistency-procs.jar;
 file -inlinebatch END_OF_2ND_BATCH
 
 CREATE PROCEDURE FROM CLASS liverejoinconsistency.procedures.Initialize;
-PARAMETER 0
+-- PARAMETER 0
 CREATE PROCEDURE PARTITION ON TABLE JOINER COLUMN ID FROM CLASS liverejoinconsistency.procedures.getCountFromPtn;
 CREATE PROCEDURE PARTITION ON TABLE JOINER COLUMN ID FROM CLASS liverejoinconsistency.procedures.getCountFromRep;
 CREATE PROCEDURE PARTITION ON TABLE JOINER COLUMN ID FROM CLASS liverejoinconsistency.procedures.getRowFromPtn;
