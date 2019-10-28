@@ -795,6 +795,9 @@ public class SnapshotSiteProcessor {
                             try {
                                 final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
                                 messenger.getZK().delete(blocker, -1);
+                                if (SNAP_LOG.isDebugEnabled()) {
+                                    SNAP_LOG.debug("Delete blocker for stream snapsot on site:" + CoreUtils.hsIdToString(context.getSiteId()));
+                                }
                             } catch (NoNodeException e) {
                             } catch (Exception e) {
                                 VoltDB.crashLocalVoltDB(e.getMessage(), true, e);

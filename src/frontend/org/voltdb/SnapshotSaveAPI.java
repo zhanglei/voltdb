@@ -387,6 +387,9 @@ public class SnapshotSaveAPI
             final String blocker = VoltZK.streamSnapshotInProgress + context.getSiteId();
             try {
                 messenger.getZK().create(blocker, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                if (SNAP_LOG.isDebugEnabled()) {
+                    SNAP_LOG.debug("Create blocker for stream snapsot on site:" + CoreUtils.hsIdToString(context.getSiteId()));
+                }
             } catch (KeeperException.NodeExistsException e) {
                 SNAP_LOG.warn("Didn't expect the stream snapshot node to already exist", e);
             } catch (Exception e) {
