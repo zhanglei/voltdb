@@ -184,9 +184,6 @@ public class SnapshotSiteProcessor {
     private boolean m_isTruncation;
     private boolean m_perSiteLastSnapshotSucceded = true;
 
-    // Remember if the destination host is down for stream snapshotting
-    private static AtomicBoolean s_streamTargetHostDown = new AtomicBoolean(false);
-
     /**
      * List of threads to join to block on snapshot completion
      * when using completeSnapshotWork().
@@ -421,9 +418,6 @@ public class SnapshotSiteProcessor {
             boolean isTruncation,
             ExtensibleSnapshotDigestData extraSnapshotData)
     {
-        // New snapshot, reset the flag
-        s_streamTargetHostDown.compareAndSet(true, false);
-
         // TRAIL [SnapSave:8] 4 [all SP] Initiate snapshot, build table streamers.
         ExecutionSitesCurrentlySnapshotting.add(this);
         final long now = System.currentTimeMillis();
@@ -442,15 +436,10 @@ public class SnapshotSiteProcessor {
             TableStreamer streamer =
                     new TableStreamer(tableId, format.getStreamType(), hiddenColumnFilter, m_snapshotTableTasks.get(tableId));
             if (!streamer.activate(context, tablePredicates.getValue())) {
-                if (!s_streamTargetHostDown.get()) {
-                    VoltDB.crashLocalVoltDB("Failed to activate snapshot stream on table " +
-                            CatalogUtil.getTableNameFromId(context.getDatabase(), tableId), false, null);
-                }
+                VoltDB.crashLocalVoltDB("Failed to activate snapshot stream on table " +
+                        CatalogUtil.getTableNameFromId(context.getDatabase(), tableId), false, null);
             }
             m_streamers.put(tableId, streamer);
-            if (s_streamTargetHostDown.get()) {
-                break;
-            }
         }
 
         /*
@@ -614,7 +603,15 @@ public class SnapshotSiteProcessor {
          * a snapshot is finished. If the snapshot buffer is loaned out that means
          * it is pending I/O somewhere so there is no work to do until it comes back.
          */
+        final HostMessenger messenger = VoltDB.instance().getHostMessenger();
         if (m_snapshotTableTasks == null || m_snapshotTargets == null) {
+            try {
+                final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
+                messenger.getZK().delete(blocker, -1);
+            } catch (NoNodeException e) {
+            } catch (Exception e) {
+                VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
+            }
             return retval;
         }
 
@@ -750,10 +747,8 @@ public class SnapshotSiteProcessor {
                                 try {
                                     t.close();
                                 } catch (IOException | InterruptedException e) {
-                                    if (!s_streamTargetHostDown.get()) {
-                                        snapshotSucceeded = false;
-                                        throw new RuntimeException(e);
-                                    }
+                                    snapshotSucceeded = false;
+                                    throw new RuntimeException(e);
                                 }
                             }
 
@@ -770,7 +765,6 @@ public class SnapshotSiteProcessor {
                             // ExecutionSitesCurrentlySnapshotting set, so
                             // logSnapshotCompletionToZK() will not see incorrect values
                             // from the next snapshot
-                            final HostMessenger messenger = VoltDB.instance().getHostMessenger();
                             try {
                                 messenger.getZK().delete(
                                         VoltZK.nodes_currently_snapshotting + "/" + messenger.getHostId(), -1);
