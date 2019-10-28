@@ -35,7 +35,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -605,13 +604,7 @@ public class SnapshotSiteProcessor {
          */
         final HostMessenger messenger = VoltDB.instance().getHostMessenger();
         if (m_snapshotTableTasks == null || m_snapshotTargets == null) {
-            try {
-                final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
-                messenger.getZK().delete(blocker, -1);
-            } catch (NoNodeException e) {
-            } catch (Exception e) {
-                VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
-            }
+            removeStreamSnapshotNode(context.getSiteId(), messenger);
             return retval;
         }
 
@@ -707,6 +700,7 @@ public class SnapshotSiteProcessor {
                 IamLast = ExecutionSitesCurrentlySnapshotting.size() == 1;
                 if (!IamLast) {
                     ExecutionSitesCurrentlySnapshotting.remove(this);
+                    removeStreamSnapshotNode(context.getSiteId(), messenger);
                 }
             }
 
@@ -790,18 +784,8 @@ public class SnapshotSiteProcessor {
                                  */
                                 ExecutionSitesCurrentlySnapshotting.remove(SnapshotSiteProcessor.this);
                             }
-
-                            // Remove the stream snap node under action blockers if there exists
-                            try {
-                                final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
-                                messenger.getZK().delete(blocker, -1);
-                                if (SNAP_LOG.isDebugEnabled()) {
-                                    SNAP_LOG.debug("Delete blocker for stream snapsot on site:" + CoreUtils.hsIdToString(context.getSiteId()));
-                                }
-                            } catch (NoNodeException e) {
-                            } catch (Exception e) {
-                                VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
-                            }
+                            // Remove the last one
+                            removeStreamSnapshotNode(context.getSiteId(), messenger);
                             logSnapshotCompleteToZK(txnId,
                                     snapshotSucceeded,
                                     snapshotDataForZookeeper);
@@ -816,6 +800,19 @@ public class SnapshotSiteProcessor {
         return retval;
     }
 
+    private void removeStreamSnapshotNode(long siteId, HostMessenger messenger) {
+        // Remove the stream snap node under action blockers if there exists
+        try {
+            final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
+            messenger.getZK().delete(blocker, -1);
+            if (SNAP_LOG.isDebugEnabled()) {
+                SNAP_LOG.debug("Delete blocker for stream snapsot on site:" + CoreUtils.hsIdToString(siteId));
+            }
+        } catch (NoNodeException e) {
+        } catch (Exception e) {
+            VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
+        }
+    }
     public static void runPostSnapshotTasks(SystemProcedureExecutionContext context)
     {
         if (SNAP_LOG.isDebugEnabled()) {
