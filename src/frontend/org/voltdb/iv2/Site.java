@@ -742,8 +742,7 @@ public class Site implements Runnable, SiteProcedureConnection, SiteSnapshotConn
             public boolean idle(long now) {
                 return (now - 5) > m_lastTxnTime;
             }
-        },
-        m_siteId);
+        });
     }
 
     /** Create a native VoltDB execution engine */

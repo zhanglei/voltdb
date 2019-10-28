@@ -273,22 +273,19 @@ public class SnapshotSiteProcessor {
 
     private long m_quietUntil = 0;
 
-    private final long m_siteId;
-
     public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, long siteId) {
         this(siteQueue, snapshotPriority, new IdlePredicate() {
             @Override
             public boolean idle(long now) {
                 throw new UnsupportedOperationException();
             }
-        }, siteId);
+        });
     }
 
-    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, IdlePredicate idlePredicate, long siteId) {
+    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, IdlePredicate idlePredicate) {
         m_siteTaskerQueue = siteQueue;
         m_snapshotPriority = snapshotPriority;
         m_idlePredicate = idlePredicate;
-        m_siteId = siteId;
     }
 
     public void shutdown() throws InterruptedException {
@@ -604,7 +601,7 @@ public class SnapshotSiteProcessor {
          */
         final HostMessenger messenger = VoltDB.instance().getHostMessenger();
         if (m_snapshotTableTasks == null || m_snapshotTargets == null) {
-            removeStreamSnapshotNode(context.getSiteId(), messenger);
+            removeStreamSnapshotNode(messenger);
             return retval;
         }
 
@@ -700,7 +697,6 @@ public class SnapshotSiteProcessor {
                 IamLast = ExecutionSitesCurrentlySnapshotting.size() == 1;
                 if (!IamLast) {
                     ExecutionSitesCurrentlySnapshotting.remove(this);
-                    removeStreamSnapshotNode(context.getSiteId(), messenger);
                 }
             }
 
@@ -785,7 +781,7 @@ public class SnapshotSiteProcessor {
                                 ExecutionSitesCurrentlySnapshotting.remove(SnapshotSiteProcessor.this);
                             }
                             // Remove the last one
-                            removeStreamSnapshotNode(context.getSiteId(), messenger);
+                            removeStreamSnapshotNode(messenger);
                             logSnapshotCompleteToZK(txnId,
                                     snapshotSucceeded,
                                     snapshotDataForZookeeper);
@@ -800,13 +796,13 @@ public class SnapshotSiteProcessor {
         return retval;
     }
 
-    private void removeStreamSnapshotNode(long siteId, HostMessenger messenger) {
+    private void removeStreamSnapshotNode(HostMessenger messenger) {
         // Remove the stream snap node under action blockers if there exists
         try {
-            final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
+            final String blocker = VoltZK.streamSnapshotInProgress + messenger.getHostId();
             messenger.getZK().delete(blocker, -1);
             if (SNAP_LOG.isDebugEnabled()) {
-                SNAP_LOG.debug("Delete blocker for stream snapsot on site:" + CoreUtils.hsIdToString(siteId));
+                SNAP_LOG.debug("Delete blocker for stream snapsot for " + blocker);
             }
         } catch (NoNodeException e) {
         } catch (Exception e) {

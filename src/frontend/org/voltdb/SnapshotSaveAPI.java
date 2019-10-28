@@ -380,23 +380,20 @@ public class SnapshotSaveAPI
             }
             return blockingResult;
         }
-
         // Create a node for rejoin stream snapshot
         if (format == SnapshotFormat.STREAM) {
             HostMessenger messenger = VoltDB.instance().getHostMessenger();
-            final String blocker = VoltZK.streamSnapshotInProgress + context.getSiteId();
+            final String blocker = VoltZK.streamSnapshotInProgress + messenger.getHostId();
             try {
                 messenger.getZK().create(blocker, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
                 if (SNAP_LOG.isDebugEnabled()) {
-                    SNAP_LOG.debug("Create blocker for stream snapsot on site:" + CoreUtils.hsIdToString(context.getSiteId()));
+                    SNAP_LOG.debug("Create blocker for stream snapsot for " + blocker);
                 }
             } catch (KeeperException.NodeExistsException e) {
-                SNAP_LOG.warn("Didn't expect the stream snapshot node to already exist", e);
             } catch (Exception e) {
                 VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
             }
         }
-
         return result;
     }
 

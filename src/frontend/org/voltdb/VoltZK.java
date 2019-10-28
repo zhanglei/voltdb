@@ -186,7 +186,7 @@ public class VoltZK {
     public static final String banElasticOperation = actionBlockers + "/" + leafNodeBanElasticOperation;
     public static final String leafNodeElasticMigration = "elastic_migration_blocker";
     public static final String elasticMigration = actionBlockers + "/" + leafNodeElasticMigration;
-    public static final String streamSnapshotInProgress = actionBlockers + "/streamSite_";
+    public static final String streamSnapshotInProgress = actionBlockers + "/stream_source_host_";
 
     public static final String leafNodeRejoinInProgress = "rejoin_blocker";
     public static final String rejoinInProgress = actionBlockers + "/" + leafNodeRejoinInProgress;
