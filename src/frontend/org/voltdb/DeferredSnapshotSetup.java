@@ -22,10 +22,8 @@ import org.apache.zookeeper_voltpatches.CreateMode;
 import org.apache.zookeeper_voltpatches.KeeperException;
 import org.apache.zookeeper_voltpatches.ZooDefs;
 import org.voltcore.logging.VoltLogger;
-import org.voltcore.messaging.HostMessenger;
 import org.voltcore.zk.ZKUtil;
 import org.voltdb.sysprocs.saverestore.SnapshotWritePlan;
-import org.voltdb.sysprocs.saverestore.StreamSnapshotWritePlan;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -86,12 +84,12 @@ public class DeferredSnapshotSetup implements Callable<DeferredSnapshotSetup> {
                 m_txnId, m_partitionTransactionIds);
 
         // Provide the truncation request ID so the monitor can recognize a specific snapshot.
-        logSnapshotStartToZK(m_txnId, m_plan instanceof StreamSnapshotWritePlan);
+        logSnapshotStartToZK(m_txnId);
 
         return this;
     }
 
-    private static void logSnapshotStartToZK(long txnId, boolean rejoinStream) {
+    private static void logSnapshotStartToZK(long txnId) {
         /*
          * Going to send out the requests async to make snapshot init move faster
          */
@@ -102,18 +100,14 @@ public class DeferredSnapshotSetup implements Callable<DeferredSnapshotSetup> {
          */
         try {
             //This node shouldn't already exist... should have been erased when the last snapshot finished
-            final HostMessenger messenger =  VoltDB.instance().getHostMessenger();
-            final String path = ZKUtil.joinZKPath(VoltZK.nodes_currently_snapshotting, Integer.toString(messenger.getHostId()));
-            assert(messenger.getZK().exists(path, false)== null);
+            assert(VoltDB.instance().getHostMessenger().getZK().exists(
+                    VoltZK.nodes_currently_snapshotting + "/" + VoltDB.instance().getHostMessenger().getHostId(), false)
+                   == null);
             ByteBuffer snapshotTxnId = ByteBuffer.allocate(8);
             snapshotTxnId.putLong(txnId);
-            messenger.getZK().create(path, snapshotTxnId.array(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, cb1, null);
-
-            // Create a node for rejoin stream snapshot
-            if (rejoinStream) {
-                final String blocker = VoltZK.streamSnapshotInProgress + messenger.getHostId();
-                messenger.getZK().create(blocker, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-            }
+            VoltDB.instance().getHostMessenger().getZK().create(
+                    VoltZK.nodes_currently_snapshotting + "/" + VoltDB.instance().getHostMessenger().getHostId(),
+                    snapshotTxnId.array(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, cb1, null);
         } catch (KeeperException.NodeExistsException e) {
             SNAP_LOG.warn("Didn't expect the snapshot node to already exist", e);
         } catch (Exception e) {

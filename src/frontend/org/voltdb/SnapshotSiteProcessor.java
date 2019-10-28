@@ -277,19 +277,22 @@ public class SnapshotSiteProcessor {
 
     private long m_quietUntil = 0;
 
-    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority) {
+    private final long m_siteId;
+
+    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, long siteId) {
         this(siteQueue, snapshotPriority, new IdlePredicate() {
             @Override
             public boolean idle(long now) {
                 throw new UnsupportedOperationException();
             }
-        });
+        }, siteId);
     }
 
-    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, IdlePredicate idlePredicate) {
+    public SnapshotSiteProcessor(SiteTaskerQueue siteQueue, int snapshotPriority, IdlePredicate idlePredicate, long siteId) {
         m_siteTaskerQueue = siteQueue;
         m_snapshotPriority = snapshotPriority;
         m_idlePredicate = idlePredicate;
+        m_siteId = siteId;
     }
 
     public void shutdown() throws InterruptedException {
@@ -796,7 +799,7 @@ public class SnapshotSiteProcessor {
 
                             // Remove the stream snap node under action blockers if there exists
                             try {
-                                final String blocker = VoltZK.streamSnapshotInProgress + messenger.getHostId();
+                                final String blocker = VoltZK.streamSnapshotInProgress + m_siteId;
                                 messenger.getZK().delete(blocker, -1);
                             } catch (NoNodeException e) {
                             } catch (Exception e) {

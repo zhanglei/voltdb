@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
 import org.apache.zookeeper_voltpatches.KeeperException;
+import org.apache.zookeeper_voltpatches.ZooDefs;
 import org.apache.zookeeper_voltpatches.ZooDefs.Ids;
 import org.apache.zookeeper_voltpatches.ZooKeeper;
 import org.apache.zookeeper_voltpatches.data.Stat;
@@ -39,6 +40,7 @@ import org.json_voltpatches.JSONException;
 import org.json_voltpatches.JSONObject;
 import org.json_voltpatches.JSONStringer;
 import org.voltcore.logging.VoltLogger;
+import org.voltcore.messaging.HostMessenger;
 import org.voltcore.utils.CoreUtils;
 import org.voltcore.zk.ZKUtil;
 import org.voltdb.dtxn.SiteTracker;
@@ -377,6 +379,19 @@ public class SnapshotSaveAPI
                         err);
             }
             return blockingResult;
+        }
+
+        // Create a node for rejoin stream snapshot
+        if (format == SnapshotFormat.STREAM) {
+            HostMessenger messenger = VoltDB.instance().getHostMessenger();
+            final String blocker = VoltZK.streamSnapshotInProgress + context.getSiteId();
+            try {
+                messenger.getZK().create(blocker, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            } catch (KeeperException.NodeExistsException e) {
+                SNAP_LOG.warn("Didn't expect the stream snapshot node to already exist", e);
+            } catch (Exception e) {
+                VoltDB.crashLocalVoltDB(e.getMessage(), true, e);
+            }
         }
 
         return result;
