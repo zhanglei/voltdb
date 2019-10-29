@@ -175,6 +175,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         // A listenable future used to notify a listener when this buffer is discarded
         final SettableFuture<Boolean> m_future;
 
+        final AtomicBoolean m_targetHostDown;
         /**
          * Creates an empty send work to terminate the sender thread
          */
@@ -186,11 +187,12 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
             m_otherDestHSIds = null;
             m_ts = -1;
             m_future = null;
+            m_targetHostDown = new AtomicBoolean(false);
         }
 
         SendWork (StreamSnapshotMessageType type, long targetId, long destHSId,
                   Set<Long> otherDestIds, BBContainer message,
-                  SettableFuture<Boolean> future) {
+                  SettableFuture<Boolean> future, AtomicBoolean targetHostDown) {
             m_isEmpty = false;
             m_type = type;
             m_targetId = targetId;
@@ -199,6 +201,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
             m_message = message;
             m_ts = System.currentTimeMillis();
             m_future = future;
+            m_targetHostDown = targetHostDown;
         }
 
         /**
@@ -219,32 +222,37 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
          * subsystem.
          */
         protected int send(Mailbox mb, MessageFactory msgFactory, BBContainer message) throws IOException {
+            if (m_targetHostDown.get()) {
+                return 0;
+            }
             final ByteBuffer messageBuffer = message.b();
             if (messageBuffer.isDirect()) {
                 byte[] data = CompressionService.compressBuffer(messageBuffer);
+
                 mb.send(m_destHSId, msgFactory.makeDataMessage(m_targetId, data));
                 return data.length;
             } else {
                 byte compressedBytes[] =
-                    CompressionService.compressBytes(
-                            messageBuffer.array(), messageBuffer.position(),
-                            messageBuffer.remaining());
-
+                        CompressionService.compressBytes(
+                                messageBuffer.array(), messageBuffer.position(),
+                                messageBuffer.remaining());
                 mb.send(m_destHSId, msgFactory.makeDataMessage(m_targetId, compressedBytes));
                 return compressedBytes.length;
             }
         }
 
         private void sendReplicatedDataToNonLowestSites(Mailbox mb, MessageFactory msgFactory, ByteBuffer message, int len) throws IOException {
-            byte[] compressedBytes;
-            if (message.isDirect()) {
-                compressedBytes = CompressionService.compressBuffer(message);
+            if (!m_targetHostDown.get()) {
+                byte[] compressedBytes;
+                if (message.isDirect()) {
+                    compressedBytes = CompressionService.compressBuffer(message);
+                }
+                else {
+                    compressedBytes =
+                            CompressionService.compressBytes(message.array(), 0, len);
+                }
+                mb.send(Longs.toArray(m_otherDestHSIds), msgFactory.makeDataMessage(m_targetId, compressedBytes));
             }
-            else {
-                compressedBytes =
-                    CompressionService.compressBytes(message.array(), 0, len);
-            }
-            mb.send(Longs.toArray(m_otherDestHSIds), msgFactory.makeDataMessage(m_targetId, compressedBytes));
         }
 
         public synchronized int doWork(Mailbox mb, MessageFactory msgFactory) throws Exception {
@@ -299,7 +307,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
         }
 
         public boolean receiveAck() {
-            return m_ackCounter.decrementAndGet() == 0;
+            return m_ackCounter.decrementAndGet() == 0 || m_targetHostDown.get();
         }
     }
 
@@ -636,12 +644,14 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
                     " from targetId " + m_targetId + " to " + CoreUtils.hsIdToString(m_destHSId) +
                     (replicatedTable?", " + CoreUtils.hsIdCollectionToString(m_otherDestHostHSIds):""));
         }
+
+        // Target host is down, do not queue more work
         if (m_targetHostDown.get()) {
             sendFuture.set(true);
             return sendFuture;
         }
         SendWork sendWork = new SendWork(type, m_targetId, m_destHSId,
-                replicatedTable?m_otherDestHostHSIds:null, chunk, sendFuture);
+                replicatedTable?m_otherDestHostHSIds:null, chunk, sendFuture, m_targetHostDown);
         m_outstandingWork.put(blockIndex, sendWork);
         m_outstandingWorkCount.incrementAndGet();
         m_sender.offer(sendWork);
@@ -814,7 +824,7 @@ implements SnapshotDataTarget, StreamSnapshotAckReceiver.AckCallback {
 
                 // Target host failed. Stop sender and receiver
                 m_ackReceiver.forceStop();
-                m_sender.m_stop.set(true);
+                m_sender.stop();
             }
             if (REJOIN_LOG.isDebugEnabled()) {
                 REJOIN_LOG.debug("The stream destination host " + CoreUtils.getHostIdFromHSId(m_destHSId) +
