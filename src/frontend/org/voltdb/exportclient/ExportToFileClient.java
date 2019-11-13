@@ -396,44 +396,52 @@ public class ExportToFileClient extends ExportClientBase {
         CSVWriter getWriter(String tableName, long generation) throws IOException {
             FileHandle handle = new FileHandle(tableName, generation);
             CSVWriter writer = m_writers.get(handle);
-            if (writer != null)
+            if (writer != null) {
                 return writer;
+            }
 
-            String path = handle.getPath(ACTIVE_PREFIX);
-            File newFile = new VoltFile(path);
-            if (newFile.exists()) {
-                m_logger.error("Error: Output file for next period already exists at path: " + newFile.getPath()
-                        + " Consider using a more specific timestamp in your filename or cleaning up your export data directory."
-                        + " ExportToFileClient will stop to prevent data loss.");
-                throw new RuntimeException();
-            }
-            try {
-                OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(newFile, false), StandardCharsets.UTF_8);
-                if (m_fullDelimiters != null) {
-                    writer = new CSVWriter(new BufferedWriter(osw, 4096 * 4),
-                            m_fullDelimiters[0], m_fullDelimiters[1], m_fullDelimiters[2], String.valueOf(m_fullDelimiters[3]));
+            // Create new file in synchronized block to avoid racing between threads (ENG-18528)
+            synchronized(m_writers) {
+                writer = m_writers.get(handle);
+                if (writer != null) {
+                    return writer;
                 }
-                else if (m_delimiter == ',') {
-                    // CSV
-                    writer = new CSVWriter(new BufferedWriter(osw, 4096 * 4), m_delimiter);
-                }
-                else {
-                    // TSV
-                    writer = CSVWriter.getTSVWriter(new BufferedWriter(osw, 4096 * 4));
-                }
-            }
-            catch (Exception e) {
-                if (e instanceof IOException) {
-                    rateLimitedLogError(m_logger, "Failed to create output file: " + path + " , file may be unavailable/unwritable, or not enough space.");
-                    throw e;
-                } else {
-                    m_logger.error("Error: Failed to create output file: " + path + " " + Throwables.getStackTraceAsString(e));
+                String path = handle.getPath(ACTIVE_PREFIX);
+                File newFile = new VoltFile(path);
+                if (newFile.exists()) {
+                    m_logger.error("Error: Output file for next period already exists at path: " + newFile.getPath()
+                    + " Consider using a more specific timestamp in your filename or cleaning up your export data directory."
+                    + " ExportToFileClient will stop to prevent data loss.");
                     throw new RuntimeException();
                 }
+                try {
+                    OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(newFile, false), StandardCharsets.UTF_8);
+                    if (m_fullDelimiters != null) {
+                        writer = new CSVWriter(new BufferedWriter(osw, 4096 * 4),
+                                m_fullDelimiters[0], m_fullDelimiters[1], m_fullDelimiters[2], String.valueOf(m_fullDelimiters[3]));
+                    }
+                    else if (m_delimiter == ',') {
+                        // CSV
+                        writer = new CSVWriter(new BufferedWriter(osw, 4096 * 4), m_delimiter);
+                    }
+                    else {
+                        // TSV
+                        writer = CSVWriter.getTSVWriter(new BufferedWriter(osw, 4096 * 4));
+                    }
+                }
+                catch (Exception e) {
+                    if (e instanceof IOException) {
+                        rateLimitedLogError(m_logger, "Failed to create output file: " + path + " , file may be unavailable/unwritable, or not enough space.");
+                        throw e;
+                    } else {
+                        m_logger.error("Error: Failed to create output file: " + path + " " + Throwables.getStackTraceAsString(e));
+                        throw new RuntimeException();
+                    }
 
+                }
+                m_writers.put(handle, writer);
+                return writer;
             }
-            m_writers.put(handle, writer);
-            return writer;
         }
 
         void writeSchema(String tableName, long generation, String schema) throws IOException {
@@ -602,8 +610,7 @@ public class ExportToFileClient extends ExportClientBase {
                 try {
                     // TODO: if same export client is getting used, unregisterSelf(not implemented) during generation change
                     registerSelf(row);
-                    ExportMode mode = ExportManagerInterface.instance().getExportMode();
-                    if (mode == ExportMode.BASIC && m_es == null) {
+                    if (ExportManagerInterface.instance().getExportMode() == ExportMode.BASIC && m_es == null) {
                         ListeningExecutorService executor = m_decoderExecutor.get(row.tableName);
                         if (executor == null) {
                             executor = CoreUtils.getListeningSingleThreadExecutor(
@@ -614,12 +621,6 @@ public class ExportToFileClient extends ExportClientBase {
                         m_es = executor;
 
                         // force fetch the writer ahead for fresh start to avoid multiple threads race for same file creation
-                        m_firstBlockTask.run();
-                        m_writer = m_firstBlockTask.get();
-                    }
-                    else if (mode == ExportMode.ADVANCED) {
-                        // In advanced mode, acquire the new reader under the write lock to
-                        // avoid ENG-18528
                         m_firstBlockTask.run();
                         m_writer = m_firstBlockTask.get();
                     }
