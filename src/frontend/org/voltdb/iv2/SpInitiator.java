@@ -135,8 +135,7 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
                 VoltZK.setPeristentData(m_messenger.getZK(),
                         ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(m_partitionId)), masterPair);
                 VoltZK.setPeristentData(m_messenger.getZK(),
-                        ZKUtil.joinZKPath(m_zkMailboxNode, Integer.toString(m_partitionId)),
-                        Long.toString(getInitiatorHSId()));
+                        ZKUtil.joinZKPath(m_zkMailboxNode, Integer.toString(m_partitionId)), masterPair);
 
                 m_term = createTerm(m_messenger.getZK(),
                         m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
