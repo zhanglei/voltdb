@@ -277,6 +277,10 @@ public class LeaderAppointer implements Promotable
                 }
             }
 
+            if (m_state.get() == AppointerState.CLUSTER_START) {
+                return masterHSId;
+            }
+
             // If the current leader is appointed via leader migration, then re-appoint it if possible
             if (m_isLeaderMigrated && m_previousLeader != Long.MAX_VALUE && children.contains(m_previousLeader)) {
                 masterHSId = m_previousLeader;
@@ -437,16 +441,15 @@ public class LeaderAppointer implements Promotable
         m_iv2appointees.start(true);
         m_iv2masters.start(true);
         ImmutableMap<Integer, Long> appointees = m_iv2appointees.pointInTimeCache();
+        ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
         // Figure out what conditions we assumed leadership under.
-        if (appointees.size() == 0)
-        {
+        if (masters.size() == m_initialPartitionCount) {
             tmLog.debug(WHOMIM + "LeaderAppointer in startup");
             m_state.set(AppointerState.CLUSTER_START);
         }
         //INIT is the default before promotion at runtime. Don't do this startup check
         //Let the rest of the promotion run and determine k-safety which is the else block.
         else if (m_state.get() == AppointerState.INIT && !VoltDB.instance().isRunning()) {
-            ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
             try {
                 if ((appointees.size() < getInitialPartitionCount()) ||
                         (masters.size() < getInitialPartitionCount()) ||
@@ -503,6 +506,10 @@ public class LeaderAppointer implements Promotable
                     }
             },
             m_es);
+
+            m_state.set(AppointerState.DONE);
+            m_MPI.acceptPromotion();
+            m_startupLatch.set(null);
         }
         else {
             // Create MP repair ZK node to block rejoin
@@ -516,7 +523,6 @@ public class LeaderAppointer implements Promotable
             // blocking startup of the BabySitter watching that partition will
             // call our callback, get the current full set of replicas, and
             // appoint a new leader if the seeded one has actually failed
-            Map<Integer, Long> masters = m_iv2masters.pointInTimeCache();
             tmLog.info(WHOMIM + "repairing with master set: " + CoreUtils.hsIdValueMapToString(masters));
             //Setting the map to non-null causes the babysitters to populate it when cleaning up partitions
             //We are only racing with ourselves in that the creation of a babysitter can trigger callbacks

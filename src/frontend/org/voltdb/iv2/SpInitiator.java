@@ -119,16 +119,32 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
 
     public SpInitiator(HostMessenger messenger, Integer partition, StatsAgent agent,
             SnapshotCompletionMonitor snapMonitor,
-            StartAction startAction)
+            StartAction startAction, boolean startupAsLeader)
     {
         super(VoltZK.iv2masters, messenger, partition,
                 new SpScheduler(partition, new SiteTaskerQueue(partition), snapMonitor,
                         startAction != StartAction.JOIN),
-                "SP", agent, startAction);
+                "SP", agent, startAction, startupAsLeader);
         m_scheduler.initializeScoreboard(CoreUtils.getSiteIdFromHSId(getInitiatorHSId()));
         m_leaderCache = new LeaderCache(messenger.getZK(), "SpInitiator-iv2appointees-" + partition,
                 ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(partition)), m_leadersChangeHandler);
         m_scheduler.m_repairLog = m_repairLog;
+        if (m_startupAsLeader) {
+            try {
+                String masterPair = Long.toString(Long.MAX_VALUE) + "/" + Long.toString(getInitiatorHSId());
+                VoltZK.setPeristentData(m_messenger.getZK(),
+                        ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(m_partitionId)), masterPair);
+                VoltZK.setPeristentData(m_messenger.getZK(),
+                        ZKUtil.joinZKPath(m_zkMailboxNode, Integer.toString(m_partitionId)),
+                        Long.toString(getInitiatorHSId()));
+
+                m_term = createTerm(m_messenger.getZK(),
+                        m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
+                        m_whoami);
+            } catch (Exception e) {
+                VoltDB.crashLocalVoltDB("Unable to configure SpInitiator.", true, e);
+            }
+        }
     }
 
     @Override
@@ -365,5 +381,16 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
     @Override
     protected InitiatorMailbox createInitiatorMailbox(JoinProducerBase joinProducer) {
         return new InitiatorMailbox(m_partitionId, m_scheduler, m_messenger, m_repairLog, joinProducer);
+    }
+
+    public void appointLeaderOnStartup() {
+        if (!m_startupAsLeader) {
+            return;
+        }
+        final long maxSeenTxnId = TxnEgo.makeZero(m_partitionId).getTxnId();
+        m_promoted = true;
+        m_term.start();
+        m_initiatorMailbox.setLeaderState(maxSeenTxnId);
+        ExportManagerInterface.instance().becomeLeader(m_partitionId);
     }
 }

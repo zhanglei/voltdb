@@ -60,17 +60,17 @@ public abstract class BaseInitiator<S extends Scheduler> implements Initiator
     protected Site m_executionSite = null;
     protected Thread m_siteThread = null;
     protected final RepairLog m_repairLog = new RepairLog();
-
+    protected final boolean m_startupAsLeader;
 
     public BaseInitiator(String zkMailboxNode, HostMessenger messenger, Integer partition,
-            S scheduler, String whoamiPrefix, StatsAgent agent, StartAction startAction)
+            S scheduler, String whoamiPrefix, StatsAgent agent, StartAction startAction, boolean startupAsLeader)
     {
         m_zkMailboxNode = zkMailboxNode;
         m_messenger = messenger;
         m_partitionId = partition;
         m_scheduler = scheduler;
         JoinProducerBase joinProducer;
-
+        m_startupAsLeader = startupAsLeader;
 
         if (startAction == StartAction.JOIN) {
             joinProducer = new ElasticJoinProducer(m_partitionId, scheduler.m_tasks);

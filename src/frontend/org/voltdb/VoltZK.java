@@ -41,6 +41,9 @@ import org.voltcore.zk.ZKUtil;
 import org.voltcore.zk.ZooKeeperLock;
 import org.voltdb.iv2.LeaderCache;
 import org.voltdb.iv2.LeaderCache.LeaderCallBackInfo;
+
+import com.google_voltpatches.common.base.Charsets;
+
 import org.voltdb.iv2.MigratePartitionLeaderInfo;
 
 /**
@@ -637,5 +640,14 @@ public class VoltZK {
             VoltDB.crashLocalVoltDB("Unable to read snapshotting hosts.", true, e);
         }
         return false;
+    }
+
+    public static void setPeristentData(ZooKeeper zk, String path, String data) throws KeeperException, InterruptedException {
+        try {
+            zk.create(path, data.getBytes(Charsets.UTF_8),
+                    Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        } catch (KeeperException.NodeExistsException e) {
+            zk.setData(path, data.getBytes(Charsets.UTF_8), -1);
+        }
     }
 }
