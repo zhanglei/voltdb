@@ -602,7 +602,8 @@ public class ExportToFileClient extends ExportClientBase {
                 try {
                     // TODO: if same export client is getting used, unregisterSelf(not implemented) during generation change
                     registerSelf(row);
-                    if (ExportManagerInterface.instance().getExportMode() == ExportMode.BASIC && m_es == null) {
+                    ExportMode mode = ExportManagerInterface.instance().getExportMode();
+                    if (mode == ExportMode.BASIC && m_es == null) {
                         ListeningExecutorService executor = m_decoderExecutor.get(row.tableName);
                         if (executor == null) {
                             executor = CoreUtils.getListeningSingleThreadExecutor(
@@ -613,6 +614,12 @@ public class ExportToFileClient extends ExportClientBase {
                         m_es = executor;
 
                         // force fetch the writer ahead for fresh start to avoid multiple threads race for same file creation
+                        m_firstBlockTask.run();
+                        m_writer = m_firstBlockTask.get();
+                    }
+                    else if (mode == ExportMode.ADVANCED) {
+                        // In advanced mode, acquire the new reader under the write lock to
+                        // avoid ENG-18528
                         m_firstBlockTask.run();
                         m_writer = m_firstBlockTask.get();
                     }
