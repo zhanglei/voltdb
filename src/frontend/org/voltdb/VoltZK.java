@@ -166,6 +166,7 @@ public class VoltZK {
     // start action of node in the current system (ephemeral)
     public static final String start_action = "/db/start_action";
     public static final String start_action_node = ZKUtil.joinZKPath(start_action, "node_");
+    public static final String startup_state = "/db/startup_state";
 
     /*
      * Processes that want to be mutually exclusive create children here
@@ -648,6 +649,23 @@ public class VoltZK {
                     Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         } catch (KeeperException.NodeExistsException e) {
             zk.setData(path, data.getBytes(Charsets.UTF_8), -1);
+        }
+    }
+
+    public static void createStartupState(ZooKeeper zk) {
+        try {
+            zk.create(startup_state, null,
+                    Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        } catch (KeeperException.NodeExistsException e) {
+        } catch (Exception e) {
+            VoltDB.crashLocalVoltDB("Unable to create startup state.", true, e);
+        }
+    }
+
+    public static void removeStartupState(ZooKeeper zk) {
+        try {
+            zk.delete(startup_state, -1);
+        } catch (Exception e) {
         }
     }
 }

@@ -1204,6 +1204,11 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
             VoltZK.createStartActionNode(m_messenger.getZK(), m_messenger.getHostId(), m_config.m_startAction);
             validateStartAction();
 
+            // race to create startup state if not a joining or rejoing or partial cluster
+            if (!m_config.m_startAction.doesJoin() && m_config.m_missingHostCount == 0) {
+                VoltZK.createStartupState(m_messenger.getZK());
+            }
+
             if (m_rejoining) {
                 //grab rejoining lock before catalog read
                 Iv2RejoinCoordinator.acquireLock(m_messenger);
@@ -2309,7 +2314,9 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
         TransactionTaskQueue.resetScoreboards(m_messenger.getNextSiteId(), m_nodeSettings.getLocalSitesCount());
         for (Integer partition : partitions) {
             boolean startupAsLeader = false;
-            if (!startAction.doesJoin()) {
+
+            // If there are missing hosts, join or rejoin, do not designate partition leader
+            if (!startAction.doesJoin() && m_config.m_missingHostCount == 0) {
                 int masterHostId = topo.partitionsById.get(partition).getLeaderHostId();
                 if (masterHostId == m_messenger.getHostId()) {
                     startupAsLeader = true;
@@ -4556,9 +4563,6 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
          */
         for (Initiator initiator : m_iv2Initiators.values()) {
             initiator.enableWritingIv2FaultLog();
-            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
-                ((SpInitiator)initiator).appointLeaderOnStartup();
-            }
         }
 
         /*
@@ -4566,6 +4570,12 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
          */
         if (m_leaderAppointer != null) {
             m_leaderAppointer.onReplayCompletion();
+        }
+
+        for (Initiator initiator : m_iv2Initiators.values()) {
+            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
+                ((SpInitiator)initiator).appointLeaderOnStartup();
+            }
         }
 
         deleteStagedCatalogIfNeeded();

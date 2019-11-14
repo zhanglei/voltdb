@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
@@ -110,6 +111,8 @@ public class LeaderAppointer implements Promotable
     private final ExecutorService m_es =
         CoreUtils.getCachedSingleThreadExecutor("LeaderAppointer-Babysitters", 15000);
 
+    private AtomicInteger m_cbCountDown = new AtomicInteger(0);
+    boolean m_leaderPreAssigned = false;
     private class PartitionCallback extends BabySitter.Callback
     {
         final int m_partitionId;
@@ -176,6 +179,9 @@ public class LeaderAppointer implements Promotable
                     }
                 }
                 if (children.size() == replicaCount) {
+                    if (m_leaderPreAssigned &&  m_cbCountDown.decrementAndGet() == 0) {
+                        m_state.set(AppointerState.DONE);
+                    }
                     m_currentLeader = assignLeader(m_partitionId, Long.MAX_VALUE, updatedHSIds);
                 } else {
                     tmLog.info(WHOMIM + "Waiting on " + ((m_kfactor + 1) - children.size()) + " more nodes " +
@@ -277,7 +283,8 @@ public class LeaderAppointer implements Promotable
                 }
             }
 
-            if (m_state.get() == AppointerState.CLUSTER_START) {
+            // Partition masters have been designated during startup
+            if (m_leaderPreAssigned && m_state.get() == AppointerState.CLUSTER_START) {
                 return masterHSId;
             }
 
@@ -441,16 +448,21 @@ public class LeaderAppointer implements Promotable
         m_iv2appointees.start(true);
         m_iv2masters.start(true);
         ImmutableMap<Integer, Long> appointees = m_iv2appointees.pointInTimeCache();
-        ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
         // Figure out what conditions we assumed leadership under.
-        if (masters.size() == m_initialPartitionCount) {
-            tmLog.debug(WHOMIM + "LeaderAppointer in startup");
-            m_state.set(AppointerState.CLUSTER_START);
+        m_leaderPreAssigned = VoltZK.zkNodeExists(m_zk, VoltZK.startup_state);
+        if (m_leaderPreAssigned) {
+            m_cbCountDown.set(m_initialPartitionCount);
         }
-        //INIT is the default before promotion at runtime. Don't do this startup check
-        //Let the rest of the promotion run and determine k-safety which is the else block.
-        else if (m_state.get() == AppointerState.INIT && !VoltDB.instance().isRunning()) {
+        if (appointees.size() == 0 || m_leaderPreAssigned) {
+            if (tmLog.isDebugEnabled()) {
+                tmLog.debug(WHOMIM + "LeaderAppointer accepting startup promotion, cluster state:" + m_state.get());
+            }
+            m_state.set(AppointerState.CLUSTER_START);
+        } else if (m_state.get() == AppointerState.INIT && !VoltDB.instance().isRunning()) {
+            //INIT is the default before promotion at runtime. Don't do this startup check
+            //Let the rest of the promotion run and determine k-safety which is the else block.
             try {
+                ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
                 if ((appointees.size() < getInitialPartitionCount()) ||
                         (masters.size() < getInitialPartitionCount()) ||
                         (appointees.size() != masters.size())) {
@@ -459,12 +471,12 @@ public class LeaderAppointer implements Promotable
                     VoltDB.crashGlobalVoltDB("Detected failure during startup, unable to start", false, null);
                 }
             } catch (IllegalAccessException e) {
-                // This should never happen
                 VoltDB.crashLocalVoltDB("Failed to get partition count", true, e);
             }
-        }
-        else {
-            tmLog.debug(WHOMIM + "LeaderAppointer in repair");
+        } else {
+            if (tmLog.isDebugEnabled()) {
+                tmLog.debug(WHOMIM + "LeaderAppointer in repair: cluster state:" + m_state);
+            }
             m_state.set(AppointerState.DONE);
         }
 
@@ -488,7 +500,6 @@ public class LeaderAppointer implements Promotable
                     watchPartition(i, m_es, true);
                 }
             } catch (IllegalAccessException e) {
-                // This should never happen
                 VoltDB.crashLocalVoltDB("Failed to get partition count on startup", true, e);
             }
 
@@ -506,15 +517,19 @@ public class LeaderAppointer implements Promotable
                     }
             },
             m_es);
-
-            m_state.set(AppointerState.DONE);
             m_MPI.acceptPromotion();
             m_startupLatch.set(null);
-        }
-        else {
+            if (tmLog.isDebugEnabled()) {
+                tmLog.debug(WHOMIM + "MPI promoted, startup state mode removed.");
+            }
+            VoltZK.removeStartupState(m_zk);
+            if (!m_leaderPreAssigned) {
+                m_state.set(AppointerState.DONE);
+            }
+        } else {
             // Create MP repair ZK node to block rejoin
-            VoltZK.createActionBlocker(m_zk, VoltZK.mpRepairInProgress,
-                    CreateMode.EPHEMERAL, tmLog, "MP Repair");
+            VoltZK.createActionBlocker(m_zk, VoltZK.mpRepairInProgress, CreateMode.EPHEMERAL, tmLog, "MP Repair");
+            ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
 
             // If we're taking over for a failed LeaderAppointer, we know when
             // we get here that every partition had a leader at some point in

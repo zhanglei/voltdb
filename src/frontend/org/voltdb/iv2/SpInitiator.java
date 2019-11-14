@@ -131,12 +131,13 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
         m_scheduler.m_repairLog = m_repairLog;
         if (m_startupAsLeader) {
             try {
+                // designate appointee and leader
                 String masterPair = Long.toString(Long.MAX_VALUE) + "/" + Long.toString(getInitiatorHSId());
                 VoltZK.setPeristentData(m_messenger.getZK(),
                         ZKUtil.joinZKPath(VoltZK.iv2appointees, Integer.toString(m_partitionId)), masterPair);
                 VoltZK.setPeristentData(m_messenger.getZK(),
                         ZKUtil.joinZKPath(m_zkMailboxNode, Integer.toString(m_partitionId)), masterPair);
-
+                tmLog.info("Initiator " + CoreUtils.hsIdToString(getInitiatorHSId()) + " is appointed as leader for partition "+ m_partitionId);
                 m_term = createTerm(m_messenger.getZK(),
                         m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
                         m_whoami);
