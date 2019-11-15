@@ -1205,7 +1205,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
             validateStartAction();
 
             // race to create startup state if not a joining or rejoing or partial cluster
-            if (!m_config.m_startAction.doesJoin() && m_config.m_missingHostCount == 0) {
+            if (!m_config.m_startAction.doesJoin() && !m_config.m_startAction.doesRecover() && m_config.m_missingHostCount == 0) {
                 VoltZK.createStartupState(m_messenger.getZK());
             }
 
@@ -1717,6 +1717,11 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
                 //      "corrupted by certain classes of network failures.");
             }
 
+            for (Initiator initiator : m_iv2Initiators.values()) {
+                if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
+                    ((SpInitiator)initiator).appointPartitionLeadersOnStartup();;
+                }
+            }
             assert (m_clientInterface != null);
             m_clientInterface.initializeSnapshotDaemon(m_messenger, m_globalServiceElector);
             TTLManager.initialze();
@@ -4536,7 +4541,11 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
          * Remove the terminus file if it is there, which is written on shutdown --save
          */
         new File(m_nodeSettings.getVoltDBRoot(), VoltDB.TERMINUS_MARKER).delete();
-
+        for (Initiator initiator : m_iv2Initiators.values()) {
+            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
+                ((SpInitiator)initiator).startTasks();
+            }
+        }
         /*
          * Command log is already initialized if this is a rejoin or a join
          */
@@ -4571,13 +4580,6 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
         if (m_leaderAppointer != null) {
             m_leaderAppointer.onReplayCompletion();
         }
-
-        for (Initiator initiator : m_iv2Initiators.values()) {
-            if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
-                ((SpInitiator)initiator).appointLeaderOnStartup();
-            }
-        }
-
         deleteStagedCatalogIfNeeded();
 
         // start mode can be either PAUSED or RUNNING, if server starts as paused

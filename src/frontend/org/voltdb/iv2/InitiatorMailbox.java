@@ -470,6 +470,7 @@ public class InitiatorMailbox implements Mailbox
 
         // If a fragment is part of a transaction which have not been seen on this site, restart it.
         if (txnState == null) {
+            tmLog.info(" Site:" + CoreUtils.hsIdToString(m_hsId) + " isLeader:" + m_scheduler.isLeader());
             FragmentResponseMessage response = new FragmentResponseMessage(message, getHSId());
             TransactionRestartException restart = new TransactionRestartException(
                     "Transaction being restarted due to MigratePartitionLeader.", message.getTxnId());

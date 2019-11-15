@@ -213,7 +213,7 @@ public class SpScheduler extends Scheduler implements SnapshotCompletionInterest
         VoltDBInterface db = VoltDB.instance();
         if (isLeader && db instanceof RealVoltDB ) {
             SpInitiator init = (SpInitiator)((RealVoltDB)db).getInitiator(m_partitionId);
-            if (init.m_term != null) {
+            if (init != null && init.m_term != null) {
                 ((SpTerm)init.m_term).setPromoting(false);
             }
         }

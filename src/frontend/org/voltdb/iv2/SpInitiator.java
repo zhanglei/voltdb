@@ -141,6 +141,11 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
                 m_term = createTerm(m_messenger.getZK(),
                         m_partitionId, getInitiatorHSId(), m_initiatorMailbox,
                         m_whoami);
+                m_repairLog.setLeaderState(true);
+                m_scheduler.setLeaderState(true);
+                final long maxSeenTxnId = TxnEgo.makeZero(m_partitionId).getTxnId();
+                m_scheduler.setMaxSeenTxnId(maxSeenTxnId);
+                m_promoted = true;
             } catch (Exception e) {
                 VoltDB.crashLocalVoltDB("Unable to configure SpInitiator.", true, e);
             }
@@ -383,14 +388,18 @@ public class SpInitiator extends BaseInitiator<SpScheduler> implements Promotabl
         return new InitiatorMailbox(m_partitionId, m_scheduler, m_messenger, m_repairLog, joinProducer);
     }
 
-    public void appointLeaderOnStartup() {
-        if (!m_startupAsLeader) {
-            return;
+    public void appointPartitionLeadersOnStartup() {
+        if (m_startupAsLeader) {
+            m_promoted = true;
+            m_term.start();
+            ((SpTerm)m_term).setPromoting(false);
+            m_repairLog.setLeaderState(true);
+            m_scheduler.setLeaderState(true);
+            m_scheduler.setMaxSeenTxnId(TxnEgo.makeZero(m_partitionId).getTxnId());
         }
-        final long maxSeenTxnId = TxnEgo.makeZero(m_partitionId).getTxnId();
-        m_promoted = true;
-        m_term.start();
-        m_initiatorMailbox.setLeaderState(maxSeenTxnId);
+    }
+
+    public void startTasks() {
         ExportManagerInterface.instance().becomeLeader(m_partitionId);
     }
 }
