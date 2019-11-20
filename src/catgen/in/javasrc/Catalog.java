@@ -80,6 +80,10 @@ public final class Catalog extends CatalogType {
         m_operator.execute(commands);
     }
 
+    public void parse(final String schema) {
+        m_operator.parse(schema);
+    }
+
     /**
      * Serialize the catalog to a string representation. This actually
      * creates a set of catalog commands which, re-run in order on an

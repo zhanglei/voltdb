@@ -56,4 +56,6 @@ public class CatalogOperator {
      * separated by newlines.
      */
     public native void execute(final String commands);
+
+    public native void parse(final String schema);
 }
