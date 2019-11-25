@@ -1204,9 +1204,10 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
             VoltZK.createStartActionNode(m_messenger.getZK(), m_messenger.getHostId(), m_config.m_startAction);
             validateStartAction();
 
-            // race to create startup state if not a joining or rejoing or partial cluster
+            // race to create startup node if not a joining or rejoing or partial cluster
             if (!m_config.m_startAction.doesJoin() && !m_config.m_startAction.doesRecover() && m_config.m_missingHostCount == 0) {
-                VoltZK.createStartupState(m_messenger.getZK());
+                VoltZK.createStartLeaderDesignatedNode(m_messenger.getZK());
+                hostLog.info("Host startup with designated partition leaders");
             }
 
             if (m_rejoining) {
@@ -1719,7 +1720,7 @@ public class RealVoltDB implements VoltDBInterface, RestoreAgent.Callback, HostM
 
             for (Initiator initiator : m_iv2Initiators.values()) {
                 if (initiator.getPartitionId() != MpInitiator.MP_INIT_PID) {
-                    ((SpInitiator)initiator).appointPartitionLeadersOnStartup();;
+                    ((SpInitiator)initiator).appointPartitionLeader();;
                 }
             }
             assert (m_clientInterface != null);

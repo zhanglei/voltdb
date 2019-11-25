@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.zookeeper_voltpatches.CreateMode;
@@ -111,8 +110,6 @@ public class LeaderAppointer implements Promotable
     private final ExecutorService m_es =
         CoreUtils.getCachedSingleThreadExecutor("LeaderAppointer-Babysitters", 15000);
 
-    private AtomicInteger m_cbCountDown = new AtomicInteger(0);
-    boolean m_leaderPreAssigned = false;
     private class PartitionCallback extends BabySitter.Callback
     {
         final int m_partitionId;
@@ -120,11 +117,10 @@ public class LeaderAppointer implements Promotable
         long m_currentLeader;
         long m_previousLeader = Long.MAX_VALUE;
         boolean m_isLeaderMigrated = false;
-
+        boolean m_leaderDesignated = false;
         //A candidate to host partition leader when nodes are down
         //It is calculated when nodes are down.
         int newLeaderHostId = -1;
-
         /** Constructor used when we know (or think we know) who the leader for this partition is */
         PartitionCallback(int partitionId, long currentLeader)
         {
@@ -152,6 +148,15 @@ public class LeaderAppointer implements Promotable
             // compute previously seen but now vanished from the callback list HSId set
             Set<Long> missingHSIds = new HashSet<Long>(m_replicas);
             missingHSIds.removeAll(updatedHSIds);
+            if (m_leaderDesignated) {
+                if (updatedHSIds.size() == (m_kfactor + 1)) {
+                    m_replicas.clear();
+                    m_replicas.addAll(updatedHSIds);
+                    m_leaderDesignated = false;
+                    tmLog.info("The replicas for partition " + m_partitionId + " have been fully created.");
+                }
+                return;
+            }
             if (tmLog.isDebugEnabled()) {
                 tmLog.debug(WHOMIM + "Newly dead replicas: " + CoreUtils.hsIdCollectionToString(missingHSIds));
                 tmLog.debug(WHOMIM + "Handling babysitter callback for partition " + m_partitionId + ": children: " + CoreUtils.hsIdCollectionToString(updatedHSIds));
@@ -179,9 +184,6 @@ public class LeaderAppointer implements Promotable
                     }
                 }
                 if (children.size() == replicaCount) {
-                    if (m_leaderPreAssigned &&  m_cbCountDown.decrementAndGet() == 0) {
-                        m_state.set(AppointerState.DONE);
-                    }
                     m_currentLeader = assignLeader(m_partitionId, Long.MAX_VALUE, updatedHSIds);
                 } else {
                     tmLog.info(WHOMIM + "Waiting on " + ((m_kfactor + 1) - children.size()) + " more nodes " +
@@ -257,6 +259,14 @@ public class LeaderAppointer implements Promotable
             m_replicas.addAll(updatedHSIds);
         }
 
+        public void setLeader(long leaderHSID) {
+            m_currentLeader = leaderHSID;
+        }
+
+        public void setLeaderDesignated(boolean fastStartup) {
+            m_leaderDesignated = fastStartup;
+        }
+
         private long assignLeader(int partitionId, long prevLeader, List<Long> children)
         {
             // We used masterHostId = -1 as a way to force the leader choice to be
@@ -281,11 +291,6 @@ public class LeaderAppointer implements Promotable
                     masterHSId = child;
                     break;
                 }
-            }
-
-            // Partition masters have been designated during startup
-            if (m_leaderPreAssigned && m_state.get() == AppointerState.CLUSTER_START) {
-                return masterHSId;
             }
 
             // If the current leader is appointed via leader migration, then re-appoint it if possible
@@ -352,7 +357,7 @@ public class LeaderAppointer implements Promotable
                         for (String child : children) {
                             int pid = LeaderElector.getPartitionFromElectionDir(child);
                             if (!m_partitionWatchers.containsKey(pid) && pid != MpInitiator.MP_INIT_PID) {
-                                watchPartition(pid, m_es, false);
+                                watchPartition(pid, m_es, false, new PartitionCallback(pid));
                             }
                         }
                         tmLog.info(WHOMIM + "Done " + m_partitionWatchers.keySet());
@@ -449,13 +454,10 @@ public class LeaderAppointer implements Promotable
         m_iv2masters.start(true);
         ImmutableMap<Integer, Long> appointees = m_iv2appointees.pointInTimeCache();
         // Figure out what conditions we assumed leadership under.
-        m_leaderPreAssigned = VoltZK.zkNodeExists(m_zk, VoltZK.startup_state);
-        if (m_leaderPreAssigned) {
-            m_cbCountDown.set(m_initialPartitionCount);
-        }
-        if (appointees.size() == 0 || m_leaderPreAssigned) {
+        boolean partitionLeaderDesignated = VoltZK.zkNodeExists(m_zk, VoltZK.start_leader_designated);
+        if (appointees.size() == 0 || partitionLeaderDesignated) {
             if (tmLog.isDebugEnabled()) {
-                tmLog.debug(WHOMIM + "LeaderAppointer accepting startup promotion, cluster state:" + m_state.get());
+                tmLog.debug(WHOMIM + "LeaderAppointer accepting startup promotion. Partition leader designated:" + partitionLeaderDesignated);
             }
             m_state.set(AppointerState.CLUSTER_START);
         } else if (m_state.get() == AppointerState.INIT && !VoltDB.instance().isRunning()) {
@@ -494,10 +496,15 @@ public class LeaderAppointer implements Promotable
             // so leaving it here till later. - ning
             try {
                 final int initialPartitionCount = getInitialPartitionCount();
+                ImmutableMap<Integer, Long> masters = m_iv2masters.pointInTimeCache();
                 for (int i = 0; i < initialPartitionCount; i++) {
-                    LeaderElector.createRootIfNotExist(m_zk,
-                            LeaderElector.electionDirForPartition(VoltZK.leaders_initiators, i));
-                    watchPartition(i, m_es, true);
+                    LeaderElector.createRootIfNotExist(m_zk, LeaderElector.electionDirForPartition(VoltZK.leaders_initiators, i));
+                    PartitionCallback cb = new PartitionCallback(i);
+                    if (partitionLeaderDesignated) {
+                        cb.setLeader(masters.get(i));
+                        cb.setLeaderDesignated(true);
+                    }
+                    watchPartition(i, m_es, true, cb);
                 }
             } catch (IllegalAccessException e) {
                 VoltDB.crashLocalVoltDB("Failed to get partition count on startup", true, e);
@@ -520,12 +527,10 @@ public class LeaderAppointer implements Promotable
             m_MPI.acceptPromotion();
             m_startupLatch.set(null);
             if (tmLog.isDebugEnabled()) {
-                tmLog.debug(WHOMIM + "MPI promoted, startup state mode removed.");
+                tmLog.debug(WHOMIM + "MPI promoted.");
             }
-            VoltZK.removeStartupState(m_zk);
-            if (!m_leaderPreAssigned) {
-                m_state.set(AppointerState.DONE);
-            }
+            VoltZK.removeStartLeaderDesignatedNode(m_zk);
+            m_state.set(AppointerState.DONE);
         } else {
             // Create MP repair ZK node to block rejoin
             VoltZK.createActionBlocker(m_zk, VoltZK.mpRepairInProgress, CreateMode.EPHEMERAL, tmLog, "MP Repair");
@@ -588,11 +593,11 @@ public class LeaderAppointer implements Promotable
      * @throws InterruptedException
      * @throws ExecutionException
      */
-    void watchPartition(int pid, ExecutorService es, boolean shouldBlock)
+    void watchPartition(int pid, ExecutorService es, boolean shouldBlock, PartitionCallback cb)
         throws InterruptedException, ExecutionException
     {
         String dir = LeaderElector.electionDirForPartition(VoltZK.leaders_initiators, pid);
-        m_callbacks.put(pid, new PartitionCallback(pid));
+        m_callbacks.put(pid, cb);
         BabySitter babySitter;
 
         if (shouldBlock) {
