@@ -44,6 +44,7 @@ import org.voltdb.catalog.CatalogMap;
 import org.voltdb.catalog.Table;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.exceptions.SpecifiedException;
+import org.voltdb.export.ExportManagerInterface;
 import org.voltdb.plannerv2.VoltSchemaPlus;
 import org.voltdb.utils.CatalogUtil;
 import org.voltdb.utils.CompressionService;
@@ -238,6 +239,10 @@ public class UpdateCore extends VoltSystemProcedure {
                 VoltDB.instance().cleanUpTempCatalogJar();
                 throw ex;
             }
+
+            // Note: this call can block up to a fixed timeout waiting for data source
+            // to complete closing.
+            ExportManagerInterface.instance().waitOnClosingSources();
 
             // Send out fragments to do the initial round-trip to synchronize
             // all the cluster sites on the start of catalog update, we'll do
