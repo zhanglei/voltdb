@@ -48,16 +48,17 @@ function cleanall() {
 function jars() {
     ant
     alt-jars
+    big-jars
 }
 
 # compile the procedure and client jarfiles if they don't exist
 function jars-ifneeded() {
     if [ ! -e txnid.jar ]; then
-        jars;
+        jars
     fi
 }
 
-# create an alternate jar that is functionaly equivilent
+# create an alternate jar that is functionally equivalent
 # but has a different checksum
 function alt-jars() {
     if [ -e txnid.jar ]; then
@@ -66,7 +67,7 @@ function alt-jars() {
     # src/txnIdSelfCheck/procedures/
     cp src/txnIdSelfCheck/procedures/ReadSP.java src/txnIdSelfCheck/procedures/ReadSP.java.orig
     cp src/txnIdSelfCheck/procedures/UpdateBaseProc.java src/txnIdSelfCheck/procedures/UpdateBaseProc.java.orig
-    sed -i  's/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc limit 1000000/' src/txnIdSelfCheck/procedures/ReadSP.java
+    sed -i 's/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc limit 1000000/' src/txnIdSelfCheck/procedures/ReadSP.java
     sed -i 's/SELECT count(\*) FROM dimension where cid = ?/SELECT count(\*) FROM dimension where cid = ? limit 1000000/' src/txnIdSelfCheck/procedures/UpdateBaseProc.java
     sed -i 's/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc/SELECT \* FROM partitioned p INNER JOIN dimension d ON p.cid=d.cid WHERE p.cid = ? ORDER BY p.cid, p.rid desc limit 1000000/' src/txnIdSelfCheck/procedures/UpdateBaseProc.java
     sed -i 's/SELECT \* FROM partview WHERE cid=? ORDER BY cid DESC/SELECT \* FROM partview WHERE cid=? ORDER BY cid DESC limit 1000000/' src/txnIdSelfCheck/procedures/UpdateBaseProc.java
@@ -84,6 +85,13 @@ function alt-jars() {
     mv src/txnIdSelfCheck/procedures/ReadSP.java.orig src/txnIdSelfCheck/procedures/ReadSP.java
     mv src/txnIdSelfCheck/procedures/UpdateBaseProc.java.orig src/txnIdSelfCheck/procedures/UpdateBaseProc.java
 
+}
+
+# create an alternate jar that is functionally equivalent
+# but includes some very large (> 50Mb) files
+function big-jars() {
+    cp txnid.jar txnid-big-text.jar
+    jar uvf txnid-big-text.jar src/largejar/large-random-text.txt
 }
 
 # run the voltdb server locally
