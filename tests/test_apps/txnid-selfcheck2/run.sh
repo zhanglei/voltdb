@@ -87,18 +87,24 @@ function alt-jars() {
 
 }
 
-# create an alternate jar that is functionally equivalent
-# but includes some very large (> 50Mb) files
+# create alternate jars that are functionally equivalent
+# but each includes some very large (> 30Mb) files
 function big-jars() {
-    cp txnid.jar txnid-big-text.jar
-    jar uvf txnid-big-text.jar src/largejar/large-random-text.txt
+    cp txnid.jar txnid-big-text1.jar
+    cp txnid.jar txnid-big-text2.jar
+    cp txnid.jar txnid-big-text3.jar
+    cp txnid.jar txnid-big-text4.jar
+    jar uvf txnid-big-text1.jar src/largejar/large-random-text1.txt
+    jar uvf txnid-big-text2.jar src/largejar/large-random-text2.txt
+    jar uvf txnid-big-text3.jar src/largejar/large-random-text3.txt
+    jar uvf txnid-big-text4.jar src/largejar/large-random-text4.txt
 }
 
 # run the voltdb server locally
 function server() {
     jars-ifneeded
     # run the server
-    $VOLTDB init -C deployment.xml
+    $VOLTDB init -C deployment.xml --force
     $VOLTDB start -l $LICENSE -H $HOST
 }
 
@@ -144,7 +150,7 @@ function init() {
 }
 
 function help() {
-    echo "Usage: ./run.sh {clean|jars|init|server|async-benchmark|async-benchmark-help}"
+    echo "Usage: ./run.sh {clean|jars|server|init|async-benchmark|async-benchmark-help}"
 }
 
 # Run the target passed as the first arg on the command line
