@@ -96,33 +96,6 @@ CREATE TABLE export_partitioned_table EXPORT TO TARGET loopback_target ON insert
 );
 PARTITION TABLE export_partitioned_table ON COLUMN rowid;
 
-CREATE STREAM export_partitioned_table_foo PARTITION ON COLUMN rowid EXPORT TO TARGET rabbit_target
-(
-  txnid                     BIGINT        DEFAULT 0 NOT NULL
-, rowid                     BIGINT        NOT NULL
-, rowid_group               TINYINT       NOT NULL
-, type_null_tinyint         TINYINT
-, type_not_null_tinyint     TINYINT       NOT NULL
-, type_null_smallint        SMALLINT
-, type_not_null_smallint    SMALLINT      NOT NULL
-, type_null_integer         INTEGER
-, type_not_null_integer     INTEGER       NOT NULL
-, type_null_bigint          BIGINT
-, type_not_null_bigint      BIGINT        NOT NULL
-, type_null_timestamp       TIMESTAMP
-, type_not_null_timestamp   TIMESTAMP     DEFAULT NOW NOT NULL
-, type_null_decimal         DECIMAL
-, type_not_null_decimal     DECIMAL       NOT NULL
-, type_null_float           FLOAT
-, type_not_null_float       FLOAT         NOT NULL
-, type_null_varchar25       VARCHAR(32)
-, type_not_null_varchar25   VARCHAR(32)   NOT NULL
-, type_null_varchar128      VARCHAR(128)
-, type_not_null_varchar128  VARCHAR(128)  NOT NULL
-, type_null_varchar1024     VARCHAR(1024)
-, type_not_null_varchar1024 VARCHAR(1024) NOT NULL
-);
-
 CREATE TABLE export_partitioned_table2 EXPORT TO TARGET file_target
 (
   txnid                     BIGINT        DEFAULT 0 NOT NULL
@@ -212,11 +185,6 @@ CREATE STREAM export_done_table PARTITION ON COLUMN txnid EXPORT TO TARGET abc
   txnid                     BIGINT        NOT NULL
 );
 
-CREATE STREAM export_done_table_foo PARTITION ON COLUMN txnid EXPORT TO TARGET foo
-(
-  txnid                     BIGINT        NOT NULL
-);
-
 -- Replicated Table
 CREATE TABLE replicated_table
 (
@@ -289,38 +257,6 @@ CREATE TABLE  export_replicated_table EXPORT TO TARGET abc ON insert, delete, up
 , type_not_null_varchar1024 VARCHAR(1024) NOT NULL
 ) USING TTL 5 SECONDS ON COLUMN type_not_null_timestamp;
 
-CREATE STREAM export_replicated_table_foo EXPORT TO TARGET foo
-(
-  txnid                     BIGINT        NOT NULL
-, rowid                     BIGINT        NOT NULL
-, rowid_group               TINYINT       NOT NULL
-, type_null_tinyint         TINYINT
-, type_not_null_tinyint     TINYINT       NOT NULL
-, type_null_smallint        SMALLINT
-, type_not_null_smallint    SMALLINT      NOT NULL
-, type_null_integer         INTEGER
-, type_not_null_integer     INTEGER       NOT NULL
-, type_null_bigint          BIGINT
-, type_not_null_bigint      BIGINT        NOT NULL
-, type_null_timestamp       TIMESTAMP
-, type_not_null_timestamp   TIMESTAMP     DEFAULT NOW NOT NULL
-, type_null_float           FLOAT
-, type_not_null_float       FLOAT         NOT NULL
-, type_null_decimal         DECIMAL
-, type_not_null_decimal     DECIMAL       NOT NULL
-, type_null_varchar25       VARCHAR(32)
-, type_not_null_varchar25   VARCHAR(32)   NOT NULL
-, type_null_varchar128      VARCHAR(128)
-, type_not_null_varchar128  VARCHAR(128)  NOT NULL
-, type_null_varchar1024     VARCHAR(1024)
-, type_not_null_varchar1024 VARCHAR(1024) NOT NULL
-);
-
-CREATE STREAM export_skinny_partitioned_table_foo PARTITION ON COLUMN rowid EXPORT TO TARGET foo
-(
-  txnid                     BIGINT        NOT NULL
-, rowid                     BIGINT        NOT NULL
-);
 -- CREATE PROCEDURE PARTITION ON TABLE partitioned_table COLUMN rowid PARAMETER 0 FROM CLASS genqa.procedures.JiggleSinglePartition;
 CREATE PROCEDURE FROM CLASS genqa.procedures.JiggleSinglePartition;
 CREATE PROCEDURE FROM CLASS genqa.procedures.JiggleMultiPartition;
@@ -423,11 +359,6 @@ AS
         , COUNT(*)
      FROM EXPORT_PARTITIONED_TABLE
  GROUP BY rowid;
-
-CREATE STREAM export_done_table_foo PARTITION ON COLUMN txnid EXPORT TO TARGET foo
-(
-  txnid                     BIGINT        NOT NULL
-);
 
 -- this is analogous to JiggleExportSinglePartition to insert tuples, but has the extra 4 geo columns
 CREATE PROCEDURE PARTITION ON TABLE export_geo_partitioned_table COLUMN rowid PARAMETER 0 FROM CLASS genqa.procedures.JiggleExportGeoSinglePartition;
