@@ -96,34 +96,6 @@ CREATE TABLE export_partitioned_table EXPORT TO TARGET loopback_target ON insert
 );
 PARTITION TABLE export_partitioned_table ON COLUMN rowid;
 
-CREATE TABLE export_partitioned_table2 EXPORT TO TARGET file_target
-(
-  txnid                     BIGINT        DEFAULT 0 NOT NULL
-, rowid                     BIGINT        NOT NULL
-, rowid_group               TINYINT       NOT NULL
-, type_null_tinyint         TINYINT
-, type_not_null_tinyint     TINYINT       NOT NULL
-, type_null_smallint        SMALLINT
-, type_not_null_smallint    SMALLINT      NOT NULL
-, type_null_integer         INTEGER
-, type_not_null_integer     INTEGER       NOT NULL
-, type_null_bigint          BIGINT
-, type_not_null_bigint      BIGINT        NOT NULL
-, type_null_timestamp       TIMESTAMP
-, type_not_null_timestamp   TIMESTAMP     DEFAULT NOW NOT NULL ASSUMEUNIQUE
-, type_null_decimal         DECIMAL
-, type_not_null_decimal     DECIMAL       NOT NULL
-, type_null_float           FLOAT
-, type_not_null_float       FLOAT         NOT NULL
-, type_null_varchar25       VARCHAR(32)
-, type_not_null_varchar25   VARCHAR(32)   NOT NULL
-, type_null_varchar128      VARCHAR(128)
-, type_not_null_varchar128  VARCHAR(128)  NOT NULL
-, type_null_varchar1024     VARCHAR(1024)
-, type_not_null_varchar1024 VARCHAR(1024) NOT NULL
-) USING TTL 5 SECONDS ON COLUMN type_not_null_timestamp;
-PARTITION TABLE export_partitioned_table2 ON COLUMN rowid;
-
 CREATE TABLE export_mirror_partitioned_table
 (
   txnid                     BIGINT        DEFAULT 0 NOT NULL
@@ -151,34 +123,6 @@ CREATE TABLE export_mirror_partitioned_table
 , type_not_null_varchar1024 VARCHAR(1024) NOT NULL
 );
 PARTITION TABLE export_mirror_partitioned_table ON COLUMN rowid;
-
-CREATE TABLE export_mirror_partitioned_table2
-(
-  txnid                     BIGINT        DEFAULT 0 NOT NULL
-, rowid                     BIGINT        NOT NULL
-, rowid_group               TINYINT       NOT NULL
-, type_null_tinyint         TINYINT
-, type_not_null_tinyint     TINYINT       NOT NULL
-, type_null_smallint        SMALLINT
-, type_not_null_smallint    SMALLINT      NOT NULL
-, type_null_integer         INTEGER
-, type_not_null_integer     INTEGER       NOT NULL
-, type_null_bigint          BIGINT
-, type_not_null_bigint      BIGINT        NOT NULL
-, type_null_timestamp       TIMESTAMP
-, type_not_null_timestamp   TIMESTAMP     DEFAULT NOW NOT NULL
-, type_null_decimal         DECIMAL
-, type_not_null_decimal     DECIMAL       NOT NULL
-, type_null_float           FLOAT
-, type_not_null_float       FLOAT         NOT NULL
-, type_null_varchar25       VARCHAR(32)
-, type_not_null_varchar25   VARCHAR(32)   NOT NULL
-, type_null_varchar128      VARCHAR(128)
-, type_not_null_varchar128  VARCHAR(128)  NOT NULL
-, type_null_varchar1024     VARCHAR(1024)
-, type_not_null_varchar1024 VARCHAR(1024) NOT NULL
-);
-PARTITION TABLE export_mirror_partitioned_table2 ON COLUMN rowid;
 
 CREATE STREAM export_done_table PARTITION ON COLUMN txnid EXPORT TO TARGET abc
 (
